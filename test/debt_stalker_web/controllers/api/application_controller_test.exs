@@ -71,7 +71,7 @@ defmodule DebtStalkerWeb.Api.ApplicationControllerTest do
         |> get("/api/applications")
 
       assert %{"data" => data, "cursor" => _cursor} = json_response(conn, 200)
-      assert length(data) >= 1
+      assert data != []
     end
 
     test "filters by country", %{conn: conn} do

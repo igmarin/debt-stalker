@@ -27,7 +27,10 @@ defmodule DebtStalkerWeb.ApplicationsLive do
   @impl true
   def handle_params(params, _url, socket) do
     filters = %{}
-    filters = if params["country"], do: Map.put(filters, :country, params["country"]), else: filters
+
+    filters =
+      if params["country"], do: Map.put(filters, :country, params["country"]), else: filters
+
     filters = if params["status"], do: Map.put(filters, :status, params["status"]), else: filters
 
     socket =
@@ -166,7 +169,10 @@ defmodule DebtStalkerWeb.ApplicationsLive do
 
       <%= if @next_cursor do %>
         <div class="mt-4">
-          <button phx-click="next_page" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <button
+            phx-click="next_page"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
             Next Page
           </button>
         </div>

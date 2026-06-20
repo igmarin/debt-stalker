@@ -39,7 +39,7 @@ defmodule DebtStalker.Countries.ESTest do
     end
 
     property "any 8-digit + correct checksum letter is valid" do
-      check all digits <- integer(0..99_999_999) do
+      check all(digits <- integer(0..99_999_999)) do
         padded = digits |> Integer.to_string() |> String.pad_leading(8, "0")
         letter = dni_checksum_letter(digits)
         dni = padded <> letter
@@ -50,30 +50,55 @@ defmodule DebtStalker.Countries.ESTest do
 
   describe "validate_financials/1" do
     test "amount <= 15000 and ratio <= 12x does not flag review" do
-      result = ES.validate_financials(%{requested_amount: Decimal.new("15000"), monthly_income: Decimal.new("2000")})
+      result =
+        ES.validate_financials(%{
+          requested_amount: Decimal.new("15000"),
+          monthly_income: Decimal.new("2000")
+        })
+
       assert result.additional_review_required == false
       assert result.reasons == []
     end
 
     test "amount > 15000 flags additional review" do
-      result = ES.validate_financials(%{requested_amount: Decimal.new("15001"), monthly_income: Decimal.new("5000")})
+      result =
+        ES.validate_financials(%{
+          requested_amount: Decimal.new("15001"),
+          monthly_income: Decimal.new("5000")
+        })
+
       assert result.additional_review_required == true
       assert "amount_exceeds_threshold" in result.reasons
     end
 
     test "amount > 12x monthly income flags additional review" do
-      result = ES.validate_financials(%{requested_amount: Decimal.new("24001"), monthly_income: Decimal.new("2000")})
+      result =
+        ES.validate_financials(%{
+          requested_amount: Decimal.new("24001"),
+          monthly_income: Decimal.new("2000")
+        })
+
       assert result.additional_review_required == true
       assert "income_ratio_exceeded" in result.reasons
     end
 
     test "amount exactly 12x income does NOT flag" do
-      result = ES.validate_financials(%{requested_amount: Decimal.new("24000"), monthly_income: Decimal.new("2000")})
+      result =
+        ES.validate_financials(%{
+          requested_amount: Decimal.new("24000"),
+          monthly_income: Decimal.new("2000")
+        })
+
       refute "income_ratio_exceeded" in result.reasons
     end
 
     test "both thresholds can be flagged simultaneously" do
-      result = ES.validate_financials(%{requested_amount: Decimal.new("25000"), monthly_income: Decimal.new("2000")})
+      result =
+        ES.validate_financials(%{
+          requested_amount: Decimal.new("25000"),
+          monthly_income: Decimal.new("2000")
+        })
+
       assert result.additional_review_required == true
       assert "amount_exceeds_threshold" in result.reasons
       assert "income_ratio_exceeded" in result.reasons
@@ -82,8 +107,15 @@ defmodule DebtStalker.Countries.ESTest do
 
   describe "additional_review_required?/1" do
     test "delegates to validate_financials logic" do
-      assert ES.additional_review_required?(%{requested_amount: Decimal.new("20000"), monthly_income: Decimal.new("2000")})
-      refute ES.additional_review_required?(%{requested_amount: Decimal.new("5000"), monthly_income: Decimal.new("2000")})
+      assert ES.additional_review_required?(%{
+               requested_amount: Decimal.new("20000"),
+               monthly_income: Decimal.new("2000")
+             })
+
+      refute ES.additional_review_required?(%{
+               requested_amount: Decimal.new("5000"),
+               monthly_income: Decimal.new("2000")
+             })
     end
   end
 

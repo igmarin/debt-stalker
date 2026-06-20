@@ -8,8 +8,8 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   """
   use Oban.Worker, queue: :notifications, max_attempts: 3
 
-  alias DebtStalker.Repo
   alias DebtStalker.Applications
+  alias DebtStalker.Repo
 
   @impl true
   def perform(%Oban.Job{args: %{"application_id" => app_id, "payload" => payload}}) do

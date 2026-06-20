@@ -131,8 +131,8 @@ defmodule DebtStalker.Integration.TriggerOutboxWorkerTest do
       assert event_id != nil
 
       # Run the dispatcher worker
-      assert :ok =
-               Oban.Testing.perform_job(DebtStalker.Workers.EventDispatcherWorker, %{})
+      assert {:ok, _count} =
+               DebtStalker.Workers.EventDispatcherWorker.claim_and_dispatch()
 
       # Verify event is now marked as processed
       {:ok, %{rows: [[processed_count]]}} =
@@ -168,32 +168,30 @@ defmodule DebtStalker.Integration.TriggerOutboxWorkerTest do
         )
       end
 
-      # Run two dispatchers concurrently
+      # Run two dispatchers concurrently using the public function
       tasks =
         for _i <- 1..2 do
           Task.async(fn ->
-            Oban.Testing.perform_job(DebtStalker.Workers.EventDispatcherWorker, %{})
+            DebtStalker.Workers.EventDispatcherWorker.claim_and_dispatch()
           end)
         end
 
       results = Task.await_many(tasks)
-      assert Enum.all?(results, &(&1 == :ok))
 
-      # Verify no event was processed more than once
-      {:ok, %{rows: [[duplicate_count]]}} =
+      assert Enum.all?(results, fn
+               {:ok, _count} -> true
+               _ -> false
+             end)
+
+      # Verify no unprocessed events remain
+      {:ok, %{rows: [[remaining]]}} =
         SQL.query(
           Repo,
-          """
-          SELECT COUNT(*) FROM application_events
-          WHERE processed_at IS NOT NULL
-          GROUP BY id
-          HAVING COUNT(*) > 1
-          """,
+          "SELECT COUNT(*) FROM application_events WHERE processed_at IS NULL",
           []
         )
 
-      # Should be 0 duplicates (query returns no rows if no duplicates)
-      assert duplicate_count == 0 || is_nil(duplicate_count)
+      assert remaining == 0
     end
   end
 end

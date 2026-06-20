@@ -14,7 +14,10 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
   alias DebtStalker.Applications.CreditApplication
 
   plug DebtStalkerWeb.Auth.AuthPlug
-  plug DebtStalkerWeb.Auth.RequireRolePlug, [role: "update"] when action in [:create, :update_status]
+
+  plug DebtStalkerWeb.Auth.RequireRolePlug,
+       [role: "update"] when action in [:create, :update_status]
+
   plug DebtStalkerWeb.Auth.RequireRolePlug, [role: "read"] when action in [:index, :show]
 
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -104,6 +107,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp parse_int(nil), do: nil
+
   defp parse_int(str) when is_binary(str) do
     case Integer.parse(str) do
       {int, _} -> int

@@ -9,7 +9,9 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
   alias DebtStalker.Applications
 
   @impl true
-  def perform(%Oban.Job{args: %{"application_id" => app_id, "status" => status, "triggered_by" => triggered_by}}) do
+  def perform(%Oban.Job{
+        args: %{"application_id" => app_id, "status" => status, "triggered_by" => triggered_by}
+      }) do
     case Applications.update_status(app_id, status, triggered_by) do
       {:ok, _app} -> :ok
       {:error, :not_found} -> :ok

@@ -12,7 +12,19 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
     socket =
       socket
       |> assign(:page_title, "New Application")
-      |> assign(:form, to_form(%{"country" => "", "full_name" => "", "identity_document" => "", "requested_amount" => "", "monthly_income" => ""}, as: "application"))
+      |> assign(
+        :form,
+        to_form(
+          %{
+            "country" => "",
+            "full_name" => "",
+            "identity_document" => "",
+            "requested_amount" => "",
+            "monthly_income" => ""
+          },
+          as: "application"
+        )
+      )
       |> assign(:errors, %{})
       |> assign(:submitted, false)
 
@@ -36,7 +48,11 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
     case Applications.create_application(attrs) do
       {:ok, app} ->
-        Phoenix.PubSub.broadcast(DebtStalker.PubSub, "applications:list", {:application_created, app})
+        Phoenix.PubSub.broadcast(
+          DebtStalker.PubSub,
+          "applications:list",
+          {:application_created, app}
+        )
 
         socket =
           socket
@@ -53,6 +69,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
   defp safe_decimal(""), do: nil
   defp safe_decimal(nil), do: nil
+
   defp safe_decimal(val) when is_binary(val) do
     case Decimal.parse(val) do
       {decimal, _} -> decimal
@@ -93,8 +110,12 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Full Name</label>
-          <input type="text" name="application[full_name]" value={@form.params["full_name"]}
-            class="mt-1 block w-full rounded border px-3 py-2" />
+          <input
+            type="text"
+            name="application[full_name]"
+            value={@form.params["full_name"]}
+            class="mt-1 block w-full rounded border px-3 py-2"
+          />
           <%= if @errors[:full_name] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:full_name], ", ")}</p>
           <% end %>
@@ -102,9 +123,17 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Identity Document</label>
-          <input type="text" name="application[identity_document]" value={@form.params["identity_document"]}
+          <input
+            type="text"
+            name="application[identity_document]"
+            value={@form.params["identity_document"]}
             class="mt-1 block w-full rounded border px-3 py-2"
-            placeholder={if @form.params["country"] == "ES", do: "12345678Z (DNI)", else: "GARC850101HDFRRL09 (CURP)"} />
+            placeholder={
+              if @form.params["country"] == "ES",
+                do: "12345678Z (DNI)",
+                else: "GARC850101HDFRRL09 (CURP)"
+            }
+          />
           <%= if @errors[:identity_document] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:identity_document], ", ")}</p>
           <% end %>
@@ -112,8 +141,13 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Requested Amount</label>
-          <input type="number" step="0.01" name="application[requested_amount]" value={@form.params["requested_amount"]}
-            class="mt-1 block w-full rounded border px-3 py-2" />
+          <input
+            type="number"
+            step="0.01"
+            name="application[requested_amount]"
+            value={@form.params["requested_amount"]}
+            class="mt-1 block w-full rounded border px-3 py-2"
+          />
           <%= if @errors[:requested_amount] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:requested_amount], ", ")}</p>
           <% end %>
@@ -121,14 +155,22 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Monthly Income</label>
-          <input type="number" step="0.01" name="application[monthly_income]" value={@form.params["monthly_income"]}
-            class="mt-1 block w-full rounded border px-3 py-2" />
+          <input
+            type="number"
+            step="0.01"
+            name="application[monthly_income]"
+            value={@form.params["monthly_income"]}
+            class="mt-1 block w-full rounded border px-3 py-2"
+          />
           <%= if @errors[:monthly_income] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:monthly_income], ", ")}</p>
           <% end %>
         </div>
 
-        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 font-medium">
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 font-medium"
+        >
           Create Application
         </button>
       </form>

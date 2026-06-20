@@ -59,7 +59,7 @@ defmodule DebtStalker.Applications.UpdateStatusTest do
           [uuid_binary]
         )
 
-      assert length(rows) >= 1
+      assert rows != []
       assert Enum.any?(rows, fn [action, _actor] -> action == "status_changed" end)
     end
 

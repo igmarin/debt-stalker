@@ -21,7 +21,8 @@ defmodule DebtStalker.Countries.MX do
         {:error, "invalid CURP format: must be exactly 18 characters"}
 
       not String.match?(trimmed, ~r/^[A-Z]{4}\d{6}[A-Z0-9]{6}[A-Z0-9]{2}$/) ->
-        {:error, "invalid CURP format: must be 4 uppercase letters + 6 digits + 8 alphanumeric chars"}
+        {:error,
+         "invalid CURP format: must be 4 uppercase letters + 6 digits + 8 alphanumeric chars"}
 
       true ->
         :ok
@@ -29,7 +30,10 @@ defmodule DebtStalker.Countries.MX do
   end
 
   @impl true
-  @spec validate_financials(map()) :: %{additional_review_required: boolean(), reasons: [String.t()]}
+  @spec validate_financials(map()) :: %{
+          additional_review_required: boolean(),
+          reasons: [String.t()]
+        }
   def validate_financials(params) do
     amount = Map.fetch!(params, :requested_amount)
     income = Map.fetch!(params, :monthly_income)

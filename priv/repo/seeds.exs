@@ -89,7 +89,9 @@ all_applications = es_applications ++ mx_applications
 Enum.each(all_applications, fn attrs ->
   case Applications.create_application(attrs) do
     {:ok, app} ->
-      IO.puts("  Created: #{app.country} | #{app.full_name} | #{app.status} | amount=#{app.requested_amount}")
+      IO.puts(
+        "  Created: #{app.country} | #{app.full_name} | #{app.status} | amount=#{app.requested_amount}"
+      )
 
     {:error, reason} ->
       IO.puts("  FAILED: #{attrs.full_name} — #{inspect(reason)}")

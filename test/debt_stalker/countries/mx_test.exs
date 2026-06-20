@@ -37,10 +37,12 @@ defmodule DebtStalker.Countries.MXTest do
       digits = Enum.to_list(?0..?9)
       alphanumeric_upper = uppercase ++ digits
 
-      check all letters <- string(uppercase, length: 4),
-                digit_part <- string(digits, length: 6),
-                middle <- string(alphanumeric_upper, length: 6),
-                tail <- string(alphanumeric_upper, length: 2) do
+      check all(
+              letters <- string(uppercase, length: 4),
+              digit_part <- string(digits, length: 6),
+              middle <- string(alphanumeric_upper, length: 6),
+              tail <- string(alphanumeric_upper, length: 2)
+            ) do
         curp = letters <> digit_part <> middle <> tail
         assert :ok = MX.validate_document(curp)
       end

@@ -19,7 +19,8 @@ defmodule DebtStalker.Applications do
     "MX" => DebtStalker.Providers.MXAdapter
   }
 
-  @spec create_application(map()) :: {:ok, CreditApplication.t()} | {:error, Ecto.Changeset.t() | atom()}
+  @spec create_application(map()) ::
+          {:ok, CreditApplication.t()} | {:error, Ecto.Changeset.t() | atom()}
   def create_application(attrs) do
     with {:ok, country_module} <- resolve_country(attrs),
          :ok <- validate_document(country_module, attrs),

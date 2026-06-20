@@ -78,13 +78,13 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
     test "invalid ES document returns changeset error" do
       attrs = Map.put(@valid_es_attrs, :identity_document, "INVALID")
       assert {:error, changeset} = Applications.create_application(attrs)
-      assert length(errors_on(changeset).identity_document) > 0
+      assert errors_on(changeset).identity_document != []
     end
 
     test "invalid MX document returns changeset error" do
       attrs = Map.put(@valid_mx_attrs, :identity_document, "invalid")
       assert {:error, changeset} = Applications.create_application(attrs)
-      assert length(errors_on(changeset).identity_document) > 0
+      assert errors_on(changeset).identity_document != []
     end
 
     test "non-positive requested_amount returns changeset error" do

@@ -17,14 +17,16 @@ defmodule DebtStalker.Countries.ES do
   def validate_document(document) do
     trimmed = String.trim(document)
 
-    with {:ok, {digits, letter}} <- parse_dni(trimmed),
-         :ok <- verify_checksum(digits, letter) do
-      :ok
+    with {:ok, {digits, letter}} <- parse_dni(trimmed) do
+      verify_checksum(digits, letter)
     end
   end
 
   @impl true
-  @spec validate_financials(map()) :: %{additional_review_required: boolean(), reasons: [String.t()]}
+  @spec validate_financials(map()) :: %{
+          additional_review_required: boolean(),
+          reasons: [String.t()]
+        }
   def validate_financials(%{requested_amount: amount, monthly_income: income}) do
     reasons =
       []

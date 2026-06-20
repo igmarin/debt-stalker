@@ -44,7 +44,10 @@ defmodule DebtStalker.Applications.QueryTest do
       {:ok, es_app} = Applications.create_application(@valid_es_attrs)
 
       {:ok, mx_app} =
-        Applications.create_application(%{@valid_mx_attrs | identity_document: "LOPE900215MMCPZN02"})
+        Applications.create_application(%{
+          @valid_mx_attrs
+          | identity_document: "LOPE900215MMCPZN02"
+        })
 
       %{es_app: es_app, mx_app: mx_app}
     end

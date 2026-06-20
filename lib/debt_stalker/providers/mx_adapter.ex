@@ -32,7 +32,8 @@ defmodule DebtStalker.Providers.MXAdapter do
            buro_score: 600 + rem(:erlang.phash2(document), 200),
            existing_debt: Decimal.new("#{rem(:erlang.phash2(document, 99), 50_000)}"),
            institution: "Bureau de Credito MX",
-           payment_history: if(rem(:erlang.phash2(document, 3), 2) == 0, do: "good", else: "mixed")
+           payment_history:
+             if(rem(:erlang.phash2(document, 3), 2) == 0, do: "good", else: "mixed")
          }}
     end
   end

@@ -19,7 +19,8 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
         {:ok, assign(socket, app: app, page_title: "Application #{app.id}")}
 
       {:error, :not_found} ->
-        {:ok, socket |> put_flash(:error, "Application not found") |> redirect(to: "/applications")}
+        {:ok,
+         socket |> put_flash(:error, "Application not found") |> redirect(to: "/applications")}
     end
   end
 
