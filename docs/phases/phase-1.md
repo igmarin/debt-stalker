@@ -100,7 +100,9 @@
 - `DebtStalkerWeb` — auth plugs, API controllers, webhook controller, LiveViews.
 
 ### 3.2 Data Model (migrations)
-`credit_applications` (`id uuid`, `country`, `full_name`, `identity_document`, `identity_document_hash`, `requested_amount decimal`, `monthly_income decimal`, `application_date utc_datetime`, `status`, `additional_review_required boolean`, `provider_summary jsonb`, `risk_result jsonb`, timestamps) · `application_status_transitions` · `application_events` (outbox) · `audit_logs` · `webhook_events` · `notification_attempts`.
+`credit_applications` (`id uuid`, `country`, `full_name`, `identity_document` **(encrypted via Cloak)**, `identity_document_hash`, `requested_amount decimal`, `monthly_income decimal`, `application_date utc_datetime`, `status`, `additional_review_required boolean`, `provider_summary jsonb`, `risk_result jsonb`, timestamps) · `application_status_transitions` · `application_events` (outbox) · `audit_logs` · `webhook_events` · `notification_attempts`.
+
+**PII Encryption:** `identity_document` is encrypted at rest using `cloak_ecto` from day one. The encryption key is a dev default in `config/dev.exs` and `config/test.exs`, and sourced from env in `config/runtime.exs` (fail-fast in prod). `identity_document_hash` remains for lookup/dedup. API responses and logs always show last-4 only.
 
 **Triggers:** AFTER INSERT → `application.created`; AFTER UPDATE OF `status` → `application.status_changed`, both inserting into `application_events`.
 
@@ -110,7 +112,7 @@
 
 See master plan §4.12 for the full Mermaid state machine and per-country narrowing. Summary:
 
-```
+```text
 submitted         -> pending_risk | provider_error | cancelled
 pending_risk      -> additional_review | approved | rejected | cancelled
 additional_review -> approved | rejected
@@ -202,7 +204,8 @@ sequenceDiagram
 - [ ] LiveView list/detail update without manual refresh; validation + async states shown.
 
 **Security & Observability**
-- [ ] JWT protects all endpoints except health + token; read vs update roles enforced.
+- [ ] JWT protects all endpoints except health + token; read vs update roles enforced (POST create + PATCH status require `update`).
+- [ ] `identity_document` encrypted at rest (Cloak); `identity_document_hash` for lookup; API responses + logs show last-4 only.
 - [ ] PII never logged in full; responses redact to last-4.
 - [ ] Structured JSON logs (logger_json) for all key events with `application_id` metadata.
 
@@ -254,7 +257,7 @@ sequenceDiagram
 - **[INFRA] T1.1 — Spike: trigger→outbox→worker integration test** · *AC:* a failing integration test asserts INSERT creates an `application.created` event row and an UPDATE of status creates `application.status_changed`; documents the SKIP LOCKED claim. *(De-risks earliest. This is a test-first spike — the test will fail until T1.2-T1.4 + T5.1 are done.)*
   *Review:* rs-guard on the test file.
 
-- **[DB] T1.2 — Migrations: `credit_applications` + indexes** · *AC:* table + constraints + composite/hash indexes; migrate/rollback clean.
+- **[DB] T1.2 — Migrations: `credit_applications` + indexes (with Cloak encrypted `identity_document`)** · *AC:* table + constraints + composite/hash indexes; `identity_document` column uses `cloak_ecto` encryption (schema uses `Ecto.Schema` + `Cloak.Ecto.Binary` type); migrate/rollback clean.
   *Review:* rs-guard on migration files.
 
 - **[DB] T1.3 — Migrations: transitions, events (outbox), audit, webhook, notification tables** · *AC:* all five tables + FK indexes; rollback clean.
@@ -294,10 +297,10 @@ sequenceDiagram
 
 ### Domain — Applications
 
-- **[DOMAIN] T4.1 — `Applications.create_application/1`**
-  *TDD:* (a) Write failing tests: valid ES app → `{:ok, app}` with `submitted` status + populated `provider_summary` + redacted document; invalid country → `422`; bad document → `422`; provider failure → `provider_error` status; `application_date` is server-set. (b) Run → fail. (c) Implement `create_application/1`. (d) Run → pass.
+- **[DOMAIN] T4.1 — `Applications.create_application/1` (with Cloak encryption)**
+  *TDD:* (a) Write failing tests: valid ES app → `{:ok, app}` with `submitted` status + populated `provider_summary` + redacted document; `identity_document` is encrypted at rest (assert via raw SQL — ciphertext != plaintext); invalid country → `422`; bad document → `422`; provider failure → `provider_error` status; `application_date` is server-set. (b) Run → fail. (c) Implement `create_application/1` with Cloak encryption. (d) Run → pass.
   *Review:* rs-guard → iterate (max 3).
-  *AC:* validates country/document/financials, calls provider, persists with server-set date + `submitted` (or `provider_error`), redacts document.
+  *AC:* validates country/document/financials, calls provider, persists with server-set date + `submitted` (or `provider_error`), encrypts `identity_document` at rest, redacts document in response.
 
 - **[DOMAIN] T4.2 — `get_application/1` + `list_applications/1` (cursor + filters)**
   *TDD:* (a) Write failing tests: get by uuid returns redacted data; unknown uuid → `{:error, :not_found}`; list filters by country/status/date range; cursor pagination returns next cursor; no unbounded OFFSET. (b) Run → fail. (c) Implement `get` + `list`. (d) Run → pass.
@@ -390,7 +393,7 @@ sequenceDiagram
 
 ## 7. Task Dependency Graph
 
-```
+```text
 T0.0 (branch)
   └─ T1.1 (spike: integration test — will fail until T1.4 + T5.1)
        ├─ T1.2 (migrations: credit_applications)

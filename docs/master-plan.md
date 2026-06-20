@@ -69,7 +69,7 @@ The four planning skills are interactive and gated. They were run here in **non-
 | DB-generated async via Postgres triggers → outbox is non-trivial to keep idempotent & ordered | Architecture | **Medium** | Use a dedicated `application_events` outbox + `FOR UPDATE SKIP LOCKED` dispatcher; idempotent workers keyed on event id. Cover with an integration test (insert/update → event row → worker). |
 | DNI/CURP checksum correctness | NFR / Correctness | **Medium** | Implement documented format + checksum; document any simplification; property-based + table tests. |
 | "Millions of applications" with no real volume to test | Scalability | **Low** | Design for it (cursor pagination, composite indexes, partition-by-date plan) and *document* it; do not over-build in Phase 1. |
-| PII handling vs "easy to run in <5 min" | Security vs Reproducibility | **Low** | Phase 1: store + hash + redact (last-4); defer encryption-at-rest to Phase 2 so local setup stays trivial. |
+| PII handling vs "easy to run in <5 min" | Security vs Reproducibility | **Low** | Phase 1: encrypt `identity_document` at rest with Cloak from day one + hash for lookup + redact (last-4) in responses/logs. Local setup stays trivial — encryption key is a dev default in `config/dev.exs`. |
 | Realtime UI tests can be flaky | Testing | **Low** | Test PubSub directly + LiveView lifecycle assertions. |
 | Kubernetes manifests drifting from reality | Ops | **Low** | `kubectl apply --dry-run=client` validation in Makefile/CI. |
 
@@ -105,7 +105,7 @@ No **High**-severity concerns. All are solvable within scope.
 - JWT auth (read vs update roles), structured logs, PII redaction, ETS country-config cache.
 - Reproducible local run (Makefile + Docker Compose), k8s manifests, README with data model + scale analysis.
 
-**Out of scope for Phase 1:** Real banking integrations; PT/IT/CO/BR; full KYC/AML; PII encryption at rest; real k8s deployment & load tests; metrics dashboards; DLQ/circuit breakers/rate limiting. (These land in Phases 2–4.)
+**Out of scope for Phase 1:** Real banking integrations; PT/IT/CO/BR; full KYC/AML; real k8s deployment & load tests; metrics dashboards; DLQ/circuit breakers/rate limiting. (These land in Phases 2–4.)
 
 #### Requirements Traceability Matrix
 
@@ -209,7 +209,7 @@ Legend: ✅ = all three agree · ⚠️ = minor divergence · ★ = my chosen ap
 | MX income rule | >10× income → review | Same | Same | ✅ ★ `> 10× income` → review |
 | MX debt rule | debt+amount > 18× income → review | Same | Same | ✅ ★ `provider_debt + amount > 18× income` → review |
 | Pagination | Cursor/keyset | Cursor/keyset | Cursor/keyset | ✅ ★ Cursor pagination (no unbounded OFFSET) |
-| PII | hash + redact, encryption deferred | Same | Same (encryption scope flexible) | ✅ ★ Phase 1: store + `identity_document_hash` + last-4 redaction; **encryption-at-rest → Phase 2** |
+| PII | encrypt + hash + redact | Same | Same | ✅ ★ Phase 1: encrypt `identity_document` at rest (Cloak) + `identity_document_hash` for lookup + last-4 redaction in responses/logs |
 | Caching | ETS country config | ETS; app cache deferred | ETS country config | ✅ ★ ETS country config in Phase 1; **app-level detail cache → Phase 2** |
 | Data model | 6 core tables | 6 core tables | 6 core tables | ✅ ★ `credit_applications`, `application_status_transitions`, `application_events`, `audit_logs`, `webhook_events`, `notification_attempts` |
 | Indexes | (country,status,date)+ | Same | Same | ✅ ★ Composite + FK + outbox + hash indexes |
@@ -346,7 +346,7 @@ Core tables: `credit_applications`, `application_status_transitions`, `applicati
 |--------|------|------|---------|
 | POST | `/api/auth/token` | public | Issue demo JWT |
 | GET | `/api/health` | public | Health check |
-| POST | `/api/applications` | read | Create application |
+| POST | `/api/applications` | update | Create application |
 | GET | `/api/applications/:id` | read | Get one (redacted) |
 | GET | `/api/applications` | read | List + filters (cursor) |
 | PATCH | `/api/applications/:id/status` | update | Update status |
@@ -354,7 +354,7 @@ Core tables: `credit_applications`, `application_status_transitions`, `applicati
 
 ### 4.7 Security, Caching, Scale (summary)
 
-- **Security:** JWT (env secret, fail-fast in prod), read vs update roles, PII redaction in responses + logs, normalized-only provider data.
+- **Security:** JWT (env secret, fail-fast in prod), read vs update roles, PII encrypted at rest (Cloak) + hash for lookup + redaction in responses + logs, normalized-only provider data.
 - **Caching:** ETS for static country config (invalidation = boot/redeploy) in Phase 1; app-level detail cache with PubSub invalidation in Phase 2.
 - **Scale (documented now, implemented in Phase 4):** cursor pagination, composite indexes, range partition by `application_date`, archive old audit/notification rows, read replicas for list/detail.
 
@@ -477,8 +477,8 @@ Country modules return their allowed transitions from `allowed_status_transition
 ### Phase 2 — Resilience, Observability & Production Hardening → `docs/phases/phase-2.md`
 **Goal:** Make the vertical slice production-credible. (Sub-tracks 2a + 2b.)
 **2a Resilience/Observability:** `:telemetry` + metrics (Prometheus/StatsD), LiveDashboard, provider circuit breakers + retry budgets, dead-letter handling for exhausted jobs, rate limiting (webhooks + auth), app-level detail caching with PubSub invalidation.
-**2b Production/Security:** real k8s deploy (ingress, HPA, health/readiness probes), CI/CD pipeline, **PII encryption at rest**, secrets management, log scrubbing review.
-**Exit gate:** deployable to a real cluster; metrics visible; encryption + secrets in place.
+**2b Production/Security:** real k8s deploy (ingress, HPA, health/readiness probes), CI/CD pipeline, secrets management, log scrubbing review. (PII encryption is already in place from Phase 1.)
+**Exit gate:** deployable to a real cluster; metrics visible; secrets + log scrubbing in place.
 
 ### Phase 3 — Country Expansion (PT + IT)
 **Goal:** Prove the abstraction is truly additive.
@@ -503,7 +503,7 @@ Country modules return their allowed transitions from `allowed_status_transition
 | D5 | Frontend | LiveView + PubSub | Near-realtime with fewest moving parts | Yes (API/PubSub can serve an SPA later) |
 | D6 | Auth | JWT (Joken), read vs update roles | Requirement; simple demo token endpoint | Yes |
 | D7 | **ES amount > 12× income** | **Flag `additional_review_required` (not hard reject)** | Matches "unless manually reviewed"; keeps app in system; 2/3 models agree | Yes |
-| D8 | PII (Phase 1) | Store + hash + last-4 redaction | Keeps <5-min setup; encryption-at-rest → Phase 2 | Yes |
+| D8 | PII (Phase 1) | Encrypt at rest (Cloak) + hash + last-4 redaction | Fintech compliance: no raw PII unencrypted even in MVP. Dev key in `config/dev.exs` keeps <5-min setup. | Yes |
 | D9 | Pagination | Cursor/keyset from day one | Scale-ready; avoids OFFSET bottleneck | Yes |
 | D10 | Caching (Phase 1) | ETS country config; app cache → Phase 2 | Static config is safe to cache; detail cache adds invalidation complexity | Yes |
 | D11 | Providers | Simulated deterministic adapters | Repeatable tests + fast setup | Yes (real adapters implement same behaviour) |
@@ -528,7 +528,7 @@ Country modules return their allowed transitions from `allowed_status_transition
 | Provider failure orphans applications | Low | Med | Near | Always persist with recoverable `provider_error` status | Backend dev |
 | k8s manifests drift | Low | Low | Far | `kubectl --dry-run=client` in Makefile/CI | DevOps |
 | <5-min setup regresses | Low | Med | Mid | Docker Compose + seeds; CI time check | DevOps |
-| PII leakage in logs/responses | Low | High | Near | Central redaction helper; log review in Phase 2 | Tech Lead |
+| PII leakage in logs/responses | Low | High | Near | Central redaction helper; PII encrypted at rest from Phase 1; log review in Phase 2 | Tech Lead |
 
 ---
 

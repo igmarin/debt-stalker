@@ -13,7 +13,7 @@
 
 **In scope:**
 - *2a:* telemetry + metrics, dashboards, provider circuit breakers + retry budgets, dead-letter handling, rate limiting, app-level detail caching with PubSub invalidation.
-- *2b:* real Kubernetes deployment (probes, HPA, ingress), CI/CD pipeline, **PII encryption at rest**, secrets management, log-scrubbing audit.
+- *2b:* real Kubernetes deployment (probes, HPA, ingress), CI/CD pipeline, secrets management, log-scrubbing audit. (PII encryption is already in place from Phase 1.)
 - *Both tracks:* Postman collection updated with failure scenarios; CHANGELOG + ADRs + Phase Report.
 
 **Out of scope (deferred to Phase 3–4):** new countries (PT/IT/CO/BR); table partitioning; read replicas; archiving jobs; load testing at millions of rows. (Partitioning/replicas are Phase 4; this phase makes the *single-region* deployment solid first.)
@@ -68,10 +68,10 @@
 - **AC16.1** CI runs format + compile-warnings-as-errors + full test suite + `kubectl --dry-run` on every PR.
 - **AC16.2** A build produces a container image; a deploy step (manual approval ok) ships it to the cluster.
 
-**US-17 — PII encryption at rest**
-- **AC17.1** `identity_document` (and other PII as identified) is encrypted at rest; `identity_document_hash` remains for lookup.
-- **AC17.2** Encryption keys come from secrets management, never source/config files.
-- **AC17.3** API responses + logs remain redacted (Phase 1 behaviour preserved); a migration encrypts existing rows.
+**US-17 — PII encryption verification** (encryption is in place from Phase 1)
+- **AC17.1** Verify `identity_document` is encrypted at rest (ciphertext in DB); `identity_document_hash` remains for lookup.
+- **AC17.2** Encryption keys are sourced from secrets management in production (k8s secrets), never source/config files. Dev key in `config/dev.exs` is acceptable.
+- **AC17.3** API responses + logs remain redacted (Phase 1 behaviour preserved).
 
 **US-18 — Secrets management & log scrubbing**
 - **AC18.1** JWT secret, webhook secret, DB credentials, and encryption keys are sourced from a secrets manager / k8s secrets, never committed.
@@ -99,7 +99,7 @@
 ### 3.2 Track 2b
 - k8s: liveness/readiness endpoints, resource requests/limits, HPA on the worker deployment, ingress + TLS placeholder, migration `Job`/init step.
 - CI/CD: pipeline stages (lint → test → dry-run → build image → deploy w/ approval); image registry config.
-- Encryption: `Cloak`/`cloak_ecto` (or equivalent) encrypted fields; key from secret; backfill migration; verify hash-based lookup still works.
+- Encryption: `Cloak`/`cloak_ecto` encrypted fields (in place from Phase 1); verify ciphertext at rest; production key from k8s secret; verify hash-based lookup still works.
 - Secrets: k8s `Secret` (or external manager) wiring; remove any placeholder secrets from config; document the env contract.
 - Log scrubbing: centralized redaction reviewed across controllers, workers, provider boundary, and telemetry handlers.
 
@@ -128,7 +128,7 @@ The existing `docs/postman/debt-stalker.json` (populated in Phase 1) gets new fo
 - [ ] Web + worker deployed to a real cluster with liveness/readiness probes; rollback works.
 - [ ] Worker horizontal scaling demonstrably increases throughput.
 - [ ] CI/CD: lint + tests + dry-run on PRs; image build + deploy step.
-- [ ] PII encrypted at rest; keys from secrets; existing rows migrated; responses/logs still redacted.
+- [ ] PII encryption verified at rest (from Phase 1); production keys from secrets; responses/logs still redacted.
 - [ ] Secrets sourced from a manager/k8s secrets; nothing committed.
 - [ ] Log-scrubbing audit passed (no PII/secrets/raw payloads in any log path).
 
@@ -154,7 +154,7 @@ The existing `docs/postman/debt-stalker.json` (populated in Phase 1) gets new fo
 
 | Risk | Likelihood | Impact | Mitigation | Owner |
 |------|------------|--------|------------|-------|
-| Encryption migration corrupts/locks data | Med | High | Expand-contract: add encrypted column → backfill in batches → switch reads → drop plaintext; test on a copy; keep hash for lookup | Tech Lead |
+| Encryption key rotation breaks reads | Low | High | Document key rotation procedure; Cloak supports multi-key migration; test rotation in staging | Tech Lead |
 | Circuit breaker hides real outages | Med | Med | Emit telemetry + alerts on open circuits; document thresholds | Backend dev |
 | Real k8s deploy reveals config gaps | Med | Med | Use kind/minikube in CI to catch early; keep env contract in README | DevOps |
 | Rate limits block legitimate demo traffic | Low | Low | Generous configurable defaults; documented | Backend dev |
@@ -235,13 +235,12 @@ The existing `docs/postman/debt-stalker.json` (populated in Phase 1) gets new fo
 - **[CD] T16.2 — Image build + deploy stage (manual approval)** · *AC:* image published to registry; deploy ships to cluster; manual approval gate works.
   *Review:* rs-guard on CD workflow YAML + Dockerfile.
 
-- **[SEC] T17.1 — Encrypted PII field + key from secret**
-  *TDD:* (a) Write failing tests: `identity_document` is ciphertext in DB (assert via raw SQL query); hash lookup still works; API responses still show last-4 only; logs still redacted. (b) Run → fail. (c) Implement Cloak/cloak_ecto encryption. (d) Run → pass.
+- **[SEC] T17.1 — PII encryption verification + production key wiring** (encryption is in place from Phase 1)
+  *TDD:* (a) Write failing test: `identity_document` is ciphertext in DB (assert via raw SQL query); hash lookup still works; API responses still show last-4 only; logs still redacted. (b) Run → pass (should already pass from Phase 1). (c) If any gaps, fix. (d) Run → pass.
   *Review:* rs-guard → iterate (max 3).
-  *AC:* `identity_document` ciphertext at rest; hash lookup intact; responses/logs redacted.
+  *AC:* `identity_document` ciphertext at rest verified; hash lookup intact; responses/logs redacted; production encryption key sourced from k8s secret (not config file).
 
-- **[SEC] T17.2 — Backfill migration (expand-contract)** · *AC:* existing rows encrypted in batches; reversible plan documented; tested on a copy.
-  *Review:* rs-guard on migration files. *Note:* This is a `[DB]` task — TDD-exempt, but must be tested (rollback + re-migrate cycle).
+- ~~**[SEC] T17.2 — Backfill migration (expand-contract)**~~ — **Removed.** PII is encrypted from day one in Phase 1, so no backfill migration is needed.
 
 - **[SEC] T18.1 — Secrets management wiring** · *AC:* all secrets from k8s/secret manager; none committed; env contract documented in README.
   *Review:* rs-guard on config files + k8s secret YAML.
@@ -256,14 +255,14 @@ The existing `docs/postman/debt-stalker.json` (populated in Phase 1) gets new fo
 - **[DOCS] T19.1 — Postman collection finalization** · *AC:* `docs/postman/debt-stalker.json` updated with Phase 2 failure scenarios (§3.3); all new endpoints have example requests/responses; collection is importable.
   *Review:* rs-guard on JSON file.
 
-- **[DOCS] T19.2 — CHANGELOG + ADRs + Phase 2 Completion Report** · *AC:* CHANGELOG.md updated with Phase 2 entry (Added/Changed/Fixed/Security); ADRs written for: circuit breaker library choice, encryption approach (Cloak), DLQ strategy, rate limiter choice; `docs/phases/phase-2-report.md` written with: what was built, decisions made, risks materialized, test status, deferred items, next-agent instructions, Postman collection reference.
+- **[DOCS] T19.2 — CHANGELOG + ADRs + Phase 2 Completion Report** · *AC:* CHANGELOG.md updated with Phase 2 entry (Added/Changed/Fixed/Security); ADRs written for: circuit breaker library choice, DLQ strategy, rate limiter choice; `docs/phases/phase-2-report.md` written with: what was built, decisions made, risks materialized, test status, deferred items, next-agent instructions, Postman collection reference. (Encryption ADR is in Phase 1.)
   *Review:* rs-guard on all doc files.
 
 ---
 
 ## 7. Task Dependency Graph
 
-```
+```text
 T0.0 (branch)
   ├─ Track 2a (parallel)
   │    ├─ T10.1 (telemetry events)
@@ -281,8 +280,7 @@ T0.0 (branch)
        │         └─ T15.3 (worker HPA demo) ← depends on T15.2
        ├─ T16.1 (CI pipeline) ← independent
        │    └─ T16.2 (CD image build + deploy) ← depends on T16.1 + T15.2
-       ├─ T17.1 (encrypted PII field) ← independent
-       │    └─ T17.2 (backfill migration) ← depends on T17.1
+       ├─ T17.1 (PII encryption verification + prod key) ← independent (encryption from Phase 1)
        ├─ T18.1 (secrets management) ← independent
        └─ T18.2 (log-scrubbing audit) ← depends on T10.1 (all log paths exercised)
 

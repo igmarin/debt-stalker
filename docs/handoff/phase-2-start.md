@@ -26,9 +26,7 @@ This project has Elixir/Phoenix skills installed. Invoke them before writing cod
 - `phoenix-pubsub-patterns` — for cache invalidation via PubSub (T14.1)
 - `cachex-caching` — for app-level detail cache (T14.1)
 - `telemetry-essentials` — for telemetry events + metrics (T10.1-T10.3)
-- `security-essentials` — for PII encryption + secrets management (T17.1, T18.1)
-- `ecto-essentials` — for encryption migration (T17.2)
-- `ecto-migration` — for expand-contract backfill migration (T17.2)
+- `security-essentials` — for PII encryption verification + secrets management (T17.1, T18.1)
 - `typespec-dialyzer` — for @spec on all public functions
 - `deployment-gotchas` — for k8s deployment + probes + runtime config (T15.1-T15.3)
 - `ci-cd-and-automation` — for CI/CD pipeline updates (T16.1-T16.2)
@@ -93,11 +91,11 @@ T19.1 (Postman finalization) → T19.2 (CHANGELOG + ADRs + Report)
 
 ## Key decisions for Phase 2
 - Circuit breaker library: TBD (ADR required — :fuse vs custom GenServer)
-- Encryption: Cloak/cloak_ecto (ADR required)
+- Encryption: Cloak/cloak_ecto (already in place from Phase 1 — Phase 2 verifies + wires production key)
 - DLQ strategy: TBD (ADR required — table vs Oban Pro discarded-jobs)
 - Rate limiter: TBD (ADR required — hammer vs plug_attack)
 - Real deploy target: kind/minikube (local cluster acceptable for gate)
-- Expand-contract migration for PII encryption (add encrypted col → backfill → switch → drop plaintext)
+- No backfill migration needed — PII is encrypted from day one in Phase 1
 
 ## Start
 Begin with issue #48 (T0.0 — Create feature branch), then start both tracks in parallel. See `docs/phases/phase-2.md` §7 for the full dependency graph.

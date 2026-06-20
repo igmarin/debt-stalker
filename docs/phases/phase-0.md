@@ -60,7 +60,7 @@
 - **AC0.3.2** `.github/review-prompt.md` is committed with project-specific rules.
 - **AC0.3.3** `.reviewer.toml` is committed with DeepSeek Pro configuration.
 - **AC0.3.4** CodeRabbit is configured (`.coderabbit.yaml` or equivalent) for CI review.
-- **AC0.3.5** rs-guard runs in CI on PRs (`.github/workflows/ai-review.yml`).
+- **AC0.3.5** rs-guard runs in CI on PRs (`.github/workflows/rs-guard-review.yml`).
 
 **US-0.4 — Development guidelines documented**
 > As a new developer or agent, I can read AGENTS.md and understand all conventions.
@@ -101,6 +101,7 @@
 | `postgrex` | Postgres driver | all |
 | `oban` | Background jobs | all |
 | `joken` | JWT auth | all |
+| `cloak_ecto` | PII encryption at rest | all |
 | `logger_json` | Structured JSON logs | all |
 | `credo` | Linting | dev/test |
 | `dialyxir` | Type checking | dev/test |
@@ -163,7 +164,7 @@ temperature = 0.1
 - Project-specific rules: `@doc`/`@spec` required, cursor pagination, no country branching, PII never logged, workers idempotent, migrations reversible
 - rs-guard metadata block format
 
-**CI review** (`.github/workflows/ai-review.yml`):
+**CI review** (`.github/workflows/rs-guard-review.yml`):
 - Runs rs-guard on PRs (CI mode, fetches PR diff)
 - CodeRabbit configured via `.coderabbit.yaml`
 
@@ -212,7 +213,7 @@ temperature = 0.1
 - [ ] `.github/review-prompt.md` committed with project-specific rules.
 - [ ] `.reviewer.toml` committed with DeepSeek Pro config.
 - [ ] `.github/workflows/ci.yml` runs all stages green on push.
-- [ ] `.github/workflows/ai-review.yml` runs rs-guard on PRs.
+- [ ] `.github/workflows/rs-guard-review.yml` runs rs-guard on PRs.
 - [ ] CodeRabbit configured (`.coderabbit.yaml` or equivalent).
 - [ ] `AGENTS.md` committed with all guidelines.
 - [ ] `.credo.exs` committed with strict checks + custom checks.
@@ -254,7 +255,7 @@ temperature = 0.1
 - **[INFRA] T0.7 — rs-guard pre-commit hook + `.reviewer.toml`** · *AC:* hook installed; `rs-guard` runs on commit; `.reviewer.toml` uses DeepSeek Pro.
 - **[DOCS] T0.8 — `.github/review-prompt.md`** · *AC:* prompt covers 5 axes + project-specific rules; rs-guard metadata block format correct.
 - **[INFRA] T0.9 — CodeRabbit configuration** · *AC:* `.coderabbit.yaml` committed; CodeRabbit posts review on PR.
-- **[INFRA] T0.10 — `.github/workflows/ai-review.yml`** · *AC:* rs-guard runs in CI mode on PRs; uses `RS_GUARD_GITHUB_TOKEN` secret.
+- **[INFRA] T0.10 — `.github/workflows/rs-guard-review.yml`** · *AC:* rs-guard runs in CI mode on PRs; uses `DEEPSEEK_API_KEY` + `GITHUB_TOKEN`/`GH_PAT` secrets.
 - **[INFRA] T0.11 — `.credo.exs` with strict checks** · *AC:* `mix credo --strict` passes; custom check stubs created (full implementation may extend into Phase 1).
 - **[INFRA] T0.12 — `.dialyzer_ignore.exs` baseline** · *AC:* `mix dialyzer` passes; ignore file empty or documented.
 - **[DOCS] T0.13 — `AGENTS.md`** · *AC:* all guidelines from §3.7 documented; references master plan + phase docs.
@@ -275,7 +276,7 @@ temperature = 0.1
 | `docker-compose.yml` | T0.4 | Postgres for local dev |
 | `Makefile` | T0.5 | Task automation |
 | `.github/workflows/ci.yml` | T0.6 | CI pipeline |
-| `.github/workflows/ai-review.yml` | T0.10 | rs-guard CI review |
+| `.github/workflows/rs-guard-review.yml` | T0.10 | rs-guard CI review |
 | `.github/review-prompt.md` | T0.8 | rs-guard review prompt |
 | `.reviewer.toml` | T0.7 | rs-guard config |
 | `.coderabbit.yaml` | T0.9 | CodeRabbit config |

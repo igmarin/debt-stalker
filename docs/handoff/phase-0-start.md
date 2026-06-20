@@ -36,7 +36,7 @@ This project has Elixir/Phoenix skills installed. Invoke them before writing cod
 Phase 0 tasks are [CHORE], [INFRA], [DB], [DOCS], [QA] — all TDD-exempt. But include tests where applicable (e.g., T0.16 smoke test). The TDD hard gate starts in Phase 1.
 
 ## Key decisions already made
-- Phoenix 1.8 + LiveView + Postgres + Oban + Joken + logger_json
+- Phoenix 1.8 + LiveView + Postgres + Oban + Joken + cloak_ecto + logger_json
 - Credo strict + Dialyzer + ExDoc
 - Mox + StreamData for testing
 - rs-guard with DeepSeek Pro for code review (pre-commit hook + CI)

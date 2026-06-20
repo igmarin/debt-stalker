@@ -29,7 +29,7 @@ This project has Elixir/Phoenix skills installed. Invoke them before writing cod
 - `background-job` — for worker design with idempotency (T5.1-T5.3)
 - `property-based-testing` — for DNI/CURP validation (T2.2-T2.3)
 - `typespec-dialyzer` — for @spec on all public functions
-- `security-essentials` — for JWT auth + webhook signature verification (T6.1, T6.3)
+- `security-essentials` — for JWT auth + webhook signature verification + PII encryption (T6.1, T6.3, T4.1)
 
 ## Workflow per task
 1. Pick the next issue from the Phase 1 milestone (follow the dependency graph in phase-1.md §7 — critical path first)
@@ -72,7 +72,7 @@ If you wrote implementation before the test, delete it and start over.
 - DB triggers → outbox → EventDispatcherWorker with FOR UPDATE SKIP LOCKED (not Oban Pro)
 - Simulated deterministic provider adapters (no real external calls)
 - Cursor pagination (keyset) — no unbounded OFFSET
-- PII redacted to last-4 in all responses + logs
+- PII encrypted at rest (Cloak) from day one + hash for lookup + redacted to last-4 in all responses + logs
 - Status flow: submitted → pending_risk → approved/rejected/additional_review
 - Country rules flag additional_review_required — they do NOT reject (decision D7)
 - 10 seed applications covering all scenarios (see phase-1.md §3.8)
