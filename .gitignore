@@ -1,1 +1,6 @@
 .DS_Store
+.rs-guard/cache/
+.env
+.env.local
+review-result.txt
+rs-guard-metrics.json

@@ -1,6 +1,5 @@
 # Debt Stalker — Master Plan
 
-> **Status:** Planning artifact only. No application code has been written. This document is the **authoritative synthesis** for scope, architecture, and phasing. The `docs/grok/`, `docs/kimi/`, and `docs/v1/` documents remain as referenced inputs.
 >
 > **Example countries (agreed):** Spain (`ES`) and Mexico (`MX`).
 >
@@ -14,13 +13,9 @@
 |----------|------|
 | `docs/requirements.md` | **Canonical challenge brief** (the customer requirements). |
 | `docs/master-plan.md` (this file) | Authoritative synthesis: review, architecture, roadmap, decisions, risks. |
+| `docs/phases/phase-0.md` | Detailed scope for Phase 0 (Platform Foundation + tooling). |
 | `docs/phases/phase-1.md` | Detailed scope for Phase 1 (ES + MX vertical slice). |
 | `docs/phases/phase-2.md` | Detailed scope for Phase 2 (Resilience/Observability + Production hardening). |
-| `docs/grok/*`, `docs/kimi/plan.md`, `docs/v1/spec.md` | Prior model analyses, used as inputs to the synthesis below. |
-
-> **Rename note:** The `docs/grok/`, `docs/kimi/`, and `docs/v1/` documents reference a `docs/spec.md` as the "challenge brief." That file was **renamed to `docs/requirements.md`**. Wherever those documents say `docs/spec.md`, read it as `docs/requirements.md`. This plan treats `docs/requirements.md` as canonical.
-
----
 
 ## 1. Executive Summary & Objectives
 
@@ -177,15 +172,16 @@ Each phase has an **entry condition** and an **exit gate**. A phase cannot start
 Phase 0 ──[Foundation gate]──▶ Phase 1 ──[Vertical-slice DoD]──▶ Phase 2
    │                                                                │
    ▼                                                                ▼
-make setup/test green                                  Resilience + prod-ready gate
-                                                                    │
+make setup/test/credo/dialyzer/docs green            Resilience + prod-ready gate
++ rs-guard hook + CI pipeline                                     │
+(no k8s yet — deferred to Phase 1)                                │
                                               ┌─────────────────────┴───────────┐
                                               ▼                                  ▼
                                      Phase 3 (PT+IT)                    Phase 4 (CO+BR + scale)
                                   [extensibility proven]            [millions-of-rows ready]
 ```
 
-Hard gates: **Phase 1 DoD** (every acceptance item true + invariants hold) and **Phase 2 production-readiness** (deploy + security). Phases 3 and 4 are additive and may run partly in parallel once Phase 1 contracts are frozen.
+Hard gates: **Phase 0 DoD** (tooling + review infra green), **Phase 1 DoD** (every acceptance item true + invariants hold), and **Phase 2 production-readiness** (deploy + security). Phases 3 and 4 are additive and may run partly in parallel once Phase 1 contracts are frozen.
 
 ---
 
@@ -362,16 +358,116 @@ Core tables: `credit_applications`, `application_status_transitions`, `applicati
 - **Caching:** ETS for static country config (invalidation = boot/redeploy) in Phase 1; app-level detail cache with PubSub invalidation in Phase 2.
 - **Scale (documented now, implemented in Phase 4):** cursor pagination, composite indexes, range partition by `application_date`, archive old audit/notification rows, read replicas for list/detail.
 
+### 4.8 Code Organization Contract (non-negotiable)
+
+This contract applies to ALL generated Elixir code regardless of phase. It is enforced by Credo, Dialyzer, and rs-guard reviews.
+
+**1. Contexts** — Domain logic lives in `DebtStalker.<Context>` modules (`Applications`, `Countries`, `Providers`, `Risk`, `Audit`, `Notifications`). Each context exposes a public API (functions with `@doc` + `@spec`) and may have internal implementation modules. Web layer (`DebtStalkerWeb`) calls contexts only — never reaches into internal modules.
+
+**2. Structs** — Domain entities use typed structs as the primary data shape, not raw maps:
+- `%CreditApplication{}` — the core application entity
+- `%ProviderSummary{}` — normalized provider data (never raw payloads)
+- `%CountryConfig{}` — country validation metadata (cached in ETS)
+- `%StatusTransition{}` — a validated transition request
+- `%EventEnvelope{}` — outbox event shape
+- Ecto schemas embed or wrap these structs where persistence is needed. The boundary between Ecto schema and domain struct is explicit: the context maps between them.
+
+**3. Composition** — Behaviours define contracts via `@callback`; modules implement them with `@behaviour`. The Registry pattern dispatches to country/provider modules — no `if/cond/case` branching on country or provider code outside `Countries` and `Providers` contexts. Credo custom check enforces this (Phase 0).
+
+**4. ExDoc** — Every public module has `@moduledoc`. Every public function (`@doc true` or implicit) has `@doc` and `@spec`. All `@type`/`@opaque` declarations have `@typedoc`. `mix docs` must generate without warnings. ExDoc output is the canonical API reference.
+
+**5. Typespecs** — `@spec` on every public function. `@type` for shared types (defined in the context module or a dedicated `Types` module). Dialyzer runs in CI with `--halt-exit-status`. Success typing is the analysis mode. `.dialyzer_ignore.exs` is permitted only for known false positives with a documented reason.
+
+**6. Credo** — `.credo.exs` configured with strict checks. `mix credo --strict` must pass. Custom checks (Phase 0):
+- No country/provider branching (`if country == "ES"`) outside `DebtStalker.Countries` / `DebtStalker.Providers`.
+- No `IO.inspect` in committed code.
+- All public functions have `@spec`.
+
+**7. frozen_string_literal** — Not applicable to Elixir (strings are already immutable), but the equivalent discipline applies: no mutation of shared state outside GenServer/Agent boundaries.
+
+### 4.9 Error Handling Strategy
+
+Consistent error shapes across all layers:
+
+| Layer | Success | Error |
+|-------|---------|-------|
+| Domain contexts | `{:ok, struct}` | `{:error, %Ecto.Changeset{}}` for validation; `{:error, atom}` for domain errors (`:not_found`, `:invalid_transition`, `:provider_unavailable`) |
+| Oban workers | `:ok` | `{:cancel, reason}` for permanent failures; `{:error, reason}` for transient (Oban retries) |
+| API controllers | `200` with serialized data | `422` with `{"errors": {"field": ["message"]}}`; `401`/`403` with `{"error": "message"}`; `404` with `{"error": "not found"}` |
+| Webhook controller | `200` with `{"received": true}` | `401` bad signature; `404` unknown application; `422` invalid payload |
+| LiveView | `{:ok, socket}` | `{:error, changeset}` → render inline errors; `{:error, :not_found}` → redirect with flash |
+
+**Domain error atoms** (shared, documented): `:not_found`, `:invalid_transition`, `:provider_timeout`, `:provider_unavailable`, `:invalid_document`, `:unsupported_country`, `:already_processed`.
+
+### 4.10 Structured Logging Specification
+
+| Aspect | Decision |
+|--------|----------|
+| Backend | `logger_json` (JSON structured logs) in all environments |
+| Format | JSON with timestamp, level, message, and metadata fields |
+| Required metadata fields | `application_id` (when available), `event_id` (when available), `country`, `status`, `worker` (when in a job) |
+| Log levels | `dev`: `debug`, `test`: `warning`, `prod`: `info` |
+| PII redaction | Central redaction filter: `identity_document` → `last-4`, `full_name` → `first_name + last initial`, `provider_summary` → allowed fields only. No raw provider payloads. |
+| Log events (minimum) | Application creation, validation failures, provider calls (success/failure), job enqueue, job completion/failure, webhook receipt, status transitions |
+
+### 4.11 Testing Strategy
+
+| Concern | Tool | Pattern |
+|---------|------|---------|
+| Provider mocking | Mox | Define `DebtStalker.Providers.Behaviour` mock; `Mox.expect/3` for deterministic responses; `Mox.verify_on_exit!` in tests |
+| Worker testing | Oban.Testing | `assert_enqueued/1`, `perform_job/2` for synchronous worker execution; no real Oban queue in tests |
+| PubSub | Phoenix.PubSub directly | `Phoenix.PubSub.subscribe/2` in test process; `assert_received` on broadcast; no LiveView mount needed for PubSub tests |
+| LiveView | `live_isolated` / `live/2` | Full lifecycle assertions: mount → render → event → update |
+| Time | Custom helper via `NaiveDateTime.utc_now()` injection | No `Time.now` stubbing; context functions accept an optional `now` argument defaulting to `DateTime.utc_now/0`; tests pass explicit times |
+| Document validation | StreamData (property-based) | Property tests for DNI/CURP format + checksum; table tests for edge cases |
+| Database | Ecto sandbox | `Ecto.Adapters.SQL.Sandbox` in async mode; `DataCase` for domain tests, `ConnCase` for API tests |
+| Integration | Trigger→outbox→worker | Dedicated integration test: INSERT → assert `application_events` row → `perform_job` → assert status changed |
+
+### 4.12 Status Flow (State Machine)
+
+```mermaid
+stateDiagram-v2
+    [*] --> submitted: create_application/1
+
+    submitted --> pending_risk: EventDispatcher → RiskEvaluationWorker
+    submitted --> provider_error: provider failure
+    submitted --> cancelled: user/API
+
+    pending_risk --> additional_review: rules flag review
+    pending_risk --> approved: rules pass
+    pending_risk --> rejected: rules fail
+    pending_risk --> cancelled: user/API
+
+    additional_review --> approved: human review
+    additional_review --> rejected: human review
+
+    provider_error --> pending_risk: retry succeeds
+    provider_error --> rejected: retry exhausted
+
+    approved --> [*]
+    rejected --> [*]
+    cancelled --> [*]
+```
+
+**Per-country narrowing (Phase 1):**
+
+| Country | Narrowing |
+|---------|-----------|
+| ES | No narrowing — full transition set allowed |
+| MX | No narrowing — full transition set allowed |
+
+Country modules return their allowed transitions from `allowed_status_transitions/0`. The `update_status/3` function validates against the country module's set. Future countries may restrict further (e.g., a country that doesn't allow `cancelled` from `pending_risk`).
+
 ---
 
 ## 5. Global Roadmap — 5 Phases (Phase 0–4)
 
 > Balanced roadmap (your selection). Phase 0 is the platform substrate; Phase 1 is the complete vertical slice; Phase 2 hardens for production; Phases 3–4 expand countries and scale.
 
-### Phase 0 — Platform Foundation
-**Goal:** A runnable, empty-but-wired skeleton.
-**Delivers:** Phoenix app (Postgres + LiveView + Ecto); deps (`oban`, `joken`); `dev/test/runtime` config; Docker Compose for Postgres; `Makefile` (`setup`, `db`, `migrate`, `seed`, `run`, `test`, `format`, `lint`); CI (format + compile warnings + tests); empty `k8s/` skeleton; coding guidelines (AGENTS.md).
-**Exit gate:** `make setup && make test` is green.
+### Phase 0 — Platform Foundation → `docs/phases/phase-0.md`
+**Goal:** A runnable, empty-but-wired skeleton with full tooling, code review infrastructure, and development guidelines.
+**Delivers:** Phoenix app (Postgres + LiveView + Ecto); deps (`oban`, `joken`, `credo`, `dialyxir`, `ex_doc`, `mox`, `stream_data`, `logger_json`); `dev/test/runtime` config; Docker Compose for Postgres; `Makefile` (`setup`, `db`, `migrate`, `seed`, `run`, `test`, `format`, `lint`, `dialyzer`, `docs`); CI (format + warnings-as-errors + credo strict + dialyzer + tests); **rs-guard** pre-commit hook + `.github/review-prompt.md` + `.reviewer.toml`; **CodeRabbit** CI configuration; `.credo.exs` with strict checks; `.dialyzer_ignore.exs` baseline; `AGENTS.md` (coding guidelines, TDD policy, code org contract, review loop); `CHANGELOG.md` initialized; `docs/adr/` directory; `docs/postman/debt-stalker.json` skeleton; `.tool-versions` pinned. **k8s manifests are deferred to Phase 1** (they reference actual components that don't exist yet).
+**Exit gate:** `make setup && make test && mix credo --strict && mix dialyzer && mix docs` all green; rs-guard pre-commit hook functional; CI pipeline runs end-to-end. See `docs/phases/phase-0.md` for full DoD.
 
 ### Phase 1 — ES + MX Vertical Slice  → `docs/phases/phase-1.md`
 **Goal:** Every functional + non-functional requirement satisfied end-to-end for ES + MX.
@@ -412,6 +508,12 @@ Core tables: `credit_applications`, `application_status_transitions`, `applicati
 | D10 | Caching (Phase 1) | ETS country config; app cache → Phase 2 | Static config is safe to cache; detail cache adds invalidation complexity | Yes |
 | D11 | Providers | Simulated deterministic adapters | Repeatable tests + fast setup | Yes (real adapters implement same behaviour) |
 | D12 | Roadmap | 5 phases (0–4); Phase 2 = resilience + production | Clean gating; separates expansion from scale | Yes |
+| D13 | TDD enforcement | Hard gate per feature/user-story | Tests-first for domain/worker/API/web tasks; exempt: chores, migrations, ops, docs | Yes |
+| D14 | Code review loop | rs-guard (DeepSeek Pro) local pre-commit + CI; CodeRabbit in CI; max 3 iterations per task | Automated quality gate on every commit; human reviews final PR | Yes |
+| D15 | Code organization | Contexts + Structs + Composition + ExDoc + Typespecs (§4.8) | Enforced by Credo strict + Dialyzer + rs-guard; canonical API reference via ExDoc | Partially |
+| D16 | API test artifacts | Single growing Postman collection (`docs/postman/debt-stalker.json`) | One file that evolves per phase; each API task adds endpoints with examples | Yes |
+| D17 | Phase documentation | CHANGELOG.md (Keep-a-Changelog) + ADRs (`docs/adr/NNNN-*.md`) + Phase Report (`docs/phases/phase-N-report.md`) per phase | Enables context window/agent handoff; audit trail of decisions; structured change log | Yes |
+| D18 | rs-guard LLM provider | DeepSeek Pro (`deepseek-v4-pro`) | Deeper analysis than flash; good cost/quality balance for iterative review loops | Yes |
 
 ---
 
@@ -432,9 +534,88 @@ Core tables: `credit_applications`, `application_status_transitions`, `applicati
 
 ## 8. Next Steps
 
-1. **Review** this master plan + `docs/phases/phase-1.md` + `docs/phases/phase-2.md`.
-2. On approval, **Phase 0** (foundation) can begin — it is low-risk scaffolding.
+1. **Review** this master plan + `docs/phases/phase-0.md` + `docs/phases/phase-1.md` + `docs/phases/phase-2.md`.
+2. On approval, **Phase 0** (foundation) can begin — it is low-risk scaffolding + tooling setup.
 3. The **task seeds** in the phase docs are written ticket-ready (area-prefixed, with acceptance criteria) so they can be imported via the **`github-issue`** skill into a project board with milestones per phase.
-4. Implementation follows TDD per `AGENTS.md`: failing test → implement → green, with the trigger→outbox→worker integration test prioritized as the earliest de-risking spike.
+4. Implementation follows **Spec-Driven Development** (see §8.1 below): failing test → implement → green → rs-guard review → iterate, with the trigger→outbox→worker integration test prioritized as the earliest de-risking spike.
 
-> Reminder: this is a planning deliverable. No application code, scaffolding, or tickets have been created.
+### 8.1 Spec-Driven Development Workflow (per task)
+
+Every domain/worker/API/web task follows this loop:
+
+```
+1. Write failing test for the user-story acceptance criteria
+2. Run test → verify it FAILS for the right reason (feature missing, not syntax error)
+3. Implement minimal code to pass
+4. Run test → verify PASSES
+5. Run full suite: mix format --check-formatted && mix credo --strict && mix dialyzer && mix test
+6. rs-guard local review (pre-commit or manual `rs-guard`)
+   → Evaluate findings:
+     [Critical]/[Security] → must fix
+     [Important] → fix if ≤2, document if deferred
+     [Suggestion] → optional
+7. Iterate (max 3 rounds total: implement → review → fix → review → fix → review)
+8. Commit only when rs-guard returns APPROVE or COMMENT
+9. PR triggers rs-guard + CodeRabbit in CI (second opinion)
+10. Human reviews final PR (validates end result + Postman/test flow)
+```
+
+**TDD-exempt tasks** (no test-first gate, but tests still required where applicable): `[CHORE]`, `[INFRA]`, `[DB]` migrations, `[OPS]`, `[DOCS]`.
+
+### 8.2 Phase Documentation Protocol
+
+Each phase produces three documentation artifacts:
+
+**1. CHANGELOG.md entry** (Keep-a-Changelog format):
+```markdown
+## [Phase N] — YYYY-MM-DD
+### Added
+- ...
+### Changed
+- ...
+### Deprecated
+- ...
+### Removed
+- ...
+### Fixed
+- ...
+### Security
+- ...
+```
+
+**2. Architecture Decision Records** (`docs/adr/NNNN-title.md`):
+Each significant decision made during implementation (not just pre-planned ones) gets an ADR:
+```markdown
+# NNNN. Title
+## Status
+Accepted | Superseded by ADR-NNNN | Deprecated
+## Context
+Why this decision was needed.
+## Decision
+What was decided.
+## Consequences
+Positive + negative impacts.
+```
+
+**3. Phase Completion Report** (`docs/phases/phase-N-report.md`):
+```markdown
+# Phase N Completion Report
+## What Was Built
+- (linked to GitHub issues/tickets)
+## Decisions Made
+- (linked to ADRs)
+## Risks Materialized
+- (vs. risk register — which risks actually occurred and how they were handled)
+## Test Status
+- Coverage: X%
+- Suite: green / known gaps
+## Deferred Items
+- (moved to later phases with rationale)
+## Next-Agent Instructions
+- What a fresh context window/agent needs to know to continue
+- Key files, patterns, gotchas
+## Postman Collection
+- Updated endpoints in docs/postman/debt-stalker.json
+```
+
+This protocol ensures that any new context window or agent can pick up where the previous one left off without re-reading the entire codebase.
