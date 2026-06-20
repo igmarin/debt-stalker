@@ -18,6 +18,8 @@ defmodule DebtStalkerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/applications", ApplicationsLive
+    live "/applications/:id", ApplicationDetailLive
   end
 
   scope "/api", DebtStalkerWeb.Api do
