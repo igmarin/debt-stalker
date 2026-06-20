@@ -66,6 +66,68 @@ defmodule DebtStalker.Applications do
     end
   end
 
+  @global_transitions %{
+    "submitted" => ["pending_risk", "provider_error", "cancelled"],
+    "pending_risk" => ["additional_review", "approved", "rejected", "cancelled"],
+    "additional_review" => ["approved", "rejected"],
+    "provider_error" => ["pending_risk", "rejected"]
+  }
+
+  @spec update_status(String.t(), String.t(), String.t()) ::
+          {:ok, CreditApplication.t()} | {:error, :not_found | :invalid_transition}
+  def update_status(id, new_status, triggered_by) do
+    case Repo.get(CreditApplication, id) do
+      nil ->
+        {:error, :not_found}
+
+      app ->
+        allowed = Map.get(@global_transitions, app.status, [])
+
+        if new_status in allowed do
+          perform_status_update(app, new_status, triggered_by)
+        else
+          {:error, :invalid_transition}
+        end
+    end
+  end
+
+  defp perform_status_update(app, new_status, triggered_by) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:application, Ecto.Changeset.change(app, status: new_status))
+    |> Ecto.Multi.insert(:transition, fn _changes ->
+      %DebtStalker.Applications.StatusTransition{}
+      |> Ecto.Changeset.change(%{
+        application_id: app.id,
+        from_status: app.status,
+        to_status: new_status,
+        triggered_by: triggered_by
+      })
+    end)
+    |> Ecto.Multi.insert(:audit, fn _changes ->
+      %DebtStalker.Applications.AuditLog{}
+      |> Ecto.Changeset.change(%{
+        application_id: app.id,
+        action: "status_changed",
+        actor: triggered_by,
+        metadata: %{"from" => app.status, "to" => new_status}
+      })
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{application: updated}} ->
+        Phoenix.PubSub.broadcast(
+          DebtStalker.PubSub,
+          "applications:#{app.id}",
+          {:status_changed, %{from: app.status, to: new_status}}
+        )
+
+        {:ok, updated}
+
+      {:error, _step, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
   @spec get_application(String.t()) :: {:ok, CreditApplication.t()} | {:error, :not_found}
   def get_application(id) do
     case Repo.get(CreditApplication, id) do
