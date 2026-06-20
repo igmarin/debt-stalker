@@ -29,8 +29,8 @@ config :swoosh, :api_client, false
 # Print only warnings and errors during test
 config :logger, level: :warning
 
-# Disable Oban job processing in tests
-config :debt_stalker, Oban, testing: :inline
+# Disable Oban job processing in tests (manual mode for assert_enqueued)
+config :debt_stalker, Oban, testing: :manual
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
