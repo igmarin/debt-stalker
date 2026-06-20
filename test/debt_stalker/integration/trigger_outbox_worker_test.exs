@@ -14,6 +14,7 @@ defmodule DebtStalker.Integration.TriggerOutboxWorkerTest do
   use DebtStalker.DataCase, async: false
 
   alias DebtStalker.Repo
+  alias DebtStalker.Workers.EventDispatcherWorker
   alias Ecto.Adapters.SQL
 
   @moduletag :integration
@@ -132,7 +133,7 @@ defmodule DebtStalker.Integration.TriggerOutboxWorkerTest do
 
       # Run the dispatcher worker
       assert {:ok, _count} =
-               DebtStalker.Workers.EventDispatcherWorker.claim_and_dispatch()
+               EventDispatcherWorker.claim_and_dispatch()
 
       # Verify event is now marked as processed
       {:ok, %{rows: [[processed_count]]}} =
