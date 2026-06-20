@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: debt-stalker-migrate
+  namespace: debt-stalker
+  labels:
+    app: debt-stalker
+    component: migration
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/igmarin/debt-stalker:latest
+          command: ["bin/debt_stalker"]
+          args: ["eval", "DebtStalker.Release.migrate()"]
+          envFrom:
+            - configMapRef:
+                name: debt-stalker-config
+            - secretRef:
+                name: debt-stalker-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
