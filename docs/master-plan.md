@@ -619,3 +619,24 @@ Positive + negative impacts.
 ```
 
 This protocol ensures that any new context window or agent can pick up where the previous one left off without re-reading the entire codebase.
+
+### 8.3 Session Handoff Prompts (`docs/handoff/`)
+
+Each phase has a **session starter prompt** in `docs/handoff/`:
+
+| File | Purpose |
+|------|---------|
+| `docs/handoff/README.md` | How to use + how to create future handoffs |
+| `docs/handoff/phase-0-start.md` | Phase 0 session starter |
+| `docs/handoff/phase-1-start.md` | Phase 1 session starter |
+| `docs/handoff/phase-2-start.md` | Phase 2 session starter |
+
+**Usage:** Start a fresh Devin session, paste the contents of the relevant handoff file as the first message. The agent reads the docs, invokes the right skills, and starts picking off issues from the milestone.
+
+Each handoff file includes:
+- What docs to read first (in order)
+- Which Elixir/Phoenix skills to invoke and when
+- The per-task workflow (TDD cycle + rs-guard loop + commit)
+- Key decisions already made (from prior phases)
+- The critical path + parallelizable tasks
+- Which GitHub milestone/issues to work from
