@@ -13,6 +13,7 @@ defmodule DebtStalker.Application do
       DebtStalker.Repo,
       {DNSCluster, query: Application.get_env(:debt_stalker, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: DebtStalker.PubSub},
+      DebtStalker.Countries.Registry,
       {Oban, Application.fetch_env!(:debt_stalker, Oban)},
       DebtStalkerWeb.Endpoint
     ]

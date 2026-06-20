@@ -1,0 +1,29 @@
+defmodule DebtStalker.Countries.Behaviour do
+  @moduledoc """
+  Behaviour contract for country-specific validation and risk rules.
+
+  Each country module (ES, MX, etc.) implements this behaviour to provide:
+  - Document format validation
+  - Financial threshold checks
+  - Provider summary interpretation
+  - Allowed status transitions (can narrow the global set)
+  """
+
+  @type validation_result :: :ok | {:error, String.t()}
+  @type financial_result :: %{additional_review_required: boolean(), reasons: [String.t()]}
+
+  @doc "Validates the identity document format for this country."
+  @callback validate_document(document :: String.t()) :: validation_result()
+
+  @doc "Validates financial thresholds and returns review flags."
+  @callback validate_financials(params :: map()) :: financial_result()
+
+  @doc "Interprets normalized provider summary for risk evaluation."
+  @callback interpret_provider_summary(summary :: map()) :: map()
+
+  @doc "Returns whether additional review is required given the application params."
+  @callback additional_review_required?(params :: map()) :: boolean()
+
+  @doc "Returns the allowed status transitions for this country (narrows global set)."
+  @callback allowed_status_transitions() :: %{String.t() => [String.t()]}
+end
