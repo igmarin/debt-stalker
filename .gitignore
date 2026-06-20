@@ -1,6 +1,37 @@
+# macOS
 .DS_Store
-.rs-guard/cache/
+
+# Local environment files
 .env
 .env.local
+
+# Local tooling configuration
+.devin/config.local.json
+.elixir_ls/
+.idea/
+.vscode/
+
+# Elixir / Mix build artifacts
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.tar
+
+# Phoenix assets
+/assets/node_modules/
+/priv/static/assets/
+/priv/static/cache_manifest.json
+
+# rs-guard review outputs
+.rs-guard/cache/
 review-result.txt
 rs-guard-metrics.json
+
+# rs-guard downloaded release artifacts (installed by scripts/rs-guard-install.sh)
+rs-guard
+rs-guard-x86_64-unknown-linux-gnu
+rs-guard-x86_64-unknown-linux-gnu.sha256

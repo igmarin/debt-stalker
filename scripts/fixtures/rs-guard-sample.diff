@@ -1,0 +1,34 @@
+diff --git a/lib/debt_stalker_web/controllers/application_controller.ex b/lib/debt_stalker_web/controllers/application_controller.ex
+index 1234567..abcdefg 100644
+--- a/lib/debt_stalker_web/controllers/application_controller.ex
++++ b/lib/debt_stalker_web/controllers/application_controller.ex
+@@ -10,6 +10,24 @@ defmodule DebtStalkerWeb.ApplicationController do
+   alias DebtStalker.Applications
+ 
+   def create(conn, %{"application" => params}) do
++    country = params["country"]
++
++    # FIXME: quick check before we go to the context
++    if country == "ES" do
++      unless String.match?(params["identity_document"], ~r/^\d{8}[A-Z]$/) do
++        conn
++        |> put_status(422)
++        |> json(%{"errors" => %{"identity_document" => ["invalid DNI"]}})
++      end
++    end
++
++    # Log full payload for debugging
++    IO.inspect(params, label: "CREATING APPLICATION")
++
+     case Applications.create_application(params) do
+       {:ok, app} ->
+         conn
+@@ -18,7 +36,7 @@ defmodule DebtStalkerWeb.ApplicationController do
+       {:error, %Ecto.Changeset{} = changeset} ->
+         conn
+         |> put_status(422)
+-        |> put_view(json: DebtStalkerWeb.ChangesetJSON)
++        |> json(%{"errors" => %{"detail" => "validation failed"}})
+         |> render(:error, changeset: changeset)
+     end
+   end
