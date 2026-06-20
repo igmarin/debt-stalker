@@ -66,7 +66,115 @@ defmodule DebtStalker.Applications do
     end
   end
 
+  @spec get_application(String.t()) :: {:ok, CreditApplication.t()} | {:error, :not_found}
+  def get_application(id) do
+    case Repo.get(CreditApplication, id) do
+      nil -> {:error, :not_found}
+      app -> {:ok, app}
+    end
+  end
+
+  @spec list_applications(map()) :: %{entries: [CreditApplication.t()], cursor: String.t() | nil}
+  def list_applications(filters) do
+    import Ecto.Query
+
+    limit = Map.get(filters, :limit, 20)
+
+    query =
+      CreditApplication
+      |> order_by([a], desc: a.application_date, desc: a.id)
+      |> maybe_filter_country(filters)
+      |> maybe_filter_status(filters)
+      |> maybe_filter_date_range(filters)
+      |> maybe_apply_cursor(filters)
+      |> limit(^(limit + 1))
+
+    results = Repo.all(query)
+
+    {entries, cursor} =
+      if length(results) > limit do
+        page_entries = Enum.take(results, limit)
+        last = List.last(page_entries)
+        {page_entries, encode_cursor(last)}
+      else
+        {results, nil}
+      end
+
+    %{entries: entries, cursor: cursor}
+  end
+
   # Private
+
+  defp maybe_filter_country(query, %{country: country}) do
+    import Ecto.Query
+    where(query, [a], a.country == ^country)
+  end
+
+  defp maybe_filter_country(query, _filters), do: query
+
+  defp maybe_filter_status(query, %{status: status}) do
+    import Ecto.Query
+    where(query, [a], a.status == ^status)
+  end
+
+  defp maybe_filter_status(query, _filters), do: query
+
+  defp maybe_filter_date_range(query, filters) do
+    import Ecto.Query
+
+    query =
+      case Map.get(filters, :date_from) do
+        nil ->
+          query
+
+        date_from ->
+          from_dt = DateTime.new!(date_from, ~T[00:00:00], "Etc/UTC")
+          where(query, [a], a.application_date >= ^from_dt)
+      end
+
+    case Map.get(filters, :date_to) do
+      nil ->
+        query
+
+      date_to ->
+        to_dt = DateTime.new!(date_to, ~T[23:59:59], "Etc/UTC")
+        where(query, [a], a.application_date <= ^to_dt)
+    end
+  end
+
+  defp maybe_apply_cursor(query, %{cursor: cursor}) when is_binary(cursor) do
+    import Ecto.Query
+
+    case decode_cursor(cursor) do
+      {:ok, {date, id}} ->
+        where(
+          query,
+          [a],
+          a.application_date < ^date or
+            (a.application_date == ^date and a.id < ^id)
+        )
+
+      _ ->
+        query
+    end
+  end
+
+  defp maybe_apply_cursor(query, _filters), do: query
+
+  defp encode_cursor(%CreditApplication{} = app) do
+    data = %{date: DateTime.to_iso8601(app.application_date), id: app.id}
+    Base.url_encode64(Jason.encode!(data))
+  end
+
+  defp decode_cursor(cursor) do
+    with {:ok, json} <- Base.url_decode64(cursor),
+         {:ok, %{"date" => date_str, "id" => id}} <- Jason.decode(json),
+         {:ok, date, _offset} <- DateTime.from_iso8601(date_str) do
+      {:ok, {date, id}}
+    else
+      _ -> :error
+    end
+  end
 
   defp resolve_country(%{country: country}) do
     Registry.lookup(country)
