@@ -29,6 +29,8 @@ defmodule DebtStalkerWeb.Router do
     get "/applications/:id", ApplicationController, :show
     post "/applications", ApplicationController, :create
     patch "/applications/:id/status", ApplicationController, :update_status
+
+    post "/webhooks/provider", WebhookController, :receive_webhook
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
