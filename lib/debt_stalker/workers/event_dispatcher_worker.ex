@@ -14,11 +14,18 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
 
   @impl true
   def perform(_job) do
-    claim_and_dispatch()
+    {:ok, _count} = claim_and_dispatch()
     :ok
   end
 
-  defp claim_and_dispatch do
+  @doc """
+  Claims and dispatches unprocessed events from the outbox.
+
+  Returns `{:ok, count}` where count is the number of events processed.
+  Uses FOR UPDATE SKIP LOCKED for concurrent-safe consumption.
+  """
+  @spec claim_and_dispatch() :: {:ok, non_neg_integer()}
+  def claim_and_dispatch do
     {:ok, %{rows: events}} =
       SQL.query(
         Repo,
@@ -38,6 +45,7 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
       )
 
     Enum.each(events, &dispatch_event/1)
+    {:ok, length(events)}
   end
 
   defp dispatch_event([_id, application_id, event_type, payload]) do
