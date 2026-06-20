@@ -19,6 +19,7 @@ defmodule DebtStalkerWeb.Router do
 
     get "/", PageController, :home
     live "/applications", ApplicationsLive
+    live "/applications/new", ApplicationCreateLive
     live "/applications/:id", ApplicationDetailLive
   end
 
