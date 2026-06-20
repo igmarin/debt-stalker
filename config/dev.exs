@@ -97,7 +97,7 @@ config :debt_stalker, DebtStalker.Vault,
     default: {
       Cloak.Ciphers.AES.GCM,
       tag: "AES.GCM.V1",
-      key: Base.decode64!("dGhpcyBpcyBhIDMyIGJ5dGUga2V5IGZvciBkZXY="),
+      key: Base.decode64!("7hFmtojiHGfMrgdBDBDIsMAlIA1Jmo5Up0vI2wuUdWQ="),
       iv_length: 12
     }
   ]
