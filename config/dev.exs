@@ -90,3 +90,14 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Cloak encryption key (dev only — NOT for production)
+config :debt_stalker, DebtStalker.Vault,
+  ciphers: [
+    default: {
+      Cloak.Ciphers.AES.GCM,
+      tag: "AES.GCM.V1",
+      key: Base.decode64!("dGhpcyBpcyBhIDMyIGJ5dGUga2V5IGZvciBkZXY="),
+      iv_length: 12
+    }
+  ]

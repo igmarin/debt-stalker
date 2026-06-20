@@ -9,6 +9,7 @@ defmodule DebtStalker.Application do
   def start(_type, _args) do
     children = [
       DebtStalkerWeb.Telemetry,
+      DebtStalker.Vault,
       DebtStalker.Repo,
       {DNSCluster, query: Application.get_env(:debt_stalker, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: DebtStalker.PubSub},

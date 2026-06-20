@@ -42,3 +42,14 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Cloak encryption key (test only — same as dev, NOT for production)
+config :debt_stalker, DebtStalker.Vault,
+  ciphers: [
+    default: {
+      Cloak.Ciphers.AES.GCM,
+      tag: "AES.GCM.V1",
+      key: Base.decode64!("dGhpcyBpcyBhIDMyIGJ5dGUga2V5IGZvciBkZXY="),
+      iv_length: 12
+    }
+  ]
