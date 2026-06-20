@@ -1,0 +1,42 @@
+{
+  "info": {
+    "_postman_id": "debt-stalker-collection",
+    "name": "Debt Stalker",
+    "description": "API collection for the Debt Stalker multi-country credit-application core.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [],
+      "description": "Authentication endpoints (token issuance)"
+    },
+    {
+      "name": "Applications",
+      "item": [],
+      "description": "Credit application CRUD and status management"
+    },
+    {
+      "name": "Webhooks",
+      "item": [],
+      "description": "Inbound webhook processing"
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token_read",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token_update",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+language: en
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_instructions:
+    - path: "lib/debt_stalker/**"
+      instructions: |
+        Ensure all public functions have @doc and @spec.
+        No country/provider branching outside DebtStalker.Countries and DebtStalker.Providers.
+        PII (identity documents) must never be logged in full.
+        Financial calculations must use Decimal, never floats.
+    - path: "lib/debt_stalker_web/**"
+      instructions: |
+        No business logic in controllers or LiveViews.
+        All protected endpoints must enforce JWT authentication.
+        Validate input at system boundaries.
+    - path: "test/**"
+      instructions: |
+        TDD hard gate: for [DOMAIN], [ASYNC], [API], [WEB] tasks, tests must exist before implementation.
+        Use Mox for provider mocks. Use Oban.Testing for worker tests.
+chat:
+  auto_reply: true
