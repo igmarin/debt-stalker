@@ -61,9 +61,6 @@ defmodule DebtStalker.Applications do
         %CreditApplication{}
         |> CreditApplication.changeset(insert_attrs)
         |> Repo.insert()
-
-      {:error, changeset} ->
-        {:error, changeset}
     end
   end
 
