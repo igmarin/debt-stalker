@@ -183,24 +183,30 @@ defmodule DebtStalker.DeadLetter do
           | {:error, :not_found}
           | {:error, :already_reenqueued}
           | {:error, :unknown_worker}
+          | {:error, :insert_failed}
+          | {:error, :update_failed}
   def reenqueue(id) do
     case get(id) do
       nil ->
         {:error, :not_found}
 
       %DeadLetterJob{reenqueued_at: nil} = entry ->
-        case resolve_worker(entry.worker) do
-          {:ok, worker_module} ->
-            {:ok, new_job} = insert_reenqueued_job(worker_module, entry)
-            mark_reenqueued(entry)
-            {:ok, new_job}
-
-          {:error, :unknown_worker} ->
-            {:error, :unknown_worker}
-        end
+        do_reenqueue(entry)
 
       %DeadLetterJob{} ->
         {:error, :already_reenqueued}
+    end
+  end
+
+  defp do_reenqueue(entry) do
+    with {:ok, worker_module} <- resolve_worker(entry.worker),
+         {:ok, new_job} <- insert_reenqueued_job(worker_module, entry),
+         {:ok, _updated} <- mark_reenqueued(entry) do
+      {:ok, new_job}
+    else
+      {:error, :unknown_worker} -> {:error, :unknown_worker}
+      {:error, :insert_failed} -> {:error, :insert_failed}
+      {:error, :update_failed} -> {:error, :update_failed}
     end
   end
 
@@ -301,21 +307,35 @@ defmodule DebtStalker.DeadLetter do
     end
   end
 
-  @spec insert_reenqueued_job(module(), DeadLetterJob.t()) :: {:ok, Oban.Job.t()}
+  @spec insert_reenqueued_job(module(), DeadLetterJob.t()) ::
+          {:ok, Oban.Job.t()} | {:error, :insert_failed}
   defp insert_reenqueued_job(worker_module, entry) do
     # Use the redacted args stored at capture time — safe metadata only.
     # Workers are idempotent, so replaying with these args won't duplicate
     # side effects even if the original job partially completed.
-    %{application_id: entry.application_id}
-    |> Map.merge(entry.args)
-    |> worker_module.new(queue: String.to_atom(entry.queue || "events"))
-    |> Oban.insert()
+    result =
+      %{application_id: entry.application_id}
+      |> Map.merge(entry.args)
+      |> worker_module.new(queue: String.to_atom(entry.queue || "events"))
+      |> Oban.insert()
+
+    case result do
+      {:ok, job} -> {:ok, job}
+      {:error, _changeset} -> {:error, :insert_failed}
+    end
   end
 
-  @spec mark_reenqueued(DeadLetterJob.t()) :: {:ok, DeadLetterJob.t()}
+  @spec mark_reenqueued(DeadLetterJob.t()) ::
+          {:ok, DeadLetterJob.t()} | {:error, :update_failed}
   defp mark_reenqueued(entry) do
-    entry
-    |> Ecto.Changeset.change(reenqueued_at: DateTime.utc_now() |> DateTime.truncate(:second))
-    |> Repo.update()
+    result =
+      entry
+      |> Ecto.Changeset.change(reenqueued_at: DateTime.utc_now() |> DateTime.truncate(:second))
+      |> Repo.update()
+
+    case result do
+      {:ok, updated} -> {:ok, updated}
+      {:error, _changeset} -> {:error, :update_failed}
+    end
   end
 end
