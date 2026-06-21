@@ -7,6 +7,7 @@ defmodule DebtStalkerWeb.ApplicationsLive do
 
   alias DebtStalker.Applications
   alias DebtStalker.Applications.CreditApplication
+  alias DebtStalker.Countries.Registry, as: CountryRegistry
 
   @doc "Mounts the applications list LiveView and subscribes to updates."
   @impl true
@@ -21,6 +22,7 @@ defmodule DebtStalkerWeb.ApplicationsLive do
       |> assign(:page_title, "Applications")
       |> assign(:filters, %{})
       |> assign(:cursor, nil)
+      |> assign(:country_options, CountryRegistry.supported_countries())
       |> load_applications()
 
     {:ok, socket}
@@ -116,8 +118,9 @@ defmodule DebtStalkerWeb.ApplicationsLive do
       <form id="filter-form" phx-change="filter" class="flex gap-4 mb-6">
         <select name="country" class="rounded border px-3 py-2">
           <option value="">All Countries</option>
-          <option value="ES" selected={@filters[:country] == "ES"}>Spain (ES)</option>
-          <option value="MX" selected={@filters[:country] == "MX"}>Mexico (MX)</option>
+          <%= for country <- @country_options do %>
+            <option value={country} selected={@filters[:country] == country}>{country}</option>
+          <% end %>
         </select>
 
         <select name="status" class="rounded border px-3 py-2">

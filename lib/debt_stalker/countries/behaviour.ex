@@ -33,6 +33,9 @@ defmodule DebtStalker.Countries.Behaviour do
   @doc "Returns the allowed status transitions for this country (narrows global set)."
   @callback allowed_status_transitions() :: %{String.t() => [String.t()]}
 
+  @doc "Returns the minimum acceptable risk score for this country."
+  @callback risk_score_threshold() :: non_neg_integer()
+
   @doc "Returns a short example/hint for the identity document field in UI forms."
   @callback document_hint() :: String.t()
 
