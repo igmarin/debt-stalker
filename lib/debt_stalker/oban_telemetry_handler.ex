@@ -57,6 +57,7 @@ defmodule DebtStalker.ObanTelemetryHandler do
     worker = to_string(metadata.worker)
     result = classify_result(metadata.result)
     DebtStalker.Telemetry.emit_oban_job(worker, result)
+    maybe_capture_discarded_job(metadata)
   end
 
   def handle_event([:oban, :job, :exception], _measurements, metadata, _config) do
@@ -86,30 +87,41 @@ defmodule DebtStalker.ObanTelemetryHandler do
   defp classify_result({:ok, _}), do: :success
   defp classify_result(_), do: :error
 
+  @spec maybe_capture_discarded_job(map()) :: :ok
+  defp maybe_capture_discarded_job(%{job: %Oban.Job{} = job, state: "discarded"}) do
+    capture_dead_letter(job)
+  end
+
+  defp maybe_capture_discarded_job(%{job: %Oban.Job{} = job, state: :discarded}) do
+    capture_dead_letter(job)
+  end
+
+  defp maybe_capture_discarded_job(_metadata), do: :ok
+
   @spec maybe_capture_exhausted_job(map()) :: :ok
   defp maybe_capture_exhausted_job(%{job: %Oban.Job{} = job}) do
-    if exhausted?(job) do
-      case DebtStalker.DeadLetter.capture(job) do
-        {:ok, _entry} ->
-          :ok
-
-        {:error, changeset} ->
-          require Logger
-
-          Logger.error("Failed to capture dead-letter job",
-            job_id: job.id,
-            worker: job.worker,
-            errors: inspect(changeset.errors)
-          )
-
-          :ok
-      end
-    else
-      :ok
-    end
+    if exhausted?(job), do: capture_dead_letter(job), else: :ok
   end
 
   defp maybe_capture_exhausted_job(_metadata), do: :ok
+
+  @spec capture_dead_letter(Oban.Job.t()) :: :ok
+  defp capture_dead_letter(job) do
+    case DebtStalker.DeadLetter.capture(job) do
+      {:ok, _entry} ->
+        :ok
+
+      {:error, _changeset} ->
+        require Logger
+
+        Logger.error("Failed to capture dead-letter job",
+          event_id: job.id,
+          worker: job.worker
+        )
+
+        :ok
+    end
+  end
 
   @spec exhausted?(Oban.Job.t()) :: boolean()
   defp exhausted?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}) do

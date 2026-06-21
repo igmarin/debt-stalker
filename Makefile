@@ -1,4 +1,4 @@
-.PHONY: setup db migrate seed run test format lint dialyzer docs check ci up down
+.PHONY: setup db migrate seed run test coverage format lint dialyzer docs check ci up down
 
 setup: ## Install deps, create DB, run migrations, seed
 	mix deps.get
@@ -24,6 +24,11 @@ test: ## Run full test suite
 	MIX_ENV=test mix ecto.create --quiet
 	MIX_ENV=test mix ecto.migrate --quiet
 	mix test
+
+coverage: ## Run tests with coverage report (85% threshold)
+	MIX_ENV=test mix ecto.create --quiet
+	MIX_ENV=test mix ecto.migrate --quiet
+	mix test --cover
 
 format: ## Format code
 	mix format
