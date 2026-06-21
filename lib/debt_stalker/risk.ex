@@ -22,7 +22,8 @@ defmodule DebtStalker.Risk do
 
   Returns `{:ok, status}` where status is one of:
   - `"approved"` — risk score acceptable, no additional review needed
-  - `"additional_review"` — country thresholds exceeded
+  - `"additional_review"` — country thresholds exceeded, or the country
+    module does not implement `acceptable_risk_score?/1` (fail-safe)
   - `"rejected"` — risk score below acceptable threshold
 
   Returns `{:error, :unsupported_country}` if the application's country
@@ -47,7 +48,7 @@ defmodule DebtStalker.Risk do
           review_required -> "additional_review"
           score_acceptable == true -> "approved"
           score_acceptable == false -> "rejected"
-          :unknown -> "additional_review"
+          true -> "additional_review"
         end
 
       {:ok, new_status}
