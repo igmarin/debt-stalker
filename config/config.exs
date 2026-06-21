@@ -77,8 +77,8 @@ config :logger, :default_formatter,
     :event_count,
     :notification_status,
     :reason,
-    :error,
-    :stacktrace
+    :error_module,
+    :error_message
   ]
 
 # Use Jason for JSON parsing in Phoenix

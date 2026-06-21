@@ -141,9 +141,12 @@ defmodule DebtStalker.Providers.CircuitBreaker do
     fun.()
   rescue
     exception ->
+      # Log only the exception module and message — never inspect the
+      # full exception or stacktrace, as they may contain PII from
+      # provider responses or job arguments.
       Logger.error("Circuit breaker caught exception",
-        error: inspect(exception),
-        stacktrace: Exception.format_stacktrace()
+        error_module: exception.__struct__,
+        error_message: Exception.message(exception)
       )
 
       {:error, :exception}
