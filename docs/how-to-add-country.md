@@ -1,8 +1,9 @@
 # How to Add a New Country
 
 Step-by-step recipe for integrating a new country into Debt Stalker.
-Each step is self-contained and testable. The whole process is **additive** --
-no controller, persistence, worker, or UI changes required.
+Each step is self-contained and testable. The backend process is **additive** --
+no controller, persistence, or worker changes required. The current LiveView country
+selects are still static, so add the country there until those selects are registry-backed.
 
 > **Existing examples:** `Countries.ES` (Spain/DNI) and `Countries.MX` (Mexico/CURP).
 > This guide uses **Portugal (PT)** as a hypothetical walkthrough.
@@ -97,11 +98,6 @@ defmodule DebtStalker.Countries.PT do
 
   # --- Risk score ---
 
-  @doc "Returns the minimum acceptable risk score for Portugal."
-  @impl true
-  @spec risk_score_threshold() :: non_neg_integer()
-  def risk_score_threshold, do: 620
-
   @doc "Returns whether the provider summary indicates an acceptable risk score."
   @impl true
   @spec acceptable_risk_score?(map() | nil) :: boolean()
@@ -110,7 +106,7 @@ defmodule DebtStalker.Countries.PT do
     score >= 620
   end
 
-  def acceptable_risk_score?(_), do: true
+  def acceptable_risk_score?(_), do: false
 
   # --- Optional callbacks ---
 
@@ -124,19 +120,20 @@ end
 ### Required Behaviour Callbacks
 
 | Callback | Purpose | Example (ES) |
+| --- | --- | --- |
 |----------|---------|-------------|
 | `validate_document/1` | Document format + checksum | DNI: 8 digits + letter |
 | `validate_financials/1` | Financial threshold flags | Amount > 15000, income ratio |
 | `interpret_provider_summary/1` | Normalize provider data | Pass-through |
 | `additional_review_required?/1` | Review decision | Delegates to `validate_financials` |
 | `allowed_status_transitions/0` | Status machine narrowing | Shared set (can restrict) |
-| `risk_score_threshold/0` | Minimum acceptable score | 650 (credit_score) |
-| `acceptable_risk_score?/1` | Score check against summary | `credit_score >= 650` |
 
 ### Optional Callbacks
 
 | Callback | Purpose |
+| --- | --- |
 |----------|---------|
+| `acceptable_risk_score?/1` | Provider score check; missing callback routes to `additional_review` fail-safe |
 | `document_hint/0` | UI placeholder for document input |
 
 ---
@@ -321,12 +318,6 @@ defmodule DebtStalker.Countries.PTTest do
     end
   end
 
-  describe "risk_score_threshold/0" do
-    test "returns 620 for Portugal" do
-      assert 620 = PT.risk_score_threshold()
-    end
-  end
-
   describe "acceptable_risk_score?/1" do
     test "returns true when score meets threshold" do
       assert PT.acceptable_risk_score?(%{
@@ -340,8 +331,8 @@ defmodule DebtStalker.Countries.PTTest do
              })
     end
 
-    test "returns true when no score present" do
-      assert PT.acceptable_risk_score?(nil)
+    test "returns false when no score present" do
+      refute PT.acceptable_risk_score?(nil)
     end
   end
 
@@ -409,7 +400,8 @@ mix dialyzer
 mix test
 ```
 
-The custom Credo checks will automatically verify:
+The standard quality suite verifies formatting, compilation, Credo, Dialyzer, and tests.
+If the custom architecture Credo checks from issue #78 are present, they additionally verify:
 - **NoCountryBranching**: Your new country code won't appear in branching outside `Countries`/`Providers`
 - **RequireSpec**: All public functions have `@spec`
 - **NoIOInspect**: No debug `IO.inspect` calls
@@ -423,9 +415,12 @@ The custom Credo checks will automatically verify:
 make run
 
 # Create an application for the new country
+TOKEN=$(curl -s -X POST http://localhost:4000/api/auth/token \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"update"}' | jq -r .token)
+
 curl -X POST http://localhost:4000/api/applications \
-  -H "Authorization: Bearer $(curl -s -X POST http://localhost:4000/api/auth/token \
-    -H 'Content-Type: application/json' -d '{"role":"update"}' | jq -r .token)" \
+  -H "Authorization: Bearer ${TOKEN}" \
   -H 'Content-Type: application/json' \
   -d '{
     "country": "PT",
@@ -437,7 +432,7 @@ curl -X POST http://localhost:4000/api/applications \
 ```
 
 Expected: `201` with the created application, status `"submitted"`, and
-`identity_document` redacted to `"****56789"`.
+`identity_document` redacted to `"****6789"`.
 
 ---
 
@@ -449,7 +444,7 @@ Use this checklist to verify completeness:
 - [ ] `lib/debt_stalker/providers/xx_adapter.ex` implements `Providers.Behaviour.fetch/2`
 - [ ] `Countries.Registry.default_countries/0` includes `{"XX", Countries.XX}`
 - [ ] `Providers.Registry.default_providers/0` includes `{"XX", Providers.XXAdapter}`
-- [ ] `test/debt_stalker/countries/xx_test.exs` covers document validation, financials, risk
+- [ ] `test/debt_stalker/countries/xx_test.exs` covers document validation, financials, status transitions, and optional risk score handling
 - [ ] `test/debt_stalker/providers/xx_adapter_test.exs` covers fetch success + errors
 - [ ] `mix format --check-formatted` passes
 - [ ] `mix compile --warnings-as-errors` passes
@@ -463,13 +458,14 @@ Use this checklist to verify completeness:
 
 ## What You Do NOT Need to Change
 
-The architecture is designed so adding a country is **purely additive**:
+The backend architecture is designed so adding a country is mostly additive:
 
 | Layer | Changes needed? |
+| --- | --- |
 |-------|----------------|
 | Database schema / migrations | No |
 | API controllers | No |
-| LiveView UI | No (dropdown auto-populates from registry) |
+| LiveView UI | Yes, for current static ES/MX dropdown options; no domain logic changes |
 | Oban workers | No |
 | Status machine | No (country module narrows shared set) |
 | Audit trail | No |
@@ -483,6 +479,7 @@ The architecture is designed so adding a country is **purely additive**:
 For reference, here is what the other planned countries might look like:
 
 | Country | Document | Key Financial Rule | Risk Score Field |
+| --- | --- | --- | --- |
 |---------|----------|--------------------|-----------------|
 | PT (Portugal) | NIF (9 digits) | Income ratio (10x) | `credit_score` |
 | IT (Italy) | Codice Fiscale (16 chars) | Debt-to-income | `credit_score` |
