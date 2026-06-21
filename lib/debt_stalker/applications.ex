@@ -13,14 +13,10 @@ defmodule DebtStalker.Applications do
   require Logger
 
   alias DebtStalker.Applications.CreditApplication
-  alias DebtStalker.Countries.Registry
+  alias DebtStalker.Countries.Registry, as: CountryRegistry
   alias DebtStalker.Providers.ProviderSummary
+  alias DebtStalker.Providers.Registry, as: ProviderRegistry
   alias DebtStalker.Repo
-
-  @provider_adapters %{
-    "ES" => DebtStalker.Providers.ESAdapter,
-    "MX" => DebtStalker.Providers.MXAdapter
-  }
 
   @doc """
   Creates a new credit application.
@@ -161,7 +157,7 @@ defmodule DebtStalker.Applications do
     global_allowed = Map.get(@global_transitions, app.status, [])
 
     country_allowed =
-      case Registry.lookup(app.country) do
+      case CountryRegistry.lookup(app.country) do
         {:ok, country_module} ->
           Map.get(country_module.allowed_status_transitions(), app.status, [])
 
@@ -176,7 +172,7 @@ defmodule DebtStalker.Applications do
     global_allowed = Map.get(@global_transitions, app.status, [])
 
     country_allowed =
-      case Registry.lookup(app.country) do
+      case CountryRegistry.lookup(app.country) do
         {:ok, country_module} ->
           Map.get(country_module.allowed_status_transitions(), app.status, [])
 
@@ -361,7 +357,7 @@ defmodule DebtStalker.Applications do
   end
 
   defp resolve_country(%{country: country}) do
-    Registry.lookup(country)
+    CountryRegistry.lookup(country)
   end
 
   defp resolve_country(_attrs), do: {:error, :unsupported_country}
@@ -388,7 +384,7 @@ defmodule DebtStalker.Applications do
   end
 
   defp fetch_provider(%{country: country, identity_document: document}) do
-    case Map.fetch(@provider_adapters, country) do
+    case ProviderRegistry.lookup(country) do
       {:ok, adapter} ->
         case adapter.fetch(country, %{identity_document: document}) do
           {:ok, summary} ->
@@ -400,8 +396,11 @@ defmodule DebtStalker.Applications do
             {:error, :provider_error}
         end
 
-      :error ->
-        DebtStalker.Telemetry.emit_provider_call(country, :error, error_reason: :no_adapter)
+      {:error, :unsupported_provider} ->
+        DebtStalker.Telemetry.emit_provider_call(country, :error,
+          error_reason: :unsupported_provider
+        )
+
         {:error, :provider_error}
     end
   end
