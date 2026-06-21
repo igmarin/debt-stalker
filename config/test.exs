@@ -32,6 +32,18 @@ config :logger, level: :warning
 # Disable Oban job processing in tests (manual mode for assert_enqueued)
 config :debt_stalker, Oban, testing: :manual
 
+# Fixed existing_debt for known CURPs in MX adapter simulations (test-only)
+config :debt_stalker, :mx_simulated_debt_overrides, %{
+  "DEBT850101HDFRRL09" => 35_000
+}
+
+# Circuit breaker settings for tests (high threshold avoids cross-test pollution in async suite)
+config :debt_stalker, :circuit_breakers,
+  failure_threshold: 100,
+  cooldown_ms: 5_000,
+  retry_budget: 1,
+  base_backoff_ms: 1
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

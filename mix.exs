@@ -21,7 +21,23 @@ defmodule DebtStalker.MixProject do
       docs: [
         main: "DebtStalker",
         extras: ["CHANGELOG.md"]
+      ],
+      test_coverage: [
+        summary: [threshold: 85],
+        ignore_modules: coverage_ignore_modules()
       ]
+    ]
+  end
+
+  defp coverage_ignore_modules do
+    [
+      DebtStalker.Mailer,
+      DebtStalkerWeb.CoreComponents,
+      DebtStalkerWeb.Endpoint,
+      DebtStalkerWeb.ErrorHTML,
+      DebtStalkerWeb.Gettext,
+      DebtStalkerWeb.Layouts,
+      DebtStalkerWeb.PageHTML
     ]
   end
 

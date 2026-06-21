@@ -20,6 +20,7 @@ defmodule DebtStalker.Application do
       {Phoenix.PubSub, name: DebtStalker.PubSub},
       DebtStalker.Countries.Registry,
       DebtStalker.Providers.Registry,
+      DebtStalker.Providers.CircuitBreakers,
       {Oban, Application.fetch_env!(:debt_stalker, Oban)},
       DebtStalker.ObanTelemetryHandler,
       prometheus_metrics_reporter(),

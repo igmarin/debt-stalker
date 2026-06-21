@@ -82,7 +82,7 @@ jobs:
       - name: Dialyzer
         run: mix dialyzer --halt-exit-status
 
-      - name: Run tests
-        run: mix test
+      - name: Run tests with coverage
+        run: mix test --cover
         env:
           DATABASE_URL: ecto://postgres:postgres@localhost/debt_stalker_test
