@@ -33,6 +33,7 @@ defmodule DebtStalkerWeb.ConnCase do
 
   setup tags do
     DebtStalker.DataCase.setup_sandbox(tags)
+    DebtStalker.Providers.CircuitBreakers.reset_all()
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
