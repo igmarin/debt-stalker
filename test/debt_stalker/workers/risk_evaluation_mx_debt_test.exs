@@ -20,12 +20,11 @@ defmodule DebtStalker.Workers.RiskEvaluationMxDebtTest do
     monthly_income: Decimal.new("2000")
   }
 
-  # CURP chosen so simulated existing_debt exceeds 18x income when combined with requested_amount,
-  # without triggering the 10x income-ratio rule alone (8000 < 10 * 2000).
+  # CURP mapped in test config to 35_000 existing_debt (see :mx_simulated_debt_overrides).
   @mx_high_debt_attrs %{
     country: "MX",
     full_name: "Maria Lopez",
-    identity_document: "GARC850101HDFRRL27",
+    identity_document: "DEBT850101HDFRRL09",
     requested_amount: Decimal.new("8000"),
     monthly_income: Decimal.new("2000")
   }
@@ -34,15 +33,7 @@ defmodule DebtStalker.Workers.RiskEvaluationMxDebtTest do
     test "routes to additional_review when provider debt exceeds 18x income (AC2.6 E2E)" do
       {:ok, app} = Applications.create_application(@mx_high_debt_attrs)
 
-      existing_debt =
-        app.provider_summary["risk_indicators"]["existing_debt"]
-        |> Decimal.new()
-
-      total_debt = Decimal.add(existing_debt, app.requested_amount)
-      threshold = Decimal.mult(app.monthly_income, 18)
-
-      assert Decimal.gt?(total_debt, threshold),
-             "fixture must exceed debt threshold; adjust identity_document or amounts"
+      assert app.provider_summary["risk_indicators"]["existing_debt"] == "35000"
 
       perform_job(RiskEvaluationWorker, %{application_id: app.id})
 

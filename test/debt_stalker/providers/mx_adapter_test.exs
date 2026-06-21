@@ -40,5 +40,11 @@ defmodule DebtStalker.Providers.MXAdapterTest do
       refute Map.has_key?(map, "raw_payload")
       refute Map.has_key?(map, "raw")
     end
+
+    test "uses test-only debt override for configured CURPs" do
+      params = %{identity_document: "DEBT850101HDFRRL09"}
+      assert {:ok, %ProviderSummary{} = summary} = MXAdapter.fetch("MX", params)
+      assert summary.risk_indicators["existing_debt"] == "35000"
+    end
   end
 end
