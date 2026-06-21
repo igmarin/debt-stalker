@@ -16,6 +16,7 @@ defmodule DebtStalker.DeadLetter.DeadLetterJob do
           max_attempts: integer(),
           last_error: String.t() | nil,
           captured_at: DateTime.t(),
+          reenqueued_at: DateTime.t() | nil,
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -30,6 +31,7 @@ defmodule DebtStalker.DeadLetter.DeadLetterJob do
     field :max_attempts, :integer
     field :last_error, :string
     field :captured_at, :utc_datetime
+    field :reenqueued_at, :utc_datetime
 
     timestamps()
   end
