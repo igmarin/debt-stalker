@@ -46,6 +46,10 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
     end
   end
 
+  # Marks all unprocessed webhook_events for the given application as processed.
+  # This is a no-op when no matching row exists (e.g., :not_found path where
+  # the application doesn't exist). The UPDATE matches zero rows without raising.
+  @spec mark_webhook_processed(Ecto.UUID.t()) :: :ok
   defp mark_webhook_processed(app_id) do
     {:ok, uuid_binary} = Ecto.UUID.dump(app_id)
 
