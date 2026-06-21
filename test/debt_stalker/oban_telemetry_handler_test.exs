@@ -1,6 +1,7 @@
 defmodule DebtStalker.ObanTelemetryHandlerTest do
   use DebtStalker.DataCase, async: false
 
+  alias DebtStalker.DeadLetter
   alias DebtStalker.DeadLetter.DeadLetterJob
   alias DebtStalker.ObanTelemetryHandler
   alias DebtStalker.Repo
@@ -13,18 +14,7 @@ defmodule DebtStalker.ObanTelemetryHandlerTest do
 
   describe "[:oban, :job, :stop]" do
     test "emits business metrics telemetry" do
-      handler_id = :oban_handler_test_stop
-
-      :telemetry.attach(
-        handler_id,
-        [:debt_stalker, :oban, :job, :stop],
-        fn _event, _measurements, metadata, _config ->
-          send(self(), {:oban_metric, metadata})
-        end,
-        nil
-      )
-
-      on_exit(fn -> :telemetry.detach(handler_id) end)
+      attach_metric_listener(:oban_handler_test_stop)
 
       :telemetry.execute(
         [:oban, :job, :stop],
@@ -42,32 +32,30 @@ defmodule DebtStalker.ObanTelemetryHandlerTest do
                "Elixir.DebtStalker.Workers.RiskEvaluationWorker"
              ]
     end
+
+    test "captures discarded job after {:error, _} failures exhaust retries" do
+      job = exhausted_job(id: 904, application_id: Ecto.UUID.generate())
+
+      :telemetry.execute(
+        [:oban, :job, :stop],
+        %{duration: 1},
+        %{job: job, worker: job.worker, result: {:error, :timeout}, state: "discarded"}
+      )
+
+      assert %DeadLetterJob{job_id: 904, application_id: app_id} =
+               Repo.get_by(DeadLetterJob, job_id: 904)
+
+      assert is_binary(app_id)
+      assert DeadLetter.count() >= 1
+    end
   end
 
   describe "[:oban, :job, :exception]" do
     test "emits error metric without capturing retryable failures" do
-      handler_id = :oban_handler_test_exception
+      attach_metric_listener(:oban_handler_test_exception)
 
-      :telemetry.attach(
-        handler_id,
-        [:debt_stalker, :oban, :job, :stop],
-        fn _event, _measurements, metadata, _config ->
-          send(self(), {:oban_metric, metadata})
-        end,
-        nil
-      )
-
-      on_exit(fn -> :telemetry.detach(handler_id) end)
-
-      job = %Oban.Job{
-        id: 903,
-        args: %{"application_id" => Ecto.UUID.generate()},
-        worker: "DebtStalker.Workers.RiskEvaluationWorker",
-        queue: "default",
-        attempt: 1,
-        max_attempts: 3,
-        errors: [%{"error" => "transient"}]
-      }
+      job =
+        exhausted_job(id: 903, application_id: Ecto.UUID.generate(), attempt: 1, max_attempts: 3)
 
       :telemetry.execute(
         [:oban, :job, :exception],
@@ -80,5 +68,70 @@ defmodule DebtStalker.ObanTelemetryHandlerTest do
 
       refute Repo.get_by(DeadLetterJob, job_id: 903)
     end
+
+    test "captures job when retry budget is exhausted" do
+      job = exhausted_job(id: 901, application_id: Ecto.UUID.generate())
+
+      :telemetry.execute(
+        [:oban, :job, :exception],
+        %{duration: 1},
+        %{job: job, worker: job.worker, attempt: job.attempt}
+      )
+
+      assert %DeadLetterJob{job_id: 901, application_id: app_id} =
+               Repo.get_by(DeadLetterJob, job_id: 901)
+
+      assert is_binary(app_id)
+      assert DeadLetter.count() >= 1
+    end
+
+    test "does not capture job when retries remain" do
+      job =
+        exhausted_job(id: 902, application_id: Ecto.UUID.generate(), attempt: 1, max_attempts: 3)
+
+      :telemetry.execute(
+        [:oban, :job, :exception],
+        %{duration: 1},
+        %{job: job, worker: job.worker, attempt: job.attempt}
+      )
+
+      refute Repo.get_by(DeadLetterJob, job_id: 902)
+    end
+  end
+
+  defp attach_metric_listener(handler_id) do
+    :telemetry.attach(
+      handler_id,
+      [:debt_stalker, :oban, :job, :stop],
+      fn _event, _measurements, metadata, _config ->
+        send(self(), {:oban_metric, metadata})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+  end
+
+  defp exhausted_job(opts) do
+    id = Keyword.fetch!(opts, :id)
+    application_id = Keyword.fetch!(opts, :application_id)
+    attempt = Keyword.get(opts, :attempt, 3)
+    max_attempts = Keyword.get(opts, :max_attempts, 3)
+
+    %Oban.Job{
+      id: id,
+      args: %{"application_id" => application_id},
+      worker: "DebtStalker.Workers.RiskEvaluationWorker",
+      queue: "default",
+      attempt: attempt,
+      max_attempts: max_attempts,
+      errors: [
+        %{
+          "at" => DateTime.utc_now() |> DateTime.to_iso8601(),
+          "attempt" => attempt,
+          "error" => "[runtime_error] simulated failure"
+        }
+      ]
+    }
   end
 end
