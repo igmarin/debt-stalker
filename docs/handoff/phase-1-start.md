@@ -48,7 +48,7 @@ This project has Elixir/Phoenix skills installed. Invoke them before writing cod
 4. Commit with conventional commit format + "Generated with Devin" footer
 5. Move issue to done: `gh issue edit <num> --remove-label "in-progress" --add-label "done"` then `gh issue close <num>`
 6. **Postman sub-tasks**: [API] tasks must update `docs/postman/debt-stalker.json` as part of the task
-7. When all Phase 1 issues are done, create one PR from `phase-1-es-mx` → `main`
+7. **Create one PR per issue** — branch from `main`, implement, push, open PR with `phase-1` label. Do NOT accumulate an entire phase into a single PR.
 
 ## Phase 1 TDD is a HARD GATE
 [DOMAIN], [ASYNC], [API], [WEB] tasks CANNOT have implementation code written until:

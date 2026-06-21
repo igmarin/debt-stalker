@@ -558,7 +558,7 @@ Every domain/worker/API/web task follows this loop:
 7. Iterate (max 3 rounds total: implement → review → fix → review → fix → review)
 8. Commit only when rs-guard returns APPROVE or COMMENT
 9. PR triggers rs-guard + CodeRabbit in CI (second opinion)
-10. Human reviews final PR (validates end result + Postman/test flow)
+10. Human reviews final PR (validates end result + Postman/test flow) — **one PR per issue**, tagged with `phase-N` label
 ```
 
 **TDD-exempt tasks** (no test-first gate, but tests still required where applicable): `[CHORE]`, `[INFRA]`, `[DB]` migrations, `[OPS]`, `[DOCS]`.

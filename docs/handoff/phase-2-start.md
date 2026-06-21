@@ -48,7 +48,7 @@ This project has Elixir/Phoenix skills installed. Invoke them before writing cod
 4. Commit with conventional commit format + "Generated with Devin" footer
 5. Move issue to done: `gh issue edit <num> --remove-label "in-progress" --add-label "done"` then `gh issue close <num>`
 6. **Postman sub-tasks**: T13.1 (rate limiting) + T19.1 (finalization) must update `docs/postman/debt-stalker.json`
-7. When all Phase 2 issues are done, create one PR from `phase-2-resilience` → `main`
+7. **Create one PR per issue** — branch from `main`, implement, push, open PR with `phase-2` label. Do NOT accumulate an entire phase into a single PR.
 
 ## Phase 2 TDD is a HARD GATE
 [OBS], [RES], [API], [PERF], [SEC] tasks CANNOT have implementation code written until:

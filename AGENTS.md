@@ -114,6 +114,16 @@ PRs are automatically reviewed by:
 1. **rs-guard** (`.github/workflows/rs-guard-review.yml`) — posts structured review.
 2. **CodeRabbit** (`.coderabbit.yaml`) — posts inline suggestions.
 
+### PR Strategy
+
+**One PR per issue, NOT one PR per phase.**
+
+- Each issue gets its own branch from `main` and its own PR.
+- Tag every PR with the appropriate `phase-N` label so it can be traced back to the roadmap.
+- Keep PRs small and focused — a 7,000-line PR is unreviewable and defeats the purpose of code review.
+- If an issue depends on another issue's code, wait for the dependency PR to merge first.
+- Phase-level reports and ADRs are written after all issues in the phase are merged.
+
 ---
 
 ## 5. Error Handling Strategy

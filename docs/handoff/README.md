@@ -14,8 +14,8 @@ Copy the file contents into a fresh Devin session to begin work.
 | File | Phase | When to use |
 |------|-------|-------------|
 | `phase-0-start.md` | Phase 0 — Platform Foundation | Starting the project skeleton + tooling |
-| `phase-1-start.md` | Phase 1 — ES + MX Vertical Slice | After Phase 0 PR is merged |
-| `phase-2-start.md` | Phase 2 — Resilience & Production Hardening | After Phase 1 PR is merged |
+| `phase-1-start.md` | Phase 1 — ES + MX Vertical Slice | After Phase 0 issues are merged |
+| `phase-2-start.md` | Phase 2 — Resilience & Production Hardening | After Phase 1 issues are merged |
 
 ## Creating future handoffs
 
