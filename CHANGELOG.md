@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - RiskEvaluationWorker: automated risk assessment using country rules + provider scores
   - ExternalNotificationWorker: simulated notification delivery for terminal statuses
   - JWT authentication (Joken): read/update roles with AuthPlug + RequireRolePlug
-  - REST API: /api/applications (CRUD), /api/applications/:id/status (PATCH), /api/auth/token
-  - Webhook endpoint: /api/webhooks/provider with HMAC verification + idempotency
+  - REST API: `GET /api/health`, `/api/applications` (CRUD), `/api/applications/:id/status` (PATCH), `/api/auth/token`
+  - Webhook endpoint: `/api/webhooks/provider-confirmations` with HMAC verification + idempotency
   - LiveView: applications list (filters, cursor pagination, PubSub), detail view, create form
   - Cloak encryption (AES-256-GCM) for identity_document at rest
   - PII redaction: API responses and logs show last-4 only
@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - k8s manifests: namespace, deployment, service, configmap, secrets, migration job
   - Postman collection: all Phase 1 endpoints with auto-token scripts
   - Concurrency integration test: verifies SKIP LOCKED parallel safety
+
+- **Phase 2 (partial) — Resilience & Observability**
+  - Telemetry events for HTTP, Ecto, Oban, provider calls, and status transitions
+  - Prometheus metrics exporter (port 9568) and LiveDashboard (`/dev/dashboard` in dev)
+  - Business metrics: applications created, Oban jobs, provider latency, status transitions
+  - Dead-letter table, `DeadLetter` context, and Oban exhaustion capture wiring
+  - Provider circuit breaker module wired into provider fetches
+  - Test coverage gate at 85%
+  - Custom Credo checks for architecture contracts: no country branching outside country/provider modules, public `@spec` enforcement, and no committed `IO.inspect`
 
 ## [0.1.0] - 2026-06-20
 

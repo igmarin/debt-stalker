@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Debt Stalker — Phase 1",
-    "description": "Complete API collection for the ES+MX vertical slice.\n\nSetup:\n1. Run `make up && make setup && make run`\n2. Execute 'Get Token' request first to populate {{token}} variable\n3. All other requests use {{token}} automatically",
+    "name": "Debt Stalker — API",
+    "description": "API collection for the ES+MX vertical slice (Phase 1 + health).\n\nSetup:\n1. Run `make up && make setup && make run`\n2. Execute 'Get Token' request first to populate {{token}} variable\n3. All other requests use {{token}} automatically",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,6 +19,31 @@
     }
   ],
   "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is ok', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Auth",
       "item": [

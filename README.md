@@ -54,6 +54,9 @@ Visit [`localhost:4000`](http://localhost:4000) for the LiveView UI.
 ### API Usage
 
 ```bash
+# Health check (public)
+curl http://localhost:4000/api/health
+
 # Get a JWT token
 curl -X POST http://localhost:4000/api/auth/token -H 'Content-Type: application/json' -d '{"role":"update"}'
 
@@ -74,12 +77,22 @@ curl -X PATCH http://localhost:4000/api/applications/<id>/status \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"status":"pending_risk"}'
+
+# List with filters (cursor, country, status, date range)
+curl "http://localhost:4000/api/applications?country=ES&limit=10" \
+  -H 'Authorization: Bearer <token>'
 ```
+
+### Observability (Phase 2)
+
+- **Prometheus metrics**: `http://localhost:9568/metrics` (when the app is running)
+- **LiveDashboard** (dev): `http://localhost:4000/dev/dashboard` — requires `dev_routes` enabled
 
 ## Development
 
 ```bash
 make test       # Run test suite
+make coverage   # Run tests with 85% coverage gate
 make lint       # Credo strict
 make dialyzer   # Type checking
 make check      # format + credo + dialyzer
@@ -93,7 +106,7 @@ make seed       # Create 10 demo apps + print JWT tokens
 
 ## Security
 
-- **JWT authentication**: All API endpoints (except `/api/auth/token`) require Bearer token
+- **JWT authentication**: Protected API endpoints require Bearer token; public: `GET /api/health`, `POST /api/auth/token`
 - **Role-based access**: `read` (list/get) vs `update` (create/patch status)
 - **PII encryption**: `identity_document` encrypted at rest with AES-256-GCM via Cloak
 - **Redaction**: API responses and logs show document as `****XXXX` (last-4 only)
