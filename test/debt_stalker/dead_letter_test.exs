@@ -39,7 +39,9 @@ defmodule DebtStalker.DeadLetterTest do
       assert dlq_entry.job_id == 42
       assert dlq_entry.attempt == 3
       assert dlq_entry.last_error =~ "something went wrong"
-      assert dlq_entry.args == job_args
+      # Safe keys are preserved
+      assert dlq_entry.args["application_id"] == "app-123"
+      assert dlq_entry.args["event_type"] == "application.created"
     end
 
     test "is idempotent — capturing the same job twice does not create duplicates" do
@@ -72,9 +74,32 @@ defmodule DebtStalker.DeadLetterTest do
       assert dlq_entry.application_id == nil
       assert dlq_entry.worker == "DebtStalker.Workers.EventDispatcherWorker"
     end
+
+    test "redacts sensitive keys (PII) from args before storage" do
+      job_args = %{
+        "application_id" => "app-pii",
+        "identity_document" => "12345678A",
+        "full_name" => "John Doe",
+        "event_type" => "application.created"
+      }
+
+      job = make_job(88, job_args, "DebtStalker.Workers.RiskEvaluationWorker", "error")
+
+      {:ok, dlq_entry} = DeadLetter.capture(job)
+
+      # Sensitive keys are redacted
+      assert dlq_entry.args["identity_document"] == "[REDACTED]"
+      assert dlq_entry.args["full_name"] == "[REDACTED]"
+      # Safe keys are preserved
+      assert dlq_entry.args["application_id"] == "app-pii"
+      assert dlq_entry.args["event_type"] == "application.created"
+      # Raw PII is not stored
+      refute dlq_entry.args["identity_document"] =~ "12345678"
+      refute dlq_entry.args["full_name"] =~ "John"
+    end
   end
 
-  describe "list/0" do
+  describe "list/1" do
     test "returns all dead-letter entries ordered by most recent first" do
       job1 =
         make_job(
@@ -99,6 +124,46 @@ defmodule DebtStalker.DeadLetterTest do
       entries = DeadLetter.list()
       assert length(entries) == 2
       assert hd(entries).application_id == "app-2"
+    end
+
+    test "supports cursor-based pagination with :before" do
+      Enum.each(1..5, fn i ->
+        job =
+          make_job(
+            i,
+            %{"application_id" => "app-#{i}"},
+            "DebtStalker.Workers.RiskEvaluationWorker",
+            "error"
+          )
+
+        {:ok, _} = DeadLetter.capture(job)
+      end)
+
+      # First page (default limit 50, so all 5)
+      page1 = DeadLetter.list()
+      assert length(page1) == 5
+
+      # Page before the last entry of page1
+      cursor = List.last(page1).id
+      page2 = DeadLetter.list(before: cursor)
+      assert page2 == []
+    end
+
+    test "respects :limit option" do
+      Enum.each(1..5, fn i ->
+        job =
+          make_job(
+            i,
+            %{"application_id" => "app-#{i}"},
+            "DebtStalker.Workers.RiskEvaluationWorker",
+            "error"
+          )
+
+        {:ok, _} = DeadLetter.capture(job)
+      end)
+
+      page = DeadLetter.list(limit: 2)
+      assert length(page) == 2
     end
   end
 
