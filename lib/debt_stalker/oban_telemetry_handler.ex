@@ -62,6 +62,7 @@ defmodule DebtStalker.ObanTelemetryHandler do
   def handle_event([:oban, :job, :exception], _measurements, metadata, _config) do
     worker = to_string(metadata.worker)
     DebtStalker.Telemetry.emit_oban_job(worker, :error)
+    maybe_capture_exhausted_job(metadata)
   end
 
   # --- GenServer callbacks ---
@@ -84,4 +85,34 @@ defmodule DebtStalker.ObanTelemetryHandler do
   defp classify_result(:ok), do: :success
   defp classify_result({:ok, _}), do: :success
   defp classify_result(_), do: :error
+
+  @spec maybe_capture_exhausted_job(map()) :: :ok
+  defp maybe_capture_exhausted_job(%{job: %Oban.Job{} = job}) do
+    if exhausted?(job) do
+      case DebtStalker.DeadLetter.capture(job) do
+        {:ok, _entry} ->
+          :ok
+
+        {:error, changeset} ->
+          require Logger
+
+          Logger.error("Failed to capture dead-letter job",
+            job_id: job.id,
+            worker: job.worker,
+            errors: inspect(changeset.errors)
+          )
+
+          :ok
+      end
+    else
+      :ok
+    end
+  end
+
+  defp maybe_capture_exhausted_job(_metadata), do: :ok
+
+  @spec exhausted?(Oban.Job.t()) :: boolean()
+  defp exhausted?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
+    attempt >= max_attempts
+  end
 end
