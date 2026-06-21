@@ -126,6 +126,7 @@ make seed       # Create 10 demo apps + print JWT tokens
 - [Phase 0 — Foundation](docs/phases/phase-0.md)
 - [Phase 1 — ES+MX Vertical](docs/phases/phase-1.md)
 - [Phase 2 — Resilience](docs/phases/phase-2.md)
+- [How to Add a Country](docs/how-to-add-country.md) — Step-by-step integration recipe
 - [AGENTS.md](AGENTS.md) — Development conventions
 - [ADRs](docs/adr/) — Architecture Decision Records
 - [CHANGELOG](CHANGELOG.md) — Release history
