@@ -15,6 +15,7 @@ defmodule DebtStalker.Application do
       {Phoenix.PubSub, name: DebtStalker.PubSub},
       DebtStalker.Countries.Registry,
       {Oban, Application.fetch_env!(:debt_stalker, Oban)},
+      prometheus_metrics_reporter(),
       DebtStalkerWeb.Endpoint
     ]
 
@@ -30,5 +31,14 @@ defmodule DebtStalker.Application do
   def config_change(changed, _new, removed) do
     DebtStalkerWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  @doc false
+  @spec prometheus_metrics_reporter() :: {module(), keyword()} | nil
+  defp prometheus_metrics_reporter do
+    metrics = DebtStalkerWeb.Telemetry.prometheus_metrics()
+    port = Application.get_env(:debt_stalker, :prometheus_metrics_port, 9568)
+
+    {TelemetryMetricsPrometheus, metrics: metrics, port: port}
   end
 end

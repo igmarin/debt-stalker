@@ -79,7 +79,88 @@ defmodule DebtStalkerWeb.Telemetry do
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      summary("vm.total_run_queue_lengths.io"),
+
+      # Custom: Status transition metrics
+      counter("debt_stalker.status_transition.stop.count",
+        event_name: [:debt_stalker, :status_transition, :stop],
+        tags: [:to_status],
+        description: "Number of status transitions by target status"
+      ),
+
+      # Custom: Provider call metrics
+      counter("debt_stalker.provider.fetch.stop.count",
+        event_name: [:debt_stalker, :provider, :fetch, :stop],
+        tags: [:outcome, :country],
+        description: "Number of provider calls by outcome and country"
+      )
+    ]
+  end
+
+  @doc """
+  Returns metrics definitions compatible with TelemetryMetricsPrometheus.
+
+  Prometheus does not support `summary` metric types from Telemetry.Metrics.
+  This function converts the summary metrics to `distribution` metrics and
+  keeps `counter` and `sum` metrics as-is.
+
+  Used by the Prometheus reporter in the application supervision tree.
+  """
+  @spec prometheus_metrics() :: [Telemetry.Metrics.t()]
+  def prometheus_metrics do
+    [
+      # Phoenix Metrics (distribution for Prometheus)
+      distribution("phoenix.endpoint.stop.duration",
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [1, 5, 10, 50, 100, 500, 1000]]
+      ),
+      distribution("phoenix.router_dispatch.stop.duration",
+        tags: [:route],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [1, 5, 10, 50, 100, 500, 1000]]
+      ),
+      distribution("phoenix.router_dispatch.exception.duration",
+        tags: [:route],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [1, 5, 10, 50, 100, 500, 1000]]
+      ),
+
+      # Database Metrics (distribution for Prometheus)
+      distribution("debt_stalker.repo.query.total_time",
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [0.1, 0.5, 1, 5, 10, 50, 100, 500]],
+        description: "The sum of the other measurements"
+      ),
+      distribution("debt_stalker.repo.query.query_time",
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [0.1, 0.5, 1, 5, 10, 50, 100, 500]],
+        description: "The time spent executing the query"
+      ),
+      distribution("debt_stalker.repo.query.queue_time",
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [0.1, 0.5, 1, 5, 10, 50, 100]],
+        description: "The time spent waiting for a database connection"
+      ),
+
+      # VM Metrics (last_value for Prometheus)
+      last_value("vm.memory.total", unit: {:byte, :kilobyte}),
+      last_value("vm.total_run_queue_lengths.total"),
+      last_value("vm.total_run_queue_lengths.cpu"),
+      last_value("vm.total_run_queue_lengths.io"),
+
+      # Custom: Status transition metrics
+      counter("debt_stalker.status_transition.stop.count",
+        event_name: [:debt_stalker, :status_transition, :stop],
+        tags: [:to_status],
+        description: "Number of status transitions by target status"
+      ),
+
+      # Custom: Provider call metrics
+      counter("debt_stalker.provider.fetch.stop.count",
+        event_name: [:debt_stalker, :provider, :fetch, :stop],
+        tags: [:outcome, :country],
+        description: "Number of provider calls by outcome and country"
+      )
     ]
   end
 
