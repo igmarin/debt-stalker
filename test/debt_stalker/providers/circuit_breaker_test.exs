@@ -193,6 +193,60 @@ defmodule DebtStalker.Providers.CircuitBreakerTest do
       assert successes == 1
       assert rejected == 4
     end
+
+    test "trial slot is released when the caller crashes before reporting" do
+      config = %{
+        failure_threshold: 2,
+        cooldown_ms: 10,
+        retry_budget: 1,
+        base_backoff_ms: 1
+      }
+
+      {:ok, pid} = CircuitBreaker.start_link(config)
+      CircuitBreaker.set_adapter(pid, {DebtStalker.Providers.Behaviour, :fetch, ["ES"]})
+
+      on_exit(fn ->
+        try do
+          GenServer.stop(pid, :normal)
+        catch
+          :exit, _ -> :ok
+        end
+      end)
+
+      # Open the circuit.
+      Enum.each(1..2, fn _ ->
+        CircuitBreaker.call(pid, fn -> {:error, :timeout} end)
+      end)
+
+      assert CircuitBreaker.state(pid) == :open
+
+      # Wait for cooldown.
+      Process.sleep(50)
+
+      # Spawn a caller that gets the trial slot and then is killed before
+      # it can call report_result. This simulates a process crash.
+      trial_holder = spawn(fn -> CircuitBreaker.call(pid, fn -> Process.sleep(5000) end) end)
+
+      # Give the caller time to acquire the trial slot via check_access.
+      Process.sleep(20)
+
+      # Kill the caller — it will never call report_result.
+      Process.exit(trial_holder, :kill)
+
+      # The GenServer should receive the :DOWN message and reset the slot,
+      # transitioning back to :open so the circuit is not permanently stuck.
+      Process.sleep(50)
+
+      assert CircuitBreaker.state(pid) == :open
+
+      # After another cooldown, the circuit should allow a new trial —
+      # proving the slot was released and the circuit recovered.
+      Process.sleep(50)
+
+      result = CircuitBreaker.call(pid, fn -> {:ok, :recovered} end)
+      assert result == {:ok, :recovered}
+      assert CircuitBreaker.state(pid) == :closed
+    end
   end
 
   describe "telemetry" do

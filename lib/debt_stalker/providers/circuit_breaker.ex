@@ -168,7 +168,8 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       failure_count: 0,
       opened_at: nil,
       adapter: nil,
-      trial_in_flight: false
+      trial_in_flight: false,
+      trial_holder: nil
     }
 
     {:ok, state}
@@ -190,18 +191,23 @@ defmodule DebtStalker.Providers.CircuitBreaker do
   end
 
   @impl true
-  def handle_call(:check_access, _from, state) do
+  def handle_call(:check_access, {caller_pid, _tag}, state) do
     case check_and_grant_access(state) do
       {:circuit_open, state} ->
         {:reply, :circuit_open, state}
 
       {:allowed, state} ->
+        # If we just granted a half-open trial slot, monitor the caller so
+        # we can reset the slot if it crashes before reporting the result.
+        state = maybe_monitor_trial_caller(state, caller_pid)
         {:reply, :allowed, state}
     end
   end
 
   @impl true
   def handle_call({:report_result, success?}, _from, state) do
+    state = clear_trial_monitor(state)
+
     new_state =
       if success? do
         record_success(state)
@@ -214,11 +220,64 @@ defmodule DebtStalker.Providers.CircuitBreaker do
 
   @impl true
   def handle_call(:reset, _from, state) do
+    state = clear_trial_monitor(state)
+
     {:reply, :ok,
      %{state | circuit_state: :closed, failure_count: 0, opened_at: nil, trial_in_flight: false}}
   end
 
+  @impl true
+  def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
+    case state.trial_holder do
+      {^pid, ^ref} ->
+        # The trial caller crashed before reporting. Reset the slot and
+        # transition to open so the circuit doesn't get stuck.
+        state = %{state | trial_in_flight: false, trial_holder: nil}
+
+        new_state =
+          if state.circuit_state == :half_open do
+            transition_to_open(state)
+          else
+            state
+          end
+
+        {:noreply, new_state}
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
   # --- Private: state transitions ---
+
+  # Monitors the caller when a half-open trial slot is granted, so the
+  # GenServer can reset the slot if the caller crashes before reporting.
+  # In closed state there is no trial slot to guard, so no monitor is needed.
+  @spec maybe_monitor_trial_caller(map(), pid()) :: map()
+  defp maybe_monitor_trial_caller(
+         %{circuit_state: :half_open, trial_in_flight: true} = state,
+         caller_pid
+       ) do
+    ref = Process.monitor(caller_pid)
+    %{state | trial_holder: {caller_pid, ref}}
+  end
+
+  defp maybe_monitor_trial_caller(state, _caller_pid), do: state
+
+  # Demonitors the trial caller and clears the holder. Called on report_result
+  # and reset. Safe to call when no monitor is active.
+  @spec clear_trial_monitor(map()) :: map()
+  defp clear_trial_monitor(%{trial_holder: {_pid, ref}} = state) do
+    Process.demonitor(ref, [:flush])
+    %{state | trial_holder: nil}
+  end
+
+  defp clear_trial_monitor(state), do: state
 
   # Closed: always allow.
   defp check_and_grant_access(%{circuit_state: :closed} = state) do
@@ -297,7 +356,8 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       | circuit_state: :open,
         failure_count: 0,
         opened_at: System.monotonic_time(:millisecond),
-        trial_in_flight: false
+        trial_in_flight: false,
+        trial_holder: nil
     }
   end
 
@@ -320,7 +380,14 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       }
     )
 
-    %{state | circuit_state: :closed, failure_count: 0, opened_at: nil, trial_in_flight: false}
+    %{
+      state
+      | circuit_state: :closed,
+        failure_count: 0,
+        opened_at: nil,
+        trial_in_flight: false,
+        trial_holder: nil
+    }
   end
 
   defp extract_country(%{adapter: {_, _, [country | _]}}), do: country
