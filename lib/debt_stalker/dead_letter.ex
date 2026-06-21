@@ -199,16 +199,39 @@ defmodule DebtStalker.DeadLetter do
   end
 
   defp do_reenqueue(entry) do
-    with {:ok, worker_module} <- resolve_worker(entry.worker),
-         {:ok, new_job} <- insert_reenqueued_job(worker_module, entry),
+    case resolve_worker(entry.worker) do
+      {:ok, worker_module} ->
+        transactional_reenqueue(worker_module, entry)
+
+      {:error, :unknown_worker} ->
+        {:error, :unknown_worker}
+    end
+  end
+
+  defp transactional_reenqueue(worker_module, entry) do
+    # Wrap insert + mark in a transaction so both succeed or both roll back.
+    # This prevents duplicate Oban jobs if the mark_reenqueued update fails.
+    Repo.transaction(fn ->
+      case insert_then_mark(worker_module, entry) do
+        {:ok, new_job} -> new_job
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> normalize_transaction_result()
+  end
+
+  defp insert_then_mark(worker_module, entry) do
+    with {:ok, new_job} <- insert_reenqueued_job(worker_module, entry),
          {:ok, _updated} <- mark_reenqueued(entry) do
       {:ok, new_job}
     else
-      {:error, :unknown_worker} -> {:error, :unknown_worker}
       {:error, :insert_failed} -> {:error, :insert_failed}
       {:error, :update_failed} -> {:error, :update_failed}
     end
   end
+
+  defp normalize_transaction_result({:ok, job}), do: {:ok, job}
+  defp normalize_transaction_result({:error, reason}), do: {:error, reason}
 
   @doc """
   Re-enqueues all pending (not yet re-enqueued) dead-letter entries.
