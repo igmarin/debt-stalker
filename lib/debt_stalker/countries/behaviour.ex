@@ -32,4 +32,6 @@ defmodule DebtStalker.Countries.Behaviour do
 
   @doc "Returns a short example/hint for the identity document field in UI forms."
   @callback document_hint() :: String.t()
+
+  @optional_callbacks [document_hint: 0]
 end

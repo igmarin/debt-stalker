@@ -6,7 +6,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
   use DebtStalkerWeb, :live_view
 
   alias DebtStalker.Applications
-  alias DebtStalker.Countries.Registry, as: CountriesRegistry
+  alias DebtStalker.Countries
 
   @doc "Mounts the new application form LiveView."
   @impl true
@@ -43,7 +43,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
     socket =
       socket
       |> assign(:form, to_form(params, as: "application"))
-      |> assign(:document_hint, document_hint(params["country"]))
+      |> assign(:document_hint, Countries.get_document_hint(params["country"]))
 
     {:noreply, socket}
   end
@@ -88,15 +88,6 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
-  end
-
-  defp document_hint(""), do: ""
-
-  defp document_hint(country_code) do
-    case CountriesRegistry.lookup(country_code) do
-      {:ok, module} -> module.document_hint()
-      {:error, :unsupported_country} -> ""
-    end
   end
 
   @doc "Renders the new application form UI."
