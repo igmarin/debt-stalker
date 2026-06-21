@@ -11,6 +11,24 @@ defmodule DebtStalkerWeb.ApplicationCreateLiveTest do
       assert html =~ "Full Name"
     end
 
+    test "shows country-specific document hint when country is selected", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/applications/new")
+
+      html =
+        view
+        |> form("#create-form", %{"application" => %{"country" => "ES"}})
+        |> render_change()
+
+      assert html =~ "DNI"
+
+      html =
+        view
+        |> form("#create-form", %{"application" => %{"country" => "MX"}})
+        |> render_change()
+
+      assert html =~ "CURP"
+    end
+
     test "creates application and redirects", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/applications/new")
 

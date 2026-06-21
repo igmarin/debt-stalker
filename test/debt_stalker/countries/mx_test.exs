@@ -147,4 +147,10 @@ defmodule DebtStalker.Countries.MXTest do
              })
     end
   end
+
+  describe "document_hint/0" do
+    test "returns a CURP example" do
+      assert MX.document_hint() =~ "CURP"
+    end
+  end
 end

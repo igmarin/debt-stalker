@@ -63,6 +63,11 @@ defmodule DebtStalker.Countries.ES do
     }
   end
 
+  @doc "Returns a short document hint for Spanish forms."
+  @impl true
+  @spec document_hint() :: String.t()
+  def document_hint, do: "12345678Z (DNI)"
+
   # Private
 
   defp parse_dni(document) when byte_size(document) == 9 do

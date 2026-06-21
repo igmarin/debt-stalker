@@ -6,6 +6,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
   use DebtStalkerWeb, :live_view
 
   alias DebtStalker.Applications
+  alias DebtStalker.Countries.Registry, as: CountriesRegistry
 
   @doc "Mounts the new application form LiveView."
   @impl true
@@ -29,6 +30,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
       )
       |> assign(:errors, %{})
       |> assign(:submitted, false)
+      |> assign(:document_hint, "")
 
     {:ok, socket}
   end
@@ -38,7 +40,12 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("validate", %{"application" => params}, socket) do
-    {:noreply, assign(socket, :form, to_form(params, as: "application"))}
+    socket =
+      socket
+      |> assign(:form, to_form(params, as: "application"))
+      |> assign(:document_hint, document_hint(params["country"]))
+
+    {:noreply, socket}
   end
 
   def handle_event("save", %{"application" => params}, socket) do
@@ -81,6 +88,15 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
+  end
+
+  defp document_hint(""), do: ""
+
+  defp document_hint(country_code) do
+    case CountriesRegistry.lookup(country_code) do
+      {:ok, module} -> module.document_hint()
+      {:error, :unsupported_country} -> ""
+    end
   end
 
   @doc "Renders the new application form UI."
@@ -128,11 +144,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
             name="application[identity_document]"
             value={@form.params["identity_document"]}
             class="mt-1 block w-full rounded border px-3 py-2"
-            placeholder={
-              if @form.params["country"] == "ES",
-                do: "12345678Z (DNI)",
-                else: "GARC850101HDFRRL09 (CURP)"
-            }
+            placeholder={@document_hint}
           />
           <%= if @errors[:identity_document] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:identity_document], ", ")}</p>

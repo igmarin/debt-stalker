@@ -119,6 +119,12 @@ defmodule DebtStalker.Countries.ESTest do
     end
   end
 
+  describe "document_hint/0" do
+    test "returns a DNI example" do
+      assert ES.document_hint() =~ "DNI"
+    end
+  end
+
   # Helper: compute the DNI checksum letter
   defp dni_checksum_letter(number) do
     letters = "TRWAGMYFPDXBNJZSQVHLCKE"
