@@ -163,6 +163,7 @@ PRs are automatically reviewed by:
 | `make seed` | Run seeds |
 | `make run` | Start Phoenix server |
 | `make test` | Run full test suite |
+| `make coverage` | Run tests with coverage gate (85% threshold) |
 | `make format` | Format code |
 | `make lint` | Run `mix credo --strict` |
 | `make dialyzer` | Run dialyzer |
@@ -175,7 +176,7 @@ mix format --check-formatted && \
 mix compile --warnings-as-errors && \
 mix credo --strict && \
 mix dialyzer && \
-mix test
+mix test --cover
 ```
 
 ---
