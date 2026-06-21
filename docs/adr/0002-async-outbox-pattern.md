@@ -35,5 +35,7 @@ Use **Postgres triggers** that insert into `application_events` (outbox) after I
 
 **Mitigations:**
 - Document all triggers in migration files with clear comments
-- EventDispatcherWorker runs frequently (every 5s via Oban cron)
+- EventDispatcherWorker runs every minute via Oban cron (`Oban.Plugins.Cron`)
+- Events are marked `processed_at` only **after** successful dispatch — failed dispatches remain unprocessed for retry on the next run
 - Integration test verifies the full path: insert → trigger → event → worker
+- Structured JSON logging (`logger_json`) on every dispatch with `event_type`, `event_count`, `worker` metadata

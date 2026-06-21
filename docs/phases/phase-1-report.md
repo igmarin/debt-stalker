@@ -51,9 +51,10 @@ Phase 1 delivers a fully functional ES + MX credit application vertical slice wi
 ```
 INSERT credit_application
   → AFTER INSERT trigger → application_events row
-    → EventDispatcherWorker (cron, SKIP LOCKED)
-      → RiskEvaluationWorker (evaluate + transition)
+    → EventDispatcherWorker (Oban cron, SKIP LOCKED, mark-after-dispatch)
+      → RiskEvaluationWorker (delegates to DebtStalker.Risk context)
       → ExternalNotificationWorker (terminal statuses)
+      → WebhookProcessingWorker (inbound webhook status updates)
 ```
 
 ### Status Machine
@@ -71,11 +72,13 @@ submitted → pending_risk → approved
 
 ## Test Coverage
 
-- **93+ tests** (unit + integration)
+- **219 tests** + 2 property-based tests (unit + integration)
 - Property-based tests for document validation (StreamData)
 - Concurrency test for SKIP LOCKED parallel safety
-- LiveView tests (mount, filter, PubSub update, create form)
-- API controller tests (auth, CRUD, validation, status transitions)
+- LiveView tests (mount, filter, PubSub update, create form, status update)
+- API controller tests (auth, CRUD, validation, status transitions, date filtering)
+- Structured logging tests (JSON format, PII redaction, metadata)
+- Risk context tests (ES + MX thresholds, edge cases)
 
 ## Security Measures
 
@@ -95,6 +98,8 @@ submitted → pending_risk → approved
 - k8s manifests not deployed to real cluster
 - No DLQ for failed events
 - LiveView not authenticated (public access to UI)
+- No AuditWorker dispatched from EventDispatcher (audit logs written synchronously in Ecto.Multi)
+- Provider adapter map hardcoded (requires provider registry in Phase 2)
 
 ## How to Demo
 
@@ -154,15 +159,63 @@ curl -X POST localhost:4000/api/auth/token -H 'Content-Type: application/json' -
 | ID | Priority | Note |
 |----|----------|------|
 | GAP-3 | LOW | No AuditWorker dispatched from EventDispatcher. Audit logs are written synchronously in `Ecto.Multi` — functionally correct but diverges from documented 5-worker design. |
-| GAP-4 | LOW | Webhook endpoint path is `/api/webhooks/provider` vs spec's `/api/webhooks/provider-confirmations`. Internal naming only. |
 | ISSUE-7 | LOW | Provider adapter map is hardcoded (`@provider_adapters`). Adding a country requires updating both the country registry config AND this map. Consider a provider registry in Phase 2. |
 
-### Quality Metrics After Review
+### Round 2 Review (2026-06-21)
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Tests | 133 | 186 |
-| Credo warnings | 0 | 0 |
-| Dialyzer errors | 0 | 0 |
-| Spec compliance gaps | 5 | 0 (critical) |
-| Edge case coverage | Basic | Comprehensive |
+**Reviewers:** Code review agent (structured review)
+
+#### Critical Findings — Fixed
+
+| ID | Finding | Resolution |
+|----|---------|------------|
+| R2-C1 | No Oban cron schedule for `EventDispatcherWorker` — outbox never drained in production | Added `Oban.Plugins.Cron` config with `* * * * *` schedule |
+| R2-C2 | `perform_status_update` didn't broadcast to `applications:list` — LiveView list never updated on status change | Added `PubSub.broadcast` to `applications:list` topic |
+| R2-C3 | `ApplicationDetailLive` had no status update form — T7.2 AC not met | Added `allowed_transitions/1` + form + `handle_event("update_status", ...)` |
+
+#### High Findings — Fixed
+
+| ID | Finding | Resolution |
+|----|---------|------------|
+| R2-H1 | No structured logging despite `logger_json` dependency | Configured `logger_json` backend; added `Logger.info/warning/error` with metadata in 6 modules |
+| R2-H2 | Workers contained business logic (Code Org Contract §3.1 violation) | Extracted `DebtStalker.Risk` context from `RiskEvaluationWorker` |
+| R2-H3 | Events marked processed before dispatch — data loss risk | Restructured to SELECT → dispatch → mark processed individually after success |
+| R2-H4 | `RiskEvaluationWorker` inconsistent error handling (crash-on-match + silent-ignore) | Rewrote with `with` chain + proper error clauses for `invalid_transition`, `unsupported_country` |
+
+#### Medium/Low Findings — Fixed
+
+| ID | Finding | Resolution |
+|----|---------|------------|
+| R2-M1 | Webhook path `/api/webhooks/provider` vs master plan's `/api/webhooks/provider-confirmations` | Updated router + Postman collection |
+| R2-M2 | Date range filtering (`date_from`/`date_to`) not exposed via API | Added `parse_date/1` + `build_filters` passthrough |
+| R2-M3 | `update_status/3` @spec missing `Ecto.Changeset.t()` error variant | Updated spec |
+| R2-M4 | Webhook response `{"status":"accepted"}` vs master plan's `{"received": true}` | Updated response shape |
+| R2-M5 | `CreditApplication.changeset` hardcoded `["ES", "MX"]` instead of using Registry | Now calls `Registry.supported_countries/0` |
+| R2-L1 | `import Ecto.Query` inside private functions (2 files) | Moved to module level |
+| R2-L2 | `WebhookProcessingWorker` didn't mark `webhook_events.processed` | Added `mark_webhook_processed/1` after successful status update |
+
+#### New Tests Added (33 new tests)
+
+| Test File | Coverage |
+|-----------|----------|
+| `risk_test.exs` | `DebtStalker.Risk.evaluate/1` — 10 tests: approved/rejected/additional_review for ES+MX, credit/buro score thresholds, missing provider_summary, invalid existing_debt, unsupported country |
+| `risk_evaluation_worker_test.exs` | Error handling: invalid_transition graceful handling, pending_risk transition edge cases |
+| `event_dispatcher_worker_test.exs` | Safe dispatch: failed dispatch leaves event unprocessed, events marked processed only after success |
+| `webhook_processing_worker_test.exs` | Status transition from webhook, marks webhook_events.processed, non-existent app, invalid transition |
+| `application_controller_test.exs` | Date filtering: date_from, date_to, future date_from returns empty |
+| `application_detail_live_test.exs` | Status update form: renders allowed transitions, invalid transitions hidden, valid submission, invalid submission |
+| `update_status_test.exs` | PubSub broadcast to `applications:list` topic |
+| `structured_logging_test.exs` | JSON log format, PII redaction, required metadata fields |
+
+### Quality Metrics After Round 2 Review
+
+| Metric | Round 1 Before | Round 1 After | Round 2 After |
+|--------|----------------|---------------|---------------|
+| Tests | 133 | 186 | 219 |
+| Properties | 2 | 2 | 2 |
+| Credo warnings | 0 | 0 | 0 |
+| Dialyzer errors | 0 | 0 | 0 |
+| Spec compliance gaps | 5 | 0 (critical) | 0 |
+| Edge case coverage | Basic | Comprehensive | Comprehensive + integration |
+| Structured logging | None | None | logger_json (all envs) |
+| Code Org compliance | Partial | Partial | Risk context extracted |

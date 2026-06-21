@@ -83,6 +83,53 @@ defmodule DebtStalkerWeb.Api.ApplicationControllerTest do
       assert %{"data" => data} = json_response(conn, 200)
       assert Enum.all?(data, &(&1["country"] == "ES"))
     end
+
+    test "filters by status", %{conn: conn} do
+      conn =
+        conn
+        |> auth_conn("read")
+        |> get("/api/applications", %{"status" => "submitted"})
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert Enum.all?(data, &(&1["status"] == "submitted"))
+    end
+
+    test "filters by date_from", %{conn: conn} do
+      today = Date.utc_today() |> Date.to_iso8601()
+
+      conn =
+        conn
+        |> auth_conn("read")
+        |> get("/api/applications", %{"date_from" => today})
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data != []
+    end
+
+    test "filters by date_to returns empty for future cutoff", %{conn: conn} do
+      future = Date.add(Date.utc_today(), 365) |> Date.to_iso8601()
+
+      conn =
+        conn
+        |> auth_conn("read")
+        |> get("/api/applications", %{"date_to" => future})
+
+      assert %{"data" => data} = json_response(conn, 200)
+      # All apps created today should be before future date
+      assert data != []
+    end
+
+    test "date_from in future returns empty list", %{conn: conn} do
+      future = Date.add(Date.utc_today(), 365) |> Date.to_iso8601()
+
+      conn =
+        conn
+        |> auth_conn("read")
+        |> get("/api/applications", %{"date_from" => future})
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data == []
+    end
   end
 
   describe "GET /api/applications/:id" do

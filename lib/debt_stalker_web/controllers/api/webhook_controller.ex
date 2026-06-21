@@ -6,6 +6,7 @@ defmodule DebtStalkerWeb.Api.WebhookController do
   """
   use DebtStalkerWeb, :controller
 
+  import Ecto.Query
   require Logger
 
   alias DebtStalker.Repo
@@ -49,8 +50,6 @@ defmodule DebtStalkerWeb.Api.WebhookController do
 
   defp check_idempotency(params) do
     payload_hash = :crypto.hash(:sha256, Jason.encode!(params)) |> Base.encode16(case: :lower)
-
-    import Ecto.Query
 
     exists =
       from(w in "webhook_events",
@@ -97,6 +96,6 @@ defmodule DebtStalkerWeb.Api.WebhookController do
       |> Oban.insert()
     end
 
-    conn |> put_status(200) |> json(%{status: "accepted"})
+    conn |> put_status(200) |> json(%{received: true})
   end
 end

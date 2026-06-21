@@ -120,7 +120,8 @@ defmodule DebtStalker.Applications do
   }
 
   @spec update_status(String.t(), String.t(), String.t()) ::
-          {:ok, CreditApplication.t()} | {:error, :not_found | :invalid_transition}
+          {:ok, CreditApplication.t()}
+          | {:error, :not_found | :invalid_transition | Ecto.Changeset.t()}
   def update_status(id, new_status, triggered_by) do
     case Repo.get(CreditApplication, id) do
       nil ->

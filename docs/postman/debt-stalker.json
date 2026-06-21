@@ -232,7 +232,7 @@
             "header": [
               {"key": "Content-Type", "value": "application/json"}
             ],
-            "url": "{{base_url}}/api/webhooks/provider",
+            "url": "{{base_url}}/api/webhooks/provider-confirmations",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"application_id\": \"{{application_id}}\",\n  \"status\": \"approved\",\n  \"source\": \"provider_es\"\n}"

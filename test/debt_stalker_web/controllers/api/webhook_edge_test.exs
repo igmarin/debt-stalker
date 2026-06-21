@@ -37,9 +37,9 @@ defmodule DebtStalkerWeb.Api.WebhookEdgeTest do
         |> put_req_header("x-webhook-signature", signature)
         |> put_req_header("content-type", "application/json")
         |> assign(:raw_body, body)
-        |> post("/api/webhooks/provider", payload)
+        |> post("/api/webhooks/provider-confirmations", payload)
 
-      assert json_response(conn, 200)["status"] == "accepted"
+      assert json_response(conn, 200)["received"] == true
     end
 
     test "invalid HMAC signature returns 401 when signature required", %{conn: conn} do
@@ -55,7 +55,7 @@ defmodule DebtStalkerWeb.Api.WebhookEdgeTest do
         conn
         |> put_req_header("x-webhook-signature", "invalid_signature_value")
         |> assign(:raw_body, "some body")
-        |> post("/api/webhooks/provider", %{
+        |> post("/api/webhooks/provider-confirmations", %{
           "application_id" => app.id,
           "status" => "pending_risk"
         })
@@ -72,7 +72,7 @@ defmodule DebtStalkerWeb.Api.WebhookEdgeTest do
 
       conn =
         conn
-        |> post("/api/webhooks/provider", %{
+        |> post("/api/webhooks/provider-confirmations", %{
           "application_id" => Ecto.UUID.generate(),
           "status" => "pending_risk"
         })
@@ -92,11 +92,11 @@ defmodule DebtStalkerWeb.Api.WebhookEdgeTest do
       }
 
       # First request
-      conn1 = post(conn, "/api/webhooks/provider", payload)
-      assert json_response(conn1, 200)["status"] == "accepted"
+      conn1 = post(conn, "/api/webhooks/provider-confirmations", payload)
+      assert json_response(conn1, 200)["received"] == true
 
       # Exact same payload → duplicate
-      conn2 = post(conn, "/api/webhooks/provider", payload)
+      conn2 = post(conn, "/api/webhooks/provider-confirmations", payload)
       assert json_response(conn2, 200)["status"] == "already_processed"
     end
   end

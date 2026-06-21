@@ -8,6 +8,7 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   """
   use Oban.Worker, queue: :notifications, max_attempts: 3
 
+  import Ecto.Query
   require Logger
 
   alias DebtStalker.Applications
@@ -47,8 +48,6 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   end
 
   defp ensure_not_duplicate(app_id, notification_type) do
-    import Ecto.Query
-
     exists =
       from(n in "notification_attempts",
         where: n.application_id == type(^app_id, :binary_id),

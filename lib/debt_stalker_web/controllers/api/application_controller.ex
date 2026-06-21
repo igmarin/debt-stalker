@@ -101,6 +101,8 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     |> maybe_put(:status, params["status"])
     |> maybe_put(:limit, parse_int(params["limit"]))
     |> maybe_put(:cursor, params["cursor"])
+    |> maybe_put(:date_from, parse_date(params["date_from"]))
+    |> maybe_put(:date_to, parse_date(params["date_to"]))
   end
 
   defp maybe_put(map, _key, nil), do: map
@@ -112,6 +114,15 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     case Integer.parse(str) do
       {int, _} -> int
       :error -> nil
+    end
+  end
+
+  defp parse_date(nil), do: nil
+
+  defp parse_date(str) when is_binary(str) do
+    case Date.from_iso8601(str) do
+      {:ok, date} -> date
+      {:error, _} -> nil
     end
   end
 

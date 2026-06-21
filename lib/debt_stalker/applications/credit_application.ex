@@ -8,6 +8,8 @@ defmodule DebtStalker.Applications.CreditApplication do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias DebtStalker.Countries.Registry
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime_usec]
@@ -41,7 +43,7 @@ defmodule DebtStalker.Applications.CreditApplication do
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> validate_inclusion(:status, @valid_statuses)
-    |> validate_inclusion(:country, ["ES", "MX"])
+    |> validate_country()
     |> validate_number(:requested_amount, greater_than: 0)
     |> validate_number(:monthly_income, greater_than: 0)
     |> put_identity_document_hash()
@@ -52,6 +54,20 @@ defmodule DebtStalker.Applications.CreditApplication do
     case get_change(changeset, :identity_document) do
       nil -> changeset
       document -> put_change(changeset, :identity_document_hash, hash_document(document))
+    end
+  end
+
+  defp validate_country(changeset) do
+    case get_field(changeset, :country) do
+      nil ->
+        changeset
+
+      country ->
+        if country in Registry.supported_countries() do
+          changeset
+        else
+          add_error(changeset, :country, "is not supported")
+        end
     end
   end
 
