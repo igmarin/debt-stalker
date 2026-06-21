@@ -17,7 +17,11 @@
         excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },
       plugins: [],
-      requires: [],
+      requires: [
+        "lib/debt_stalker/credo_checks/no_country_branching.ex",
+        "lib/debt_stalker/credo_checks/require_spec.ex",
+        "lib/debt_stalker/credo_checks/no_io_inspect.ex"
+      ],
       checks: %{
         enabled: [
           # Consistency
@@ -94,7 +98,12 @@
           {Credo.Check.Warning.UnusedRegexOperation, []},
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
-          {Credo.Check.Warning.WrongTestFileExtension, []}
+          {Credo.Check.Warning.WrongTestFileExtension, []},
+
+          # Project-specific custom checks
+          {DebtStalker.CredoChecks.NoCountryBranching, []},
+          {DebtStalker.CredoChecks.RequireSpec, []},
+          {DebtStalker.CredoChecks.NoIOInspect, []}
         ],
         disabled: [
           {Credo.Check.Readability.StrictModuleLayout, []},

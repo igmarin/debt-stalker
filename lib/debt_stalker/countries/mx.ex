@@ -74,6 +74,21 @@ defmodule DebtStalker.Countries.MX do
     }
   end
 
+  @doc "Returns the minimum acceptable risk score (buro_score) for Mexico."
+  @impl true
+  @spec risk_score_threshold() :: non_neg_integer()
+  def risk_score_threshold, do: 600
+
+  @doc "Returns whether the provider summary indicates an acceptable buro score for Mexico."
+  @impl true
+  @spec acceptable_risk_score?(map() | nil) :: boolean()
+  def acceptable_risk_score?(%{"risk_indicators" => %{"buro_score" => score}})
+      when is_integer(score) do
+    score >= 600
+  end
+
+  def acceptable_risk_score?(_), do: true
+
   @doc "Returns a short document hint for Mexican forms."
   @impl true
   @spec document_hint() :: String.t()
