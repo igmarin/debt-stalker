@@ -23,9 +23,23 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
         :ok
 
       {:error, :not_found} ->
+        Logger.warning("Webhook processing skipped: not_found",
+          application_id: app_id,
+          status: status,
+          worker: "WebhookProcessingWorker",
+          reason: "not_found"
+        )
+
         :ok
 
       {:error, :invalid_transition} ->
+        Logger.warning("Webhook processing skipped: invalid_transition",
+          application_id: app_id,
+          status: status,
+          worker: "WebhookProcessingWorker",
+          reason: "invalid_transition"
+        )
+
         :ok
     end
   end
