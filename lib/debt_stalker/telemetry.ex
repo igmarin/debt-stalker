@@ -72,10 +72,77 @@ defmodule DebtStalker.Telemetry do
         reason -> Map.put(metadata, :error_reason, reason)
       end
 
+    duration = Keyword.get(opts, :duration, 0)
+
     :telemetry.execute(
       [:debt_stalker, :provider, :fetch, :stop],
-      %{count: 1, duration: nil},
+      %{count: 1, duration: duration},
       metadata
+    )
+
+    :telemetry.execute(
+      [:debt_stalker, :provider, :latency],
+      %{duration: duration},
+      metadata
+    )
+
+    :ok
+  end
+
+  @doc """
+  Emits a `[:debt_stalker, :application, :created]` telemetry event
+  after a new credit application is created.
+
+  ## Measurements
+
+  - `:count` — always 1 (for counter metrics)
+
+  ## Metadata
+
+  - `:application_id` — the application UUID
+  - `:country` — the country code
+  - `:status` — the initial status
+  """
+  @spec emit_application_created(String.t(), String.t(), String.t()) :: :ok
+  def emit_application_created(application_id, country, status) do
+    :telemetry.execute(
+      [:debt_stalker, :application, :created],
+      %{count: 1},
+      %{
+        application_id: application_id,
+        country: country,
+        status: status
+      }
+    )
+
+    :ok
+  end
+
+  @doc """
+  Emits a `[:debt_stalker, :oban, :job, :stop]` telemetry event
+  after an Oban job completes (success or failure).
+
+  This wraps the built-in Oban telemetry events into a custom event
+  with normalized metadata for business metrics.
+
+  ## Measurements
+
+  - `:count` — always 1 (for counter metrics)
+
+  ## Metadata
+
+  - `:worker` — the worker module name as a string
+  - `:result` — `:success` or `:error`
+  """
+  @spec emit_oban_job(String.t(), :success | :error) :: :ok
+  def emit_oban_job(worker, result) do
+    :telemetry.execute(
+      [:debt_stalker, :oban, :job, :stop],
+      %{count: 1},
+      %{
+        worker: worker,
+        result: result
+      }
     )
 
     :ok

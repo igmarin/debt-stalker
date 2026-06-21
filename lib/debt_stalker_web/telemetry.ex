@@ -105,6 +105,28 @@ defmodule DebtStalkerWeb.Telemetry do
         event_name: [:debt_stalker, :provider, :fetch, :stop],
         tags: [:outcome, :country],
         description: "Number of provider calls by outcome and country"
+      ),
+
+      # Business: Applications created
+      counter("debt_stalker.applications.created.count",
+        event_name: [:debt_stalker, :application, :created],
+        tags: [:country, :status],
+        description: "Number of applications created by country and status"
+      ),
+
+      # Business: Provider latency
+      summary("debt_stalker.provider.latency.duration",
+        event_name: [:debt_stalker, :provider, :latency],
+        tags: [:country, :outcome],
+        unit: {:native, :millisecond},
+        description: "Provider call latency by country and outcome"
+      ),
+
+      # Business: Oban job execution
+      counter("debt_stalker.oban.jobs.count",
+        event_name: [:debt_stalker, :oban, :job, :stop],
+        tags: [:worker, :result],
+        description: "Number of Oban jobs executed by worker and result"
       )
     ]
   end
@@ -172,6 +194,29 @@ defmodule DebtStalkerWeb.Telemetry do
         event_name: [:debt_stalker, :provider, :fetch, :stop],
         tags: [:outcome, :country],
         description: "Number of provider calls by outcome and country"
+      ),
+
+      # Business: Applications created
+      counter("debt_stalker.applications.created.count",
+        event_name: [:debt_stalker, :application, :created],
+        tags: [:country, :status],
+        description: "Number of applications created by country and status"
+      ),
+
+      # Business: Provider latency (distribution for Prometheus)
+      distribution("debt_stalker.provider.latency.duration",
+        event_name: [:debt_stalker, :provider, :latency],
+        tags: [:country, :outcome],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [1, 5, 10, 50, 100, 500, 1000, 5000]],
+        description: "Provider call latency by country and outcome"
+      ),
+
+      # Business: Oban job execution
+      counter("debt_stalker.oban.jobs.count",
+        event_name: [:debt_stalker, :oban, :job, :stop],
+        tags: [:worker, :result],
+        description: "Number of Oban jobs executed by worker and result"
       )
     ]
   end

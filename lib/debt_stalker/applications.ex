@@ -55,6 +55,8 @@ defmodule DebtStalker.Applications do
             status: app.status
           )
 
+          DebtStalker.Telemetry.emit_application_created(app.id, app.country, app.status)
+
           Phoenix.PubSub.broadcast(
             DebtStalker.PubSub,
             "applications:list",
