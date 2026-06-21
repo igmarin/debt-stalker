@@ -1,7 +1,7 @@
 We're implementing Phase 2 of the Debt Stalker project — making the ES + MX vertical slice production-credible: observable, resilient, and deployable with PII protection.
 
 ## Project
-- Repo: /Users/igmarin/Developer/Personal/Me/debt-stalker
+- Repo: <repo-root>
 - GitHub: igmarin/debt-stalker
 - Phase 2 milestone: https://github.com/igmarin/debt-stalker/milestone/3
 - Phase 2 issues: https://github.com/igmarin/debt-stalker/issues?q=is:open+label:phase-2

@@ -3,6 +3,12 @@
 > **Reviewers:** Senior Tech Lead / Product Manager + Senior Elixir Engineer
 > **Scope:** Full Phase 1 (ES + MX vertical slice) — PR #69
 > **Date:** 2026-06-20
+>
+> **Note:** This is the **initial** (Round 1) review, capturing the state at 133 tests.
+> All findings (GAP-1 through GAP-5, ISSUE-1 through ISSUE-7) were resolved in
+> Round 1 and Round 2. See `docs/phases/phase-1-report.md` §"Post-Implementation
+> Review Notes" and §"Round 2 Review" for resolution details. Final state: 220
+> tests, 0 credo warnings, 0 dialyzer errors.
 
 ---
 

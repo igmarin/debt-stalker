@@ -1,7 +1,7 @@
 We're implementing Phase 0 of the Debt Stalker project — a fintech credit-application core built with Elixir/Phoenix.
 
 ## Project
-- Repo: /Users/igmarin/Developer/Personal/Me/debt-stalker
+- Repo: <repo-root>
 - GitHub: igmarin/debt-stalker
 - Phase 0 milestone: https://github.com/igmarin/debt-stalker/milestone/1
 - Phase 0 issues: https://github.com/igmarin/debt-stalker/issues?q=is:open+label:phase-0

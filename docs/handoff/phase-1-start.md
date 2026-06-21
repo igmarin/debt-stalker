@@ -1,7 +1,7 @@
 We're implementing Phase 1 of the Debt Stalker project — the ES + MX vertical slice. This is where real functionality begins.
 
 ## Project
-- Repo: /Users/igmarin/Developer/Personal/Me/debt-stalker
+- Repo: <repo-root>
 - GitHub: igmarin/debt-stalker
 - Phase 1 milestone: https://github.com/igmarin/debt-stalker/milestone/2
 - Phase 1 issues: https://github.com/igmarin/debt-stalker/issues?q=is:open+label:phase-1
@@ -13,7 +13,8 @@ We're implementing Phase 1 of the Debt Stalker project — the ES + MX vertical 
 4. `.github/review-prompt.md` — rs-guard review rules
 5. `.reviewer.toml` — rs-guard config
 6. `AGENTS.md` — development guidelines (TDD policy, code org, review loop)
-7. `docs/handoff/README.md` — handoff file conventions
+7. `docs/reviews/phase-1-code-review.md` — initial review findings (all resolved, see phase-1-report.md for resolution details)
+8. `docs/handoff/README.md` — handoff file conventions
 
 ## Skills to use
 This project has Elixir/Phoenix skills installed. Invoke them before writing code:
