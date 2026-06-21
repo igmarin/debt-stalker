@@ -22,6 +22,13 @@ defmodule DebtStalker.Applications do
     "MX" => DebtStalker.Providers.MXAdapter
   }
 
+  @doc """
+  Creates a new credit application.
+
+  Validates the identity document and financials for the requested country,
+  fetches a provider summary, and inserts the application. Broadcasts
+  `{:application_created, app}` on `applications:list` on success.
+  """
   @spec create_application(map()) ::
           {:ok, CreditApplication.t()} | {:error, Ecto.Changeset.t() | atom()}
   def create_application(attrs) do
@@ -119,6 +126,12 @@ defmodule DebtStalker.Applications do
     "provider_error" => ["pending_risk", "rejected"]
   }
 
+  @doc """
+  Transitions an application to `new_status` if the transition is allowed.
+
+  Records the transition and an audit log entry. Returns `:not_found`,
+  `:invalid_transition`, or a changeset error on failure.
+  """
   @spec update_status(String.t(), String.t(), String.t()) ::
           {:ok, CreditApplication.t()}
           | {:error, :not_found | :invalid_transition | Ecto.Changeset.t()}
@@ -230,6 +243,7 @@ defmodule DebtStalker.Applications do
     end
   end
 
+  @doc "Fetches a single application by id."
   @spec get_application(String.t()) :: {:ok, CreditApplication.t()} | {:error, :not_found}
   def get_application(id) do
     case Ecto.UUID.cast(id) do
@@ -244,6 +258,12 @@ defmodule DebtStalker.Applications do
     end
   end
 
+  @doc """
+  Lists applications with optional filtering and cursor pagination.
+
+  Supported filters: `:country`, `:status`, `:date_from`, `:date_to`, `:limit`, `:cursor`.
+  Returns `%{entries: [...], cursor: nil | binary()}`.
+  """
   @spec list_applications(map()) :: %{entries: [CreditApplication.t()], cursor: String.t() | nil}
   def list_applications(filters) do
     limit = Map.get(filters, :limit, 20)

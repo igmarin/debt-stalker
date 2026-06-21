@@ -5,6 +5,7 @@ defmodule DebtStalker.Providers.ProviderSummary do
   Contains only normalized fields — raw payloads are never stored or returned.
   """
 
+  @typedoc "Normalized provider summary struct."
   @type t :: %__MODULE__{
           provider_status: String.t(),
           risk_indicators: map(),
@@ -14,6 +15,7 @@ defmodule DebtStalker.Providers.ProviderSummary do
   @enforce_keys [:provider_status, :risk_indicators, :normalized_data]
   defstruct [:provider_status, :risk_indicators, :normalized_data]
 
+  @doc "Creates a new normalized provider summary from a map of attributes."
   @spec new(map()) :: t()
   def new(attrs) do
     %__MODULE__{
@@ -23,6 +25,7 @@ defmodule DebtStalker.Providers.ProviderSummary do
     }
   end
 
+  @doc "Serializes a provider summary to a plain map for persistence or responses."
   @spec to_map(t()) :: map()
   def to_map(%__MODULE__{} = summary) do
     %{

@@ -9,6 +9,7 @@ defmodule DebtStalker.Providers.ESAdapter do
 
   alias DebtStalker.Providers.ProviderSummary
 
+  @doc "Fetches and normalizes simulated provider data for Spain."
   @impl true
   @spec fetch(String.t(), map()) :: {:ok, ProviderSummary.t()} | {:error, atom()}
   def fetch("ES", %{identity_document: document} = _params) do

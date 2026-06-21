@@ -8,7 +8,9 @@ defmodule DebtStalkerWeb.ApplicationsLive do
   alias DebtStalker.Applications
   alias DebtStalker.Applications.CreditApplication
 
+  @doc "Mounts the applications list LiveView and subscribes to updates."
   @impl true
+  @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(DebtStalker.PubSub, "applications:list")
@@ -24,7 +26,10 @@ defmodule DebtStalkerWeb.ApplicationsLive do
     {:ok, socket}
   end
 
+  @doc "Handles URL parameters to apply filters and cursor pagination."
   @impl true
+  @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(params, _url, socket) do
     filters = %{}
 
@@ -42,7 +47,10 @@ defmodule DebtStalkerWeb.ApplicationsLive do
     {:noreply, socket}
   end
 
+  @doc "Applies country/status filters to the applications list."
   @impl true
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("filter", %{"country" => country, "status" => status}, socket) do
     filters = %{}
     filters = if country != "", do: Map.put(filters, :country, country), else: filters
@@ -57,7 +65,6 @@ defmodule DebtStalkerWeb.ApplicationsLive do
     {:noreply, socket}
   end
 
-  @impl true
   def handle_event("next_page", _params, socket) do
     socket =
       socket
@@ -67,7 +74,10 @@ defmodule DebtStalkerWeb.ApplicationsLive do
     {:noreply, socket}
   end
 
+  @doc "Refreshes the list when a new application is created."
   @impl true
+  @spec handle_info(term(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:application_created, _app}, socket) do
     socket = load_applications(socket)
     {:noreply, socket}
@@ -95,7 +105,9 @@ defmodule DebtStalkerWeb.ApplicationsLive do
   defp maybe_put_cursor(filters, nil), do: filters
   defp maybe_put_cursor(filters, cursor), do: Map.put(filters, :cursor, cursor)
 
+  @doc "Renders the applications list UI."
   @impl true
+  @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
     <div class="max-w-7xl mx-auto px-4 py-6">

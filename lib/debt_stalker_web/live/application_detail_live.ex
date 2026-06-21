@@ -8,7 +8,10 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
   alias DebtStalker.Applications
   alias DebtStalker.Applications.CreditApplication
 
+  @doc "Mounts the application detail LiveView and subscribes to status updates."
   @impl true
+  @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
   def mount(%{"id" => id}, _session, socket) do
     case Applications.get_application(id) do
       {:ok, app} ->
@@ -28,7 +31,10 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
     end
   end
 
+  @doc "Handles a manual status transition from the UI."
   @impl true
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("update_status", %{"status" => new_status}, socket) do
     case Applications.update_status(socket.assigns.app.id, new_status, "ui") do
       {:ok, app} ->
@@ -46,7 +52,10 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
     end
   end
 
+  @doc "Refreshes the application when its status changes."
   @impl true
+  @spec handle_info(term(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:status_changed, _details}, socket) do
     {:ok, app} = Applications.get_application(socket.assigns.app.id)
 
@@ -56,7 +65,9 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
      |> assign(:allowed_transitions, Applications.allowed_transitions(app))}
   end
 
+  @doc "Renders the application detail UI."
   @impl true
+  @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto px-4 py-6">

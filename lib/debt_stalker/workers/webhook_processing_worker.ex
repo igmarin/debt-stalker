@@ -13,7 +13,9 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
   alias DebtStalker.Repo
   alias Ecto.Adapters.SQL
 
+  @doc "Applies a status transition from a verified webhook event."
   @impl true
+  @spec perform(Oban.Job.t()) :: :ok
   def perform(%Oban.Job{
         args: %{"application_id" => app_id, "status" => status, "triggered_by" => triggered_by}
       }) do

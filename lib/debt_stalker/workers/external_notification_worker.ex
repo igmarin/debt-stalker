@@ -14,7 +14,9 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   alias DebtStalker.Applications
   alias DebtStalker.Repo
 
+  @doc "Sends a notification for a terminal application status change."
   @impl true
+  @spec perform(Oban.Job.t()) :: :ok
   def perform(%Oban.Job{args: %{"application_id" => app_id, "payload" => payload}}) do
     with {:ok, app} <- Applications.get_application(app_id),
          :ok <- ensure_terminal(app),

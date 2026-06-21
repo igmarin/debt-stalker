@@ -11,10 +11,14 @@ defmodule DebtStalkerWeb.Auth.RequireRolePlug do
 
   @behaviour Plug
 
+  @doc "Initializes the plug options."
   @impl true
+  @spec init(keyword()) :: keyword()
   def init(opts), do: opts
 
+  @doc "Halts with 403 unless the connection has the required role."
   @impl true
+  @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, opts) do
     required_role = Keyword.fetch!(opts, :role)
     current_role = conn.assigns[:current_role]

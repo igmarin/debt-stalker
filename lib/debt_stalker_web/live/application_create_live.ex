@@ -7,7 +7,9 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
   alias DebtStalker.Applications
 
+  @doc "Mounts the new application form LiveView."
   @impl true
+  @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(_params, _session, socket) do
     socket =
       socket
@@ -31,12 +33,14 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
     {:ok, socket}
   end
 
+  @doc "Validates form input on change."
   @impl true
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("validate", %{"application" => params}, socket) do
     {:noreply, assign(socket, :form, to_form(params, as: "application"))}
   end
 
-  @impl true
   def handle_event("save", %{"application" => params}, socket) do
     attrs = %{
       country: params["country"],
@@ -79,7 +83,9 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
     end)
   end
 
+  @doc "Renders the new application form UI."
   @impl true
+  @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-6">

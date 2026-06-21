@@ -11,6 +11,7 @@ defmodule DebtStalker.Countries.MX do
   @income_multiplier 10
   @debt_multiplier 18
 
+  @doc "Validates a Mexican CURP (18-character uppercase alphanumeric)."
   @impl true
   @spec validate_document(String.t()) :: :ok | {:error, String.t()}
   def validate_document(document) do
@@ -29,6 +30,7 @@ defmodule DebtStalker.Countries.MX do
     end
   end
 
+  @doc "Checks financial thresholds for Mexico and returns review flags."
   @impl true
   @spec validate_financials(map()) :: %{
           additional_review_required: boolean(),
@@ -47,10 +49,12 @@ defmodule DebtStalker.Countries.MX do
     %{additional_review_required: reasons != [], reasons: reasons}
   end
 
+  @doc "Interprets a normalized provider summary for Mexican risk evaluation."
   @impl true
   @spec interpret_provider_summary(map()) :: map()
   def interpret_provider_summary(summary), do: summary
 
+  @doc "Returns whether additional review is required for the given params."
   @impl true
   @spec additional_review_required?(map()) :: boolean()
   def additional_review_required?(params) do
@@ -58,6 +62,7 @@ defmodule DebtStalker.Countries.MX do
     required
   end
 
+  @doc "Returns the allowed status transitions for Mexico."
   @impl true
   @spec allowed_status_transitions() :: %{String.t() => [String.t()]}
   def allowed_status_transitions do

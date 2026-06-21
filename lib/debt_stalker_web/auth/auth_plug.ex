@@ -10,10 +10,14 @@ defmodule DebtStalkerWeb.Auth.AuthPlug do
 
   @behaviour Plug
 
+  @doc "Initializes the plug options."
   @impl true
+  @spec init(keyword()) :: keyword()
   def init(opts), do: opts
 
+  @doc "Verifies the JWT token and assigns the current role."
   @impl true
+  @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, _opts) do
     with {:ok, token} <- extract_token(conn),
          {:ok, claims} <- Token.verify_token(token) do

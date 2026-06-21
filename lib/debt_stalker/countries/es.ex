@@ -12,6 +12,7 @@ defmodule DebtStalker.Countries.ES do
   @amount_threshold Decimal.new("15000")
   @income_multiplier 12
 
+  @doc "Validates a Spanish DNI (8 digits + checksum letter)."
   @impl true
   @spec validate_document(String.t()) :: :ok | {:error, String.t()}
   def validate_document(document) do
@@ -22,6 +23,7 @@ defmodule DebtStalker.Countries.ES do
     end
   end
 
+  @doc "Checks financial thresholds for Spain and returns review flags."
   @impl true
   @spec validate_financials(map()) :: %{
           additional_review_required: boolean(),
@@ -36,10 +38,12 @@ defmodule DebtStalker.Countries.ES do
     %{additional_review_required: reasons != [], reasons: reasons}
   end
 
+  @doc "Interprets a normalized provider summary for Spanish risk evaluation."
   @impl true
   @spec interpret_provider_summary(map()) :: map()
   def interpret_provider_summary(summary), do: summary
 
+  @doc "Returns whether additional review is required for the given params."
   @impl true
   @spec additional_review_required?(map()) :: boolean()
   def additional_review_required?(params) do
@@ -47,6 +51,7 @@ defmodule DebtStalker.Countries.ES do
     required
   end
 
+  @doc "Returns the allowed status transitions for Spain."
   @impl true
   @spec allowed_status_transitions() :: %{String.t() => [String.t()]}
   def allowed_status_transitions do

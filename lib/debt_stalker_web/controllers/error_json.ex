@@ -15,6 +15,8 @@ defmodule DebtStalkerWeb.ErrorJSON do
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.json" becomes
   # "Not Found".
+  @doc "Renders a JSON error payload from the template name."
+  @spec render(String.t(), map()) :: %{errors: %{detail: String.t()}}
   def render(template, _assigns) do
     %{errors: %{detail: Phoenix.Controller.status_message_from_template(template)}}
   end
