@@ -115,3 +115,54 @@ curl -X POST localhost:4000/api/auth/token -H 'Content-Type: application/json' -
 # 5. Watch workers move apps through pipeline
 # (submitted → pending_risk → approved/rejected)
 ```
+
+---
+
+## Post-Implementation Review Notes
+
+**Review Date:** 2026-06-20
+**Reviewers:** Senior Tech Lead/PM + Senior Elixir Engineer
+
+### Findings Addressed (Applied Fixes)
+
+| ID | Severity | Finding | Resolution |
+|----|----------|---------|------------|
+| GAP-1 | HIGH | `update_status/3` only checked global transitions, never consulting country module's `allowed_status_transitions/0` (Master Plan §4.1 Invariant #4 violation) | Now intersects global + country-specific transitions |
+| GAP-2 | HIGH | `RiskEvaluationWorker` never passed `provider_debt` for MX risk evaluation — AC2.6 (18× debt rule) was silently bypassed | Extracts `existing_debt` from provider summary, passes as `:provider_debt` |
+| GAP-5 | MEDIUM | Missing `GET /api/health` endpoint (Master Plan §4.6) | Added `HealthController` with DB connectivity check |
+| ISSUE-1 | MEDIUM | `Decimal.new/1` in API controller crashes on invalid input (500 instead of 422) | Replaced with `Decimal.parse/1` returning nil for invalid input |
+| ISSUE-2 | LOW | `import Ecto.Query` repeated in each private filter function | Moved to module level |
+| ISSUE-3 | MEDIUM | `fetch_provider/1` used `Map.fetch!` (raises KeyError on missing country) | Changed to `Map.fetch/2` with error tuple fallback |
+| ISSUE-5 | MEDIUM | API-created apps didn't trigger LiveView list refresh (PubSub only broadcast from LiveView) | Moved broadcast to domain layer (`Applications.create_application/1`) |
+| ISSUE-6 | LOW | Invalid UUID in `get_application/1` caused Ecto cast error | Added `Ecto.UUID.cast/1` guard |
+
+### New Edge Case Tests Added (53 new tests)
+
+| Test File | Coverage |
+|-----------|----------|
+| `status_edge_cases_test.exs` | Terminal states (approved/rejected/cancelled) cannot transition; cancellation paths; country-specific transition validation |
+| `auth_edge_cases_test.exs` | Expired JWT; malformed Bearer header; wrong-secret token; role escalation attempts |
+| `cursor_pagination_test.exs` | Invalid Base64/JSON cursors gracefully ignored; empty results; page-through correctness with no duplicates |
+| `application_controller_edge_test.exs` | Non-numeric amounts; empty string amounts; invalid UUID format; decimal precision |
+| `webhook_edge_test.exs` | Valid HMAC signature acceptance; invalid signature rejection; required-signature mode; idempotency with same payload |
+| `pii_redaction_test.exs` | nil/empty/short/boundary document redaction; hash consistency |
+| `risk_evaluation_mx_debt_test.exs` | MX provider_debt extraction from provider summary; ES default to zero; regression test for AC2.6 |
+| `health_controller_test.exs` | Health endpoint returns status; no auth required |
+
+### Remaining Observations (Documented, Not Fixed)
+
+| ID | Priority | Note |
+|----|----------|------|
+| GAP-3 | LOW | No AuditWorker dispatched from EventDispatcher. Audit logs are written synchronously in `Ecto.Multi` — functionally correct but diverges from documented 5-worker design. |
+| GAP-4 | LOW | Webhook endpoint path is `/api/webhooks/provider` vs spec's `/api/webhooks/provider-confirmations`. Internal naming only. |
+| ISSUE-7 | LOW | Provider adapter map is hardcoded (`@provider_adapters`). Adding a country requires updating both the country registry config AND this map. Consider a provider registry in Phase 2. |
+
+### Quality Metrics After Review
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 133 | 186 |
+| Credo warnings | 0 | 0 |
+| Dialyzer errors | 0 | 0 |
+| Spec compliance gaps | 5 | 0 (critical) |
+| Edge case coverage | Basic | Comprehensive |
