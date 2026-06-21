@@ -29,8 +29,8 @@ config :swoosh, :api_client, false
 # Print only warnings and errors during test
 config :logger, level: :warning
 
-# Disable Oban job processing in tests
-config :debt_stalker, Oban, testing: :inline
+# Disable Oban job processing in tests (manual mode for assert_enqueued)
+config :debt_stalker, Oban, testing: :manual
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
@@ -42,3 +42,14 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Cloak encryption key (test only — same as dev, NOT for production)
+config :debt_stalker, DebtStalker.Vault,
+  ciphers: [
+    default: {
+      Cloak.Ciphers.AES.GCM,
+      tag: "AES.GCM.V1",
+      key: Base.decode64!("7hFmtojiHGfMrgdBDBDIsMAlIA1Jmo5Up0vI2wuUdWQ="),
+      iv_length: 12
+    }
+  ]

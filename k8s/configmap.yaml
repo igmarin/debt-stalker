@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: debt-stalker-config
+  namespace: debt-stalker
+data:
+  PHX_HOST: "debt-stalker.example.com"
+  PHX_PORT: "4000"
+  POOL_SIZE: "10"
+  MIX_ENV: "prod"
+  OBAN_QUEUES: "default:10,events:20,notifications:10"

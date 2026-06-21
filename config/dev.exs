@@ -70,8 +70,9 @@ config :debt_stalker, DebtStalkerWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :debt_stalker, dev_routes: true
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :default_formatter, format: "[$level] $message\n"
+# Structured JSON logging in development (via logger_json, configured in config.exs)
+# Override log level for development
+config :logger, level: :debug
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
@@ -90,3 +91,14 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Cloak encryption key (dev only — NOT for production)
+config :debt_stalker, DebtStalker.Vault,
+  ciphers: [
+    default: {
+      Cloak.Ciphers.AES.GCM,
+      tag: "AES.GCM.V1",
+      key: Base.decode64!("7hFmtojiHGfMrgdBDBDIsMAlIA1Jmo5Up0vI2wuUdWQ="),
+      iv_length: 12
+    }
+  ]

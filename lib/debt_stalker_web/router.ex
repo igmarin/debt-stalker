@@ -18,12 +18,25 @@ defmodule DebtStalkerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/applications", ApplicationsLive
+    live "/applications/new", ApplicationCreateLive
+    live "/applications/:id", ApplicationDetailLive
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", DebtStalkerWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", DebtStalkerWeb.Api do
+    pipe_through :api
+
+    get "/health", HealthController, :index
+
+    post "/auth/token", AuthController, :create
+
+    get "/applications", ApplicationController, :index
+    get "/applications/:id", ApplicationController, :show
+    post "/applications", ApplicationController, :create
+    patch "/applications/:id/status", ApplicationController, :update_status
+
+    post "/webhooks/provider-confirmations", WebhookController, :receive_webhook
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:debt_stalker, :dev_routes) do

@@ -64,6 +64,22 @@ if config_env() == :prod do
 
   # Log level
   config :logger, level: String.to_existing_atom(System.get_env("LOG_LEVEL", "info"))
+
+  # Cloak encryption key (required in prod)
+  cloak_key =
+    System.get_env("CLOAK_KEY") ||
+      raise """
+      environment variable CLOAK_KEY is missing.
+      Generate a 32-byte key with: :crypto.strong_rand_bytes(32) |> Base.encode64()
+      """
+
+  config :debt_stalker, DebtStalker.Vault,
+    ciphers: [
+      default: {
+        Cloak.Ciphers.AES.GCM,
+        tag: "AES.GCM.V1", key: Base.decode64!(cloak_key), iv_length: 12
+      }
+    ]
 end
 
 # Dev/test JWT secret (not sensitive — development only)

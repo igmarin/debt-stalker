@@ -1,42 +1,245 @@
 {
   "info": {
-    "_postman_id": "debt-stalker-collection",
-    "name": "Debt Stalker",
-    "description": "API collection for the Debt Stalker multi-country credit-application core.",
+    "name": "Debt Stalker — Phase 1",
+    "description": "Complete API collection for the ES+MX vertical slice.\n\nSetup:\n1. Run `make up && make setup && make run`\n2. Execute 'Get Token' request first to populate {{token}} variable\n3. All other requests use {{token}} automatically",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "item": [
-    {
-      "name": "Auth",
-      "item": [],
-      "description": "Authentication endpoints (token issuance)"
-    },
-    {
-      "name": "Applications",
-      "item": [],
-      "description": "Credit application CRUD and status management"
-    },
-    {
-      "name": "Webhooks",
-      "item": [],
-      "description": "Inbound webhook processing"
-    }
-  ],
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:4000",
-      "type": "string"
+      "value": "http://localhost:4000"
     },
     {
-      "key": "jwt_token_read",
-      "value": "",
-      "type": "string"
+      "key": "token",
+      "value": ""
     },
     {
-      "key": "jwt_token_update",
-      "value": "",
-      "type": "string"
+      "key": "application_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get Token (read)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"role\": \"read\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('token', jsonData.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Token (update)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"role\": \"update\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('token', jsonData.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "Create Application (ES)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": "{{base_url}}/api/applications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"ES\",\n  \"full_name\": \"Juan Garcia Lopez\",\n  \"identity_document\": \"12345678Z\",\n  \"requested_amount\": \"5000\",\n  \"monthly_income\": \"2000\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data) { pm.collectionVariables.set('application_id', jsonData.data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (ES - Over Threshold)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": "{{base_url}}/api/applications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"ES\",\n  \"full_name\": \"Maria Rodriguez\",\n  \"identity_document\": \"87654321X\",\n  \"requested_amount\": \"25000\",\n  \"monthly_income\": \"1500\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('additional_review_required is true', function() {",
+                  "  pm.expect(jsonData.data.additional_review_required).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (MX)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": "{{base_url}}/api/applications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"MX\",\n  \"full_name\": \"Roberto Hernandez\",\n  \"identity_document\": \"GARC850101HDFRRL09\",\n  \"requested_amount\": \"80000\",\n  \"monthly_income\": \"15000\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/applications?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "applications"],
+              "query": [
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Applications (filter by country)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/applications?country=ES",
+              "host": ["{{base_url}}"],
+              "path": ["api", "applications"],
+              "query": [
+                {"key": "country", "value": "ES"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Application",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}"
+          }
+        },
+        {
+          "name": "Update Status (→ pending_risk)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"pending_risk\"}"
+            }
+          }
+        },
+        {
+          "name": "Update Status (→ approved)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"approved\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Provider Webhook (status confirmation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": "{{base_url}}/api/webhooks/provider-confirmations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application_id\": \"{{application_id}}\",\n  \"status\": \"approved\",\n  \"source\": \"provider_es\"\n}"
+            }
+          }
+        }
+      ]
     }
   ]
 }
