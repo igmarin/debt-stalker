@@ -1,5 +1,5 @@
 defmodule DebtStalkerWeb.TelemetryTest do
-  use DebtStalkerWeb.ConnCase, async: true
+  use DebtStalkerWeb.ConnCase, async: false
 
   describe "HTTP request telemetry (built-in)" do
     test "emits [:phoenix, :endpoint, :stop] on HTTP request" do
@@ -50,7 +50,7 @@ defmodule DebtStalkerWeb.TelemetryTest do
       # Wait for the specific message with route == "/api/health"
       # to avoid picking up stale messages from other tests
       assert_receive {[:phoenix, :router_dispatch, :stop], _measurements,
-                      %{route: "/api/health"} = metadata},
+                      %{route: "/api/health"}},
                      1000
     end
   end

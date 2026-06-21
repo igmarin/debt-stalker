@@ -17,7 +17,7 @@ defmodule DebtStalkerWeb.ApplicationsLiveTest do
     test "renders application list", %{conn: conn} do
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
-      {:ok, view, html} = live(conn, "/applications")
+      {:ok, _view, html} = live(conn, "/applications")
       assert html =~ "Credit Applications"
       assert html =~ "Juan Garcia"
       assert html =~ "****678Z"
