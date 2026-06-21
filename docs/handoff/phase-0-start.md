@@ -30,7 +30,7 @@ This project has Elixir/Phoenix skills installed. Invoke them before writing cod
    - TDD-exempt tasks: implement → test where applicable → rs-guard review → commit
 4. Commit with conventional commit format + "Generated with Devin" footer
 5. Move issue to in-review, then done when verified: `gh issue edit <num> --remove-label "in-progress" --add-label "done"` then `gh issue close <num>`
-6. When all Phase 0 issues are done, create one PR from `phase-0-foundation` → `main`
+6. **Create one PR per issue** — branch from `main`, implement, push, open PR with `phase-0` label. Do NOT accumulate an entire phase into a single PR.
 
 ## Phase 0 is TDD-exempt
 Phase 0 tasks are [CHORE], [INFRA], [DB], [DOCS], [QA] — all TDD-exempt. But include tests where applicable (e.g., T0.16 smoke test). The TDD hard gate starts in Phase 1.
@@ -46,7 +46,7 @@ Phase 0 tasks are [CHORE], [INFRA], [DB], [DOCS], [QA] — all TDD-exempt. But i
 - ADRs for significant decisions (`docs/adr/`)
 - Phase report per phase (`docs/phases/phase-N-report.md`)
 - k8s manifests deferred to Phase 1; Docker Compose in Phase 0
-- One feature branch per phase → one PR per phase
+- One PR per issue, tagged with `phase-N` label (NOT one PR per phase)
 
 ## Start
 Begin with issue #1 (T0.0 — Create feature branch), then proceed sequentially through the Phase 0 issues. The full list with acceptance criteria is in `docs/phases/phase-0.md` §6.

@@ -281,7 +281,7 @@ flowchart TD
     subgraph Async[Oban Workers]
         Disp[EventDispatcherWorker<br/>FOR UPDATE SKIP LOCKED]
         RiskW[RiskEvaluationWorker]
-        AuditW[AuditWorker]
+        AuditW[AuditWorker<br/>(deferred — see ADR-0004)]
         NotifW[ExternalNotificationWorker]
         WebhookW[ProviderWebhookWorker]
     end
@@ -327,7 +327,8 @@ write (create / update status)
   → PostgreSQL TRIGGER (AFTER INSERT / AFTER UPDATE OF status)
     → INSERT row into application_events (outbox)
       → EventDispatcherWorker claims unprocessed rows with FOR UPDATE SKIP LOCKED
-        → enqueues specialized Oban jobs (Risk / Audit / Notification / Webhook)
+        → enqueues specialized Oban jobs (Risk / Notification / Webhook)
+          → audit is synchronous in Ecto.Multi (see ADR-0004)
           → workers call back through Applications context (validated transition)
             → audit row + PubSub broadcast → LiveView updates
 ```
@@ -557,7 +558,7 @@ Every domain/worker/API/web task follows this loop:
 7. Iterate (max 3 rounds total: implement → review → fix → review → fix → review)
 8. Commit only when rs-guard returns APPROVE or COMMENT
 9. PR triggers rs-guard + CodeRabbit in CI (second opinion)
-10. Human reviews final PR (validates end result + Postman/test flow)
+10. Human reviews final PR (validates end result + Postman/test flow) — **one PR per issue**, tagged with `phase-N` label
 ```
 
 **TDD-exempt tasks** (no test-first gate, but tests still required where applicable): `[CHORE]`, `[INFRA]`, `[DB]` migrations, `[OPS]`, `[DOCS]`.

@@ -2,6 +2,8 @@ defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
   use DebtStalker.DataCase, async: false
   use Oban.Testing, repo: DebtStalker.Repo
 
+  import ExUnit.CaptureLog
+
   alias DebtStalker.Applications
   alias DebtStalker.Workers.WebhookProcessingWorker
   alias Ecto.Adapters.SQL
@@ -76,25 +78,73 @@ defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
       assert processed_val == true
     end
 
-    test "non-existent application does not crash" do
-      assert :ok =
-               perform_job(WebhookProcessingWorker, %{
-                 "application_id" => Ecto.UUID.generate(),
-                 "status" => "approved",
-                 "triggered_by" => "webhook"
-               })
+    test "non-existent application does not crash and logs warning" do
+      fake_id = Ecto.UUID.generate()
+
+      logs =
+        capture_log(fn ->
+          assert :ok =
+                   perform_job(WebhookProcessingWorker, %{
+                     "application_id" => fake_id,
+                     "status" => "approved",
+                     "triggered_by" => "webhook"
+                   })
+        end)
+
+      assert logs =~ "Webhook processing skipped"
+      assert logs =~ "not_found"
     end
 
-    test "invalid transition does not crash" do
+    test "invalid transition does not crash and logs warning" do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
 
-      # approved is not valid from submitted
+      logs =
+        capture_log(fn ->
+          # approved is not valid from submitted
+          assert :ok =
+                   perform_job(WebhookProcessingWorker, %{
+                     "application_id" => app.id,
+                     "status" => "approved",
+                     "triggered_by" => "webhook"
+                   })
+        end)
+
+      assert logs =~ "Webhook processing skipped"
+      assert logs =~ "invalid_transition"
+    end
+
+    test "marks webhook_event as processed even on invalid_transition" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, uuid_binary} = Ecto.UUID.dump(app.id)
+
+      # Insert a webhook_event row manually
+      {:ok, _} =
+        SQL.query(
+          DebtStalker.Repo,
+          """
+          INSERT INTO webhook_events (id, application_id, source, payload_hash, verified, processed, raw_payload, inserted_at)
+          VALUES ($1, $2, 'provider_es', 'testhash456', true, false, '{}'::jsonb, NOW())
+          """,
+          [Ecto.UUID.bingenerate(), uuid_binary]
+        )
+
+      # Run the worker with an invalid transition (approved from submitted)
       assert :ok =
                perform_job(WebhookProcessingWorker, %{
                  "application_id" => app.id,
                  "status" => "approved",
                  "triggered_by" => "webhook"
                })
+
+      # Webhook event should still be marked processed — the worker handled it
+      {:ok, %{rows: [[processed_val]]}} =
+        SQL.query(
+          DebtStalker.Repo,
+          "SELECT processed FROM webhook_events WHERE application_id = $1",
+          [uuid_binary]
+        )
+
+      assert processed_val == true
     end
   end
 end

@@ -251,7 +251,7 @@ sequenceDiagram
 
 ### Foundation & Database
 
-- **[CHORE] T0.0 — Create feature branch** · *AC:* branch `phase-1-es-mx` created from `main`.
+- **[CHORE] T0.0 — Create feature branch** · *AC:* branch created from `main` for this issue. Each issue gets its own branch + PR (tagged `phase-1`).
   *Review:* rs-guard on branch creation (no code yet, skip).
 
 - **[INFRA] T1.1 — Spike: trigger→outbox→worker integration test** · *AC:* a failing integration test asserts INSERT creates an `application.created` event row and an UPDATE of status creates `application.status_changed`; documents the SKIP LOCKED claim. *(De-risks earliest. This is a test-first spike — the test will fail until T1.2-T1.4 + T5.1 are done.)*

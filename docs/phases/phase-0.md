@@ -245,7 +245,7 @@ temperature = 0.1
 
 > Phase 0 tasks are **TDD-exempt** (infrastructure/scaffolding). Tests are included where applicable (smoke test, config test) but the test-first gate does not apply. Each task still goes through the rs-guard review loop.
 
-- **[CHORE] T0.0 — Create feature branch** · *AC:* branch `phase-0-foundation` created from `main`.
+- **[CHORE] T0.0 — Create feature branch** · *AC:* branch created from `main` for this issue. Each issue gets its own branch + PR (tagged `phase-0`).
 - **[INFRA] T0.1 — `mix phx.new` + deps in `mix.exs`** · *AC:* Phoenix app generated; all deps from §3.2 added; `mix deps.get` succeeds.
 - **[INFRA] T0.2 — Configuration files (`dev.exs`, `test.exs`, `runtime.exs`)** · *AC:* configs written; `runtime.exs` reads JWT secret + DB URL from env; fail-fast on missing prod secrets.
 - **[INFRA] T0.3 — `.tool-versions`** · *AC:* Elixir + Erlang versions pinned; compatible with Phoenix 1.8 + all deps.

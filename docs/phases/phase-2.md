@@ -174,7 +174,7 @@ The existing `docs/postman/debt-stalker.json` (populated in Phase 1) gets new fo
 
 ### Track 2a — Resilience & Observability
 
-- **[CHORE] T0.0 — Create feature branch** · *AC:* branch `phase-2-resilience` from `main`.
+- **[CHORE] T0.0 — Create feature branch** · *AC:* branch created from `main` for this issue. Each issue gets its own branch + PR (tagged `phase-2`).
   *Review:* rs-guard on branch creation (no code yet, skip).
 
 - **[OBS] T10.1 — Telemetry events across HTTP/Ecto/Oban/provider/transitions**
