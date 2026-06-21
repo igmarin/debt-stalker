@@ -11,13 +11,23 @@ defmodule DebtStalker.Countries do
   @doc """
   Returns a UI placeholder hint for the identity document field of `country_code`.
 
-  Returns an empty string when the country is unknown or does not provide a hint.
+  Returns an empty string when the country is unknown, does not provide a hint,
+  or has not implemented the optional `document_hint/0` callback.
   """
-  @spec get_document_hint(String.t()) :: String.t()
+  @spec get_document_hint(String.t() | nil) :: String.t()
+  def get_document_hint(nil), do: ""
+
   def get_document_hint(country_code) when is_binary(country_code) do
     case Registry.lookup(country_code) do
-      {:ok, module} -> module.document_hint()
-      {:error, :unsupported_country} -> ""
+      {:ok, module} ->
+        if Code.ensure_loaded?(module) and function_exported?(module, :document_hint, 0) do
+          module.document_hint()
+        else
+          ""
+        end
+
+      {:error, :unsupported_country} ->
+        ""
     end
   end
 end

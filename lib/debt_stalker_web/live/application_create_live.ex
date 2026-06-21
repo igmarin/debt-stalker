@@ -11,26 +11,19 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
   @doc "Mounts the new application form LiveView."
   @impl true
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
+    form_params = Map.get(params, "application", %{})
+
     socket =
       socket
       |> assign(:page_title, "New Application")
       |> assign(
         :form,
-        to_form(
-          %{
-            "country" => "",
-            "full_name" => "",
-            "identity_document" => "",
-            "requested_amount" => "",
-            "monthly_income" => ""
-          },
-          as: "application"
-        )
+        to_form(form_params, as: "application")
       )
       |> assign(:errors, %{})
       |> assign(:submitted, false)
-      |> assign(:document_hint, "")
+      |> assign(:document_hint, Countries.get_document_hint(form_params["country"]))
 
     {:ok, socket}
   end
@@ -68,7 +61,14 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         errors = format_errors(changeset)
-        {:noreply, assign(socket, :errors, errors)}
+
+        socket =
+          socket
+          |> assign(:form, to_form(params, as: "application"))
+          |> assign(:document_hint, Countries.get_document_hint(params["country"]))
+          |> assign(:errors, errors)
+
+        {:noreply, socket}
     end
   end
 

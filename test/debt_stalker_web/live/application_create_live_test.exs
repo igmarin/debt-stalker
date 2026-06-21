@@ -29,6 +29,35 @@ defmodule DebtStalkerWeb.ApplicationCreateLiveTest do
       assert html =~ "CURP"
     end
 
+    test "initializes document hint from mount params", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/applications/new?application[country]=ES")
+      assert html =~ "DNI"
+    end
+
+    test "keeps document hint after submission error", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/applications/new")
+
+      view
+      |> form("#create-form", %{"application" => %{"country" => "ES"}})
+      |> render_change()
+
+      html =
+        view
+        |> form("#create-form", %{
+          "application" => %{
+            "country" => "ES",
+            "full_name" => "Test",
+            "identity_document" => "INVALID",
+            "requested_amount" => "5000",
+            "monthly_income" => "2000"
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "invalid DNI"
+      assert html =~ "DNI"
+    end
+
     test "creates application and redirects", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/applications/new")
 

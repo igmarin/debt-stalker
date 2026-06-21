@@ -16,16 +16,26 @@ defmodule DebtStalker.BusinessMetricsTest do
       metrics_output = TelemetryMetricsPrometheus.Core.scrape(:prometheus_metrics)
 
       initial_count =
-        extract_counter_value(metrics_output, "debt_stalker_applications_created_count")
+        extract_labeled_counter(
+          metrics_output,
+          "debt_stalker_applications_created_count",
+          "country",
+          "ES"
+        )
 
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
       metrics_output2 = TelemetryMetricsPrometheus.Core.scrape(:prometheus_metrics)
 
       final_count =
-        extract_counter_value(metrics_output2, "debt_stalker_applications_created_count")
+        extract_labeled_counter(
+          metrics_output2,
+          "debt_stalker_applications_created_count",
+          "country",
+          "ES"
+        )
 
-      assert final_count > initial_count
+      assert final_count >= initial_count + 1.0
     end
 
     test "provider_latency histogram tracks provider call duration" do
@@ -60,7 +70,7 @@ defmodule DebtStalker.BusinessMetricsTest do
           "pending_risk"
         )
 
-      assert final > initial
+      assert final >= initial + 1.0
     end
 
     test "oban_jobs counter tracks job execution by worker and result" do
@@ -79,9 +89,12 @@ defmodule DebtStalker.BusinessMetricsTest do
     end
   end
 
-  defp extract_counter_value(output, metric_name) do
-    # Match counter with or without labels
-    pattern = Regex.compile!("^#{metric_name}(?:\\{[^}]*\\})?\\s+(\\d+(?:\\.\\d+)?)$", "m")
+  defp extract_labeled_counter(output, metric_name, label_value) do
+    pattern =
+      Regex.compile!(
+        "^#{metric_name}\\{[^}]*to_status=\"#{label_value}\"[^}]*\\}\\s+(\\d+(?:\\.\\d+)?)$",
+        "m"
+      )
 
     case Regex.run(pattern, output) do
       [_, value] -> parse_number(value)
@@ -89,10 +102,10 @@ defmodule DebtStalker.BusinessMetricsTest do
     end
   end
 
-  defp extract_labeled_counter(output, metric_name, label_value) do
+  defp extract_labeled_counter(output, metric_name, label_key, label_value) do
     pattern =
       Regex.compile!(
-        "^#{metric_name}\\{[^}]*to_status=\"#{label_value}\"[^}]*\\}\\s+(\\d+(?:\\.\\d+)?)$",
+        "^#{metric_name}\\{[^}]*#{label_key}=\"#{label_value}\"[^}]*\\}\\s+(\\d+(?:\\.\\d+)?)$",
         "m"
       )
 
