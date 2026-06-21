@@ -203,6 +203,14 @@ defmodule DebtStalker.Applications do
           from_status: app.status
         )
 
+        DebtStalker.Telemetry.emit_status_transition(
+          app.id,
+          app.country,
+          app.status,
+          new_status,
+          triggered_by
+        )
+
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:#{app.id}",
@@ -361,11 +369,17 @@ defmodule DebtStalker.Applications do
     case Map.fetch(@provider_adapters, country) do
       {:ok, adapter} ->
         case adapter.fetch(country, %{identity_document: document}) do
-          {:ok, summary} -> {:ok, summary}
-          {:error, _reason} -> {:error, :provider_error}
+          {:ok, summary} ->
+            DebtStalker.Telemetry.emit_provider_call(country, :success)
+            {:ok, summary}
+
+          {:error, reason} ->
+            DebtStalker.Telemetry.emit_provider_call(country, :error, error_reason: reason)
+            {:error, :provider_error}
         end
 
       :error ->
+        DebtStalker.Telemetry.emit_provider_call(country, :error, error_reason: :no_adapter)
         {:error, :provider_error}
     end
   end
