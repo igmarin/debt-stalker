@@ -159,10 +159,10 @@ defmodule DebtStalker.Countries.MXTest do
       refute MX.acceptable_risk_score?(%{"risk_indicators" => %{"buro_score" => 500}})
     end
 
-    test "returns true when provider summary has no buro_score" do
-      assert MX.acceptable_risk_score?(%{})
-      assert MX.acceptable_risk_score?(%{"risk_indicators" => %{}})
-      assert MX.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 700}})
+    test "returns false when provider summary has no buro_score (fail-safe)" do
+      refute MX.acceptable_risk_score?(%{})
+      refute MX.acceptable_risk_score?(%{"risk_indicators" => %{}})
+      refute MX.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 700}})
     end
   end
 end

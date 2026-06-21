@@ -30,6 +30,8 @@ defmodule DebtStalker.Countries.Behaviour do
   @doc "Returns whether the provider risk score is acceptable for this country."
   @callback acceptable_risk_score?(provider_summary :: map()) :: boolean()
 
+  @optional_callbacks [acceptable_risk_score?: 1]
+
   @doc "Returns the allowed status transitions for this country (narrows global set)."
   @callback allowed_status_transitions() :: %{String.t() => [String.t()]}
 end

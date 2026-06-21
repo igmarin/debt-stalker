@@ -59,7 +59,7 @@ defmodule DebtStalker.Countries.ES do
     score >= 650
   end
 
-  def acceptable_risk_score?(_provider_summary), do: true
+  def acceptable_risk_score?(_provider_summary), do: false
 
   @doc "Returns the allowed status transitions for Spain."
   @impl true

@@ -40,7 +40,7 @@ defmodule DebtStalker.Risk do
 
       review_required = country_module.additional_review_required?(financials_params)
 
-      score_acceptable = country_module.acceptable_risk_score?(app.provider_summary)
+      score_acceptable = acceptable_risk_score?(country_module, app.provider_summary)
 
       new_status =
         cond do
@@ -62,4 +62,17 @@ defmodule DebtStalker.Risk do
   end
 
   defp extract_provider_debt(_), do: Decimal.new("0")
+
+  # Handles the optional acceptable_risk_score?/1 callback.
+  # Countries that implement it (ES, MX) delegate to their logic.
+  # Countries that don't implement it default to false (fail-safe:
+  # applications without a score check go to additional_review,
+  # not automatic approval).
+  defp acceptable_risk_score?(country_module, provider_summary) do
+    if function_exported?(country_module, :acceptable_risk_score?, 1) do
+      country_module.acceptable_risk_score?(provider_summary)
+    else
+      false
+    end
+  end
 end

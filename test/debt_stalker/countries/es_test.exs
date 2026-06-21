@@ -130,10 +130,10 @@ defmodule DebtStalker.Countries.ESTest do
       refute ES.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 500}})
     end
 
-    test "returns true when provider summary has no credit_score" do
-      assert ES.acceptable_risk_score?(%{})
-      assert ES.acceptable_risk_score?(%{"risk_indicators" => %{}})
-      assert ES.acceptable_risk_score?(%{"risk_indicators" => %{"buro_score" => 700}})
+    test "returns false when provider summary has no credit_score (fail-safe)" do
+      refute ES.acceptable_risk_score?(%{})
+      refute ES.acceptable_risk_score?(%{"risk_indicators" => %{}})
+      refute ES.acceptable_risk_score?(%{"risk_indicators" => %{"buro_score" => 700}})
     end
   end
 

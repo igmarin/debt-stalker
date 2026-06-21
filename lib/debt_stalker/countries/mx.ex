@@ -70,7 +70,7 @@ defmodule DebtStalker.Countries.MX do
     score >= 600
   end
 
-  def acceptable_risk_score?(_provider_summary), do: true
+  def acceptable_risk_score?(_provider_summary), do: false
 
   @doc "Returns the allowed status transitions for Mexico."
   @impl true
