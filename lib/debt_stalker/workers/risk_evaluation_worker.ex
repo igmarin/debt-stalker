@@ -48,7 +48,8 @@ defmodule DebtStalker.Workers.RiskEvaluationWorker do
 
     financials_params = %{
       requested_amount: app.requested_amount,
-      monthly_income: app.monthly_income
+      monthly_income: app.monthly_income,
+      provider_debt: extract_provider_debt(app.provider_summary)
     }
 
     review_required = country_module.additional_review_required?(financials_params)
@@ -77,4 +78,11 @@ defmodule DebtStalker.Workers.RiskEvaluationWorker do
         true
     end
   end
+
+  defp extract_provider_debt(%{"risk_indicators" => %{"existing_debt" => debt}})
+       when is_binary(debt) do
+    Decimal.new(debt)
+  end
+
+  defp extract_provider_debt(_), do: Decimal.new("0")
 end
