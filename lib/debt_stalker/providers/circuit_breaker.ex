@@ -16,6 +16,15 @@ defmodule DebtStalker.Providers.CircuitBreaker do
   - `[:debt_stalker, :circuit_breaker, :open]`
   - `[:debt_stalker, :circuit_breaker, :close]`
 
+  ## Design
+
+  The retry loop and `Process.sleep` execute in the **caller's process**,
+  not inside the GenServer. The GenServer is only contacted for:
+  1. A quick state check before execution (`:check_access`)
+  2. Reporting the result after execution (`:report_result`)
+
+  This prevents the GenServer from being blocked during long retry sequences.
+
   ## Configuration
 
   - `:failure_threshold` — consecutive failures before opening (default: 5)
@@ -74,13 +83,70 @@ defmodule DebtStalker.Providers.CircuitBreaker do
   @doc """
   Executes a function through the circuit breaker.
 
+  The retry loop runs in the caller's process — the GenServer is only
+  contacted for a quick state check and result reporting, so it is
+  never blocked by long-running calls or backoff sleeps.
+
   Returns the function result, `{:error, :circuit_open}` if the circuit is open,
   or the last error if the retry budget is exhausted.
+
+  Exceptions raised by `fun` are caught and treated as `{:error, :exception}`.
   """
   @spec call(pid(), (-> {:ok, term()} | {:error, atom()})) ::
           {:ok, term()} | {:error, atom()}
   def call(pid, fun) when is_function(fun, 0) do
-    GenServer.call(pid, {:call, fun}, :infinity)
+    case GenServer.call(pid, :check_access) do
+      :circuit_open ->
+        {:error, :circuit_open}
+
+      :allowed ->
+        {result, success?} = execute_with_retry(pid, fun)
+        GenServer.call(pid, {:report_result, success?})
+        result
+    end
+  end
+
+  # --- Private: retry logic (runs in caller's process) ---
+
+  defp execute_with_retry(pid, fun) do
+    config = GenServer.call(pid, :get_config)
+    execute_with_retry(pid, fun, config, config.retry_budget, nil)
+  end
+
+  defp execute_with_retry(_pid, _fun, _config, 0, last_error) do
+    {{:error, last_error}, false}
+  end
+
+  defp execute_with_retry(pid, fun, config, remaining, _last_error) do
+    result = safe_call(fun)
+
+    case result do
+      {:ok, data} ->
+        {{:ok, data}, true}
+
+      {:error, reason} ->
+        if reason in @transient_errors and remaining > 0 do
+          backoff = config.base_backoff_ms * :math.pow(2, config.retry_budget - remaining)
+          Process.sleep(round(backoff))
+          execute_with_retry(pid, fun, config, remaining - 1, reason)
+        else
+          {{:error, reason}, false}
+        end
+    end
+  end
+
+  @spec safe_call((-> {:ok, term()} | {:error, atom()})) ::
+          {:ok, term()} | {:error, atom()}
+  defp safe_call(fun) do
+    fun.()
+  rescue
+    exception ->
+      Logger.error("Circuit breaker caught exception",
+        error: inspect(exception),
+        stacktrace: Exception.format_stacktrace()
+      )
+
+      {:error, :exception}
   end
 
   # --- GenServer callbacks ---
@@ -109,15 +175,31 @@ defmodule DebtStalker.Providers.CircuitBreaker do
   end
 
   @impl true
-  def handle_call({:call, fun}, _from, state) do
+  def handle_call(:get_config, _from, state) do
+    {:reply, state.config, state}
+  end
+
+  @impl true
+  def handle_call(:check_access, _from, state) do
     case maybe_transition_to_half_open(state) do
       {:circuit_open, state} ->
-        {:reply, {:error, :circuit_open}, state}
+        {:reply, :circuit_open, state}
 
       {:allowed, state} ->
-        {result, new_state} = execute_with_retry(fun, state)
-        {:reply, result, new_state}
+        {:reply, :allowed, state}
     end
+  end
+
+  @impl true
+  def handle_call({:report_result, success?}, _from, state) do
+    new_state =
+      if success? do
+        record_success(state)
+      else
+        record_failure(state)
+      end
+
+    {:reply, :ok, new_state}
   end
 
   # --- Private: state transitions ---
@@ -133,37 +215,6 @@ defmodule DebtStalker.Providers.CircuitBreaker do
   end
 
   defp maybe_transition_to_half_open(state), do: {:allowed, state}
-
-  # --- Private: retry logic ---
-
-  defp execute_with_retry(fun, state) do
-    execute_with_retry(fun, state, state.config.retry_budget, nil)
-  end
-
-  defp execute_with_retry(_fun, state, 0, last_error) do
-    new_state = record_failure(state)
-    {{:error, last_error}, new_state}
-  end
-
-  defp execute_with_retry(fun, state, remaining, _last_error) do
-    case fun.() do
-      {:ok, data} ->
-        new_state = record_success(state)
-        {{:ok, data}, new_state}
-
-      {:error, reason} ->
-        if reason in @transient_errors and remaining > 0 do
-          backoff =
-            state.config.base_backoff_ms * :math.pow(2, state.config.retry_budget - remaining)
-
-          Process.sleep(round(backoff))
-          execute_with_retry(fun, state, remaining - 1, reason)
-        else
-          new_state = record_failure(state)
-          {{:error, reason}, new_state}
-        end
-    end
-  end
 
   # --- Private: failure/success recording ---
 
