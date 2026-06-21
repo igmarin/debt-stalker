@@ -63,6 +63,21 @@ defmodule DebtStalker.Countries.ES do
     }
   end
 
+  @doc "Returns the minimum acceptable risk score (credit_score) for Spain."
+  @impl true
+  @spec risk_score_threshold() :: non_neg_integer()
+  def risk_score_threshold, do: 650
+
+  @doc "Returns whether the provider summary indicates an acceptable credit score for Spain."
+  @impl true
+  @spec acceptable_risk_score?(map() | nil) :: boolean()
+  def acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => score}})
+      when is_integer(score) do
+    score >= 650
+  end
+
+  def acceptable_risk_score?(_), do: true
+
   @doc "Returns a short document hint for Spanish forms."
   @impl true
   @spec document_hint() :: String.t()

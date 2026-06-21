@@ -125,6 +125,34 @@ defmodule DebtStalker.Countries.ESTest do
     end
   end
 
+  describe "risk_score_threshold/0" do
+    test "returns 650 for Spain" do
+      assert ES.risk_score_threshold() == 650
+    end
+  end
+
+  describe "acceptable_risk_score?/1" do
+    test "returns true when credit_score meets threshold" do
+      summary = %{"risk_indicators" => %{"credit_score" => 650}}
+      assert ES.acceptable_risk_score?(summary)
+    end
+
+    test "returns true when credit_score exceeds threshold" do
+      summary = %{"risk_indicators" => %{"credit_score" => 800}}
+      assert ES.acceptable_risk_score?(summary)
+    end
+
+    test "returns false when credit_score below threshold" do
+      summary = %{"risk_indicators" => %{"credit_score" => 500}}
+      refute ES.acceptable_risk_score?(summary)
+    end
+
+    test "returns true when no risk_indicators present" do
+      assert ES.acceptable_risk_score?(nil)
+      assert ES.acceptable_risk_score?(%{})
+    end
+  end
+
   # Helper: compute the DNI checksum letter
   defp dni_checksum_letter(number) do
     letters = "TRWAGMYFPDXBNJZSQVHLCKE"

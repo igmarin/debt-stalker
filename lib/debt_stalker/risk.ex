@@ -54,27 +54,21 @@ defmodule DebtStalker.Risk do
   @doc """
   Returns the acceptable risk score threshold for a given country.
 
-  Uses `credit_score` for ES and `buro_score` for MX.
+  Delegates to the country module via `Registry.lookup/1`.
+  Returns `nil` for unsupported countries.
   """
   @spec risk_score_threshold(String.t()) :: non_neg_integer() | nil
   def risk_score_threshold(country) do
-    case country do
-      "ES" -> 650
-      "MX" -> 600
-      _ -> nil
+    case Registry.lookup(country) do
+      {:ok, country_module} -> country_module.risk_score_threshold()
+      {:error, :unsupported_country} -> nil
     end
   end
 
   defp risk_score_acceptable?(app) do
-    case app.provider_summary do
-      %{"risk_indicators" => %{"credit_score" => score}} when is_integer(score) ->
-        score >= 650
-
-      %{"risk_indicators" => %{"buro_score" => score}} when is_integer(score) ->
-        score >= 600
-
-      _ ->
-        true
+    case Registry.lookup(app.country) do
+      {:ok, country_module} -> country_module.acceptable_risk_score?(app.provider_summary)
+      {:error, :unsupported_country} -> true
     end
   end
 

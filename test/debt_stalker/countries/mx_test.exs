@@ -153,4 +153,32 @@ defmodule DebtStalker.Countries.MXTest do
       assert MX.document_hint() =~ "CURP"
     end
   end
+
+  describe "risk_score_threshold/0" do
+    test "returns 600 for Mexico" do
+      assert MX.risk_score_threshold() == 600
+    end
+  end
+
+  describe "acceptable_risk_score?/1" do
+    test "returns true when buro_score meets threshold" do
+      summary = %{"risk_indicators" => %{"buro_score" => 600}}
+      assert MX.acceptable_risk_score?(summary)
+    end
+
+    test "returns true when buro_score exceeds threshold" do
+      summary = %{"risk_indicators" => %{"buro_score" => 800}}
+      assert MX.acceptable_risk_score?(summary)
+    end
+
+    test "returns false when buro_score below threshold" do
+      summary = %{"risk_indicators" => %{"buro_score" => 500}}
+      refute MX.acceptable_risk_score?(summary)
+    end
+
+    test "returns true when no risk_indicators present" do
+      assert MX.acceptable_risk_score?(nil)
+      assert MX.acceptable_risk_score?(%{})
+    end
+  end
 end
