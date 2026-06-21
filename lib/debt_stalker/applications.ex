@@ -9,6 +9,8 @@ defmodule DebtStalker.Applications do
   - Document redaction in responses
   """
 
+  import Ecto.Query
+
   alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries.Registry
   alias DebtStalker.Providers.ProviderSummary
@@ -32,9 +34,24 @@ defmodule DebtStalker.Applications do
         |> Map.put(:additional_review_required, financials.additional_review_required)
         |> Map.put(:provider_summary, ProviderSummary.to_map(provider_summary))
 
-      %CreditApplication{}
-      |> CreditApplication.changeset(insert_attrs)
-      |> Repo.insert()
+      result =
+        %CreditApplication{}
+        |> CreditApplication.changeset(insert_attrs)
+        |> Repo.insert()
+
+      case result do
+        {:ok, app} ->
+          Phoenix.PubSub.broadcast(
+            DebtStalker.PubSub,
+            "applications:list",
+            {:application_created, app}
+          )
+
+          {:ok, app}
+
+        error ->
+          error
+      end
     else
       {:error, :unsupported_country} ->
         changeset =
@@ -79,14 +96,27 @@ defmodule DebtStalker.Applications do
         {:error, :not_found}
 
       app ->
-        allowed = Map.get(@global_transitions, app.status, [])
-
-        if new_status in allowed do
+        if transition_allowed?(app, new_status) do
           perform_status_update(app, new_status, triggered_by)
         else
           {:error, :invalid_transition}
         end
     end
+  end
+
+  defp transition_allowed?(app, new_status) do
+    global_allowed = Map.get(@global_transitions, app.status, [])
+
+    country_allowed =
+      case Registry.lookup(app.country) do
+        {:ok, country_module} ->
+          Map.get(country_module.allowed_status_transitions(), app.status, [])
+
+        {:error, _} ->
+          global_allowed
+      end
+
+    new_status in global_allowed and new_status in country_allowed
   end
 
   defp perform_status_update(app, new_status, triggered_by) do
@@ -128,16 +158,20 @@ defmodule DebtStalker.Applications do
 
   @spec get_application(String.t()) :: {:ok, CreditApplication.t()} | {:error, :not_found}
   def get_application(id) do
-    case Repo.get(CreditApplication, id) do
-      nil -> {:error, :not_found}
-      app -> {:ok, app}
+    case Ecto.UUID.cast(id) do
+      {:ok, _} ->
+        case Repo.get(CreditApplication, id) do
+          nil -> {:error, :not_found}
+          app -> {:ok, app}
+        end
+
+      :error ->
+        {:error, :not_found}
     end
   end
 
   @spec list_applications(map()) :: %{entries: [CreditApplication.t()], cursor: String.t() | nil}
   def list_applications(filters) do
-    import Ecto.Query
-
     limit = Map.get(filters, :limit, 20)
 
     query =
@@ -166,22 +200,18 @@ defmodule DebtStalker.Applications do
   # Private
 
   defp maybe_filter_country(query, %{country: country}) do
-    import Ecto.Query
     where(query, [a], a.country == ^country)
   end
 
   defp maybe_filter_country(query, _filters), do: query
 
   defp maybe_filter_status(query, %{status: status}) do
-    import Ecto.Query
     where(query, [a], a.status == ^status)
   end
 
   defp maybe_filter_status(query, _filters), do: query
 
   defp maybe_filter_date_range(query, filters) do
-    import Ecto.Query
-
     query =
       case Map.get(filters, :date_from) do
         nil ->
@@ -203,8 +233,6 @@ defmodule DebtStalker.Applications do
   end
 
   defp maybe_apply_cursor(query, %{cursor: cursor}) when is_binary(cursor) do
-    import Ecto.Query
-
     case decode_cursor(cursor) do
       {:ok, {date, id}} ->
         where(
@@ -252,16 +280,27 @@ defmodule DebtStalker.Applications do
   defp validate_document(_country_module, _attrs), do: :ok
 
   defp evaluate_financials(country_module, attrs) do
-    financials = country_module.validate_financials(attrs)
-    {:ok, financials}
+    amount = Map.get(attrs, :requested_amount)
+    income = Map.get(attrs, :monthly_income)
+
+    if is_nil(amount) or is_nil(income) do
+      {:ok, %{additional_review_required: false, reasons: []}}
+    else
+      financials = country_module.validate_financials(attrs)
+      {:ok, financials}
+    end
   end
 
   defp fetch_provider(%{country: country, identity_document: document}) do
-    adapter = Map.fetch!(@provider_adapters, country)
+    case Map.fetch(@provider_adapters, country) do
+      {:ok, adapter} ->
+        case adapter.fetch(country, %{identity_document: document}) do
+          {:ok, summary} -> {:ok, summary}
+          {:error, _reason} -> {:error, :provider_error}
+        end
 
-    case adapter.fetch(country, %{identity_document: document}) do
-      {:ok, summary} -> {:ok, summary}
-      {:error, _reason} -> {:error, :provider_error}
+      :error ->
+        {:error, :provider_error}
     end
   end
 end
