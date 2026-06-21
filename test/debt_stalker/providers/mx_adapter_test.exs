@@ -23,6 +23,16 @@ defmodule DebtStalker.Providers.MXAdapterTest do
       assert summary1 == summary2
     end
 
+    test "preserves legacy simulated debt for non-overridden documents" do
+      document = "GARC850101HDFRRL09"
+      expected_debt = Integer.to_string(rem(:erlang.phash2(document, 99), 50_000))
+
+      assert {:ok, %ProviderSummary{} = summary} =
+               MXAdapter.fetch("MX", %{identity_document: document})
+
+      assert summary.risk_indicators["existing_debt"] == expected_debt
+    end
+
     test "returns :unavailable for document starting with XXXX" do
       params = %{identity_document: "XXXX850101HDFRRL09"}
       assert {:error, :unavailable} = MXAdapter.fetch("MX", params)

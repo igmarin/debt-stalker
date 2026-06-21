@@ -39,12 +39,13 @@ defmodule DebtStalker.Providers.MXAdapter do
     end
   end
 
+  @spec simulated_existing_debt(String.t()) :: Decimal.t()
   defp simulated_existing_debt(document) do
     overrides = Application.get_env(:debt_stalker, :mx_simulated_debt_overrides, %{})
 
     case Map.get(overrides, document) do
       amount when is_integer(amount) -> Decimal.new(amount)
-      _ -> Decimal.new("#{rem(:erlang.phash2(document), 50_000)}")
+      _ -> Decimal.new("#{rem(:erlang.phash2(document, 99), 50_000)}")
     end
   end
 
