@@ -39,5 +39,51 @@ defmodule DebtStalkerWeb.ApplicationDetailLiveTest do
       assert {:error, {:redirect, %{to: "/applications"}}} =
                live(conn, "/applications/#{Ecto.UUID.generate()}")
     end
+
+    test "renders status update form with allowed transitions", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, _view, html} = live(conn, "/applications/#{app.id}")
+
+      assert html =~ "Update Status"
+      assert html =~ "pending_risk"
+    end
+
+    test "status update form does not show invalid transitions for submitted app", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, _view, html} = live(conn, "/applications/#{app.id}")
+
+      # approved is not a valid transition from submitted
+      refute html =~ ~r/value="approved"/
+    end
+
+    test "submitting valid status transition updates the application", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, view, _html} = live(conn, "/applications/#{app.id}")
+
+      view
+      |> element("form#status-update-form")
+      |> render_submit(%{"status" => "pending_risk"})
+
+      html = render(view)
+      assert html =~ "pending_risk"
+    end
+
+    test "invalid status transition does not change status", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, view, _html} = live(conn, "/applications/#{app.id}")
+
+      view
+      |> element("form#status-update-form")
+      |> render_submit(%{"status" => "approved"})
+
+      html = render(view)
+      # Status should still be submitted (approved is not a valid transition from submitted)
+      assert html =~ "submitted"
+      refute html =~ ~r/<p class="font-semibold">approved<\/p>/
+    end
   end
 end

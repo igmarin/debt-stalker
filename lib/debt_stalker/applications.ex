@@ -10,6 +10,7 @@ defmodule DebtStalker.Applications do
   """
 
   import Ecto.Query
+  require Logger
 
   alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries.Registry
@@ -41,6 +42,12 @@ defmodule DebtStalker.Applications do
 
       case result do
         {:ok, app} ->
+          Logger.info("Application created",
+            application_id: app.id,
+            country: app.country,
+            status: app.status
+          )
+
           Phoenix.PubSub.broadcast(
             DebtStalker.PubSub,
             "applications:list",
@@ -54,6 +61,10 @@ defmodule DebtStalker.Applications do
       end
     else
       {:error, :unsupported_country} ->
+        Logger.warning("Application creation failed: unsupported country",
+          country: Map.get(attrs, :country)
+        )
+
         changeset =
           %CreditApplication{}
           |> CreditApplication.changeset(attrs)
@@ -62,6 +73,11 @@ defmodule DebtStalker.Applications do
         {:error, changeset}
 
       {:error, :invalid_document, message} ->
+        Logger.warning("Application creation failed: invalid document",
+          country: Map.get(attrs, :country),
+          reason: message
+        )
+
         changeset =
           %CreditApplication{}
           |> CreditApplication.changeset(attrs)
@@ -75,9 +91,24 @@ defmodule DebtStalker.Applications do
           |> Map.put(:status, "provider_error")
           |> Map.put(:additional_review_required, false)
 
-        %CreditApplication{}
-        |> CreditApplication.changeset(insert_attrs)
-        |> Repo.insert()
+        result =
+          %CreditApplication{}
+          |> CreditApplication.changeset(insert_attrs)
+          |> Repo.insert()
+
+        case result do
+          {:ok, app} ->
+            Logger.error("Provider error during application creation",
+              application_id: app.id,
+              country: app.country,
+              status: "provider_error"
+            )
+
+            {:ok, app}
+
+          error ->
+            error
+        end
     end
   end
 
@@ -102,6 +133,27 @@ defmodule DebtStalker.Applications do
           {:error, :invalid_transition}
         end
     end
+  end
+
+  @doc """
+  Returns the list of allowed status transitions for the given application.
+
+  Intersects global transitions with country-specific transitions.
+  """
+  @spec allowed_transitions(CreditApplication.t()) :: [String.t()]
+  def allowed_transitions(%CreditApplication{} = app) do
+    global_allowed = Map.get(@global_transitions, app.status, [])
+
+    country_allowed =
+      case Registry.lookup(app.country) do
+        {:ok, country_module} ->
+          Map.get(country_module.allowed_status_transitions(), app.status, [])
+
+        {:error, _} ->
+          global_allowed
+      end
+
+    global_allowed -- (global_allowed -- country_allowed)
   end
 
   defp transition_allowed?(app, new_status) do
@@ -143,9 +195,22 @@ defmodule DebtStalker.Applications do
     |> Repo.transaction()
     |> case do
       {:ok, %{application: updated}} ->
+        Logger.info("Status transition completed",
+          application_id: app.id,
+          country: app.country,
+          status: new_status,
+          from_status: app.status
+        )
+
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:#{app.id}",
+          {:status_changed, %{from: app.status, to: new_status}}
+        )
+
+        Phoenix.PubSub.broadcast(
+          DebtStalker.PubSub,
+          "applications:list",
           {:status_changed, %{from: app.status, to: new_status}}
         )
 

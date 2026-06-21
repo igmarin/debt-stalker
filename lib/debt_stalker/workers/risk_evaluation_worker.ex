@@ -2,17 +2,19 @@ defmodule DebtStalker.Workers.RiskEvaluationWorker do
   @moduledoc """
   Oban worker that evaluates risk for a credit application.
 
-  Re-evaluates using country rules + provider summary, then moves the
-  application through status transitions (submitted → pending_risk →
-  approved/rejected/additional_review).
+  Delegates to `DebtStalker.Risk` context for business logic.
+  Moves the application through status transitions:
+  submitted → pending_risk → approved/rejected/additional_review.
 
   Idempotent: if the application is not in a state that allows risk evaluation
   (already moved past pending_risk), the worker completes without side effects.
   """
   use Oban.Worker, queue: :events, max_attempts: 3
 
+  require Logger
+
   alias DebtStalker.Applications
-  alias DebtStalker.Countries.Registry
+  alias DebtStalker.Risk
 
   @impl true
   def perform(%Oban.Job{args: %{"application_id" => app_id}}) do
@@ -35,54 +37,51 @@ defmodule DebtStalker.Workers.RiskEvaluationWorker do
 
   defp evaluate_risk(app) do
     # First move to pending_risk if still in submitted
-    app =
-      if app.status == "submitted" do
-        {:ok, updated} = Applications.update_status(app.id, "pending_risk", "risk_worker")
-        updated
-      else
-        app
-      end
+    with {:ok, app} <- maybe_transition_to_pending_risk(app),
+         {:ok, new_status} <- Risk.evaluate(app),
+         {:ok, _updated} <- Applications.update_status(app.id, new_status, "risk_worker") do
+      Logger.info("Risk evaluation completed",
+        application_id: app.id,
+        country: app.country,
+        status: new_status,
+        worker: "RiskEvaluationWorker"
+      )
 
-    # Evaluate using country module
-    {:ok, country_module} = Registry.lookup(app.country)
+      :ok
+    else
+      {:error, :invalid_transition} ->
+        Logger.warning("Risk evaluation skipped: invalid transition",
+          application_id: app.id,
+          country: app.country,
+          worker: "RiskEvaluationWorker"
+        )
 
-    financials_params = %{
-      requested_amount: app.requested_amount,
-      monthly_income: app.monthly_income,
-      provider_debt: extract_provider_debt(app.provider_summary)
-    }
+        :ok
 
-    review_required = country_module.additional_review_required?(financials_params)
+      {:error, :unsupported_country} ->
+        Logger.warning("Risk evaluation skipped: unsupported country",
+          application_id: app.id,
+          country: app.country,
+          worker: "RiskEvaluationWorker"
+        )
 
-    # Determine final status
-    new_status =
-      cond do
-        review_required -> "additional_review"
-        risk_score_acceptable?(app) -> "approved"
-        true -> "rejected"
-      end
+        :ok
 
-    Applications.update_status(app.id, new_status, "risk_worker")
-    :ok
-  end
+      {:error, reason} ->
+        Logger.error("Risk evaluation failed",
+          application_id: app.id,
+          country: app.country,
+          worker: "RiskEvaluationWorker",
+          reason: inspect(reason)
+        )
 
-  defp risk_score_acceptable?(app) do
-    case app.provider_summary do
-      %{"risk_indicators" => %{"credit_score" => score}} when is_integer(score) ->
-        score >= 650
-
-      %{"risk_indicators" => %{"buro_score" => score}} when is_integer(score) ->
-        score >= 600
-
-      _ ->
-        true
+        {:error, reason}
     end
   end
 
-  defp extract_provider_debt(%{"risk_indicators" => %{"existing_debt" => debt}})
-       when is_binary(debt) do
-    Decimal.new(debt)
+  defp maybe_transition_to_pending_risk(%{status: "submitted"} = app) do
+    Applications.update_status(app.id, "pending_risk", "risk_worker")
   end
 
-  defp extract_provider_debt(_), do: Decimal.new("0")
+  defp maybe_transition_to_pending_risk(app), do: {:ok, app}
 end

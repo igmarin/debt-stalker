@@ -16,7 +16,11 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
           Phoenix.PubSub.subscribe(DebtStalker.PubSub, "applications:#{app.id}")
         end
 
-        {:ok, assign(socket, app: app, page_title: "Application #{app.id}")}
+        {:ok,
+         socket
+         |> assign(:app, app)
+         |> assign(:allowed_transitions, Applications.allowed_transitions(app))
+         |> assign(:page_title, "Application #{app.id}")}
 
       {:error, :not_found} ->
         {:ok,
@@ -25,9 +29,31 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
   end
 
   @impl true
+  def handle_event("update_status", %{"status" => new_status}, socket) do
+    case Applications.update_status(socket.assigns.app.id, new_status, "ui") do
+      {:ok, app} ->
+        {:noreply,
+         socket
+         |> assign(:app, app)
+         |> assign(:allowed_transitions, Applications.allowed_transitions(app))
+         |> put_flash(:info, "Status updated to #{new_status}")}
+
+      {:error, :invalid_transition} ->
+        {:noreply, put_flash(socket, :error, "Invalid status transition")}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, "Application not found")}
+    end
+  end
+
+  @impl true
   def handle_info({:status_changed, _details}, socket) do
     {:ok, app} = Applications.get_application(socket.assigns.app.id)
-    {:noreply, assign(socket, :app, app)}
+
+    {:noreply,
+     socket
+     |> assign(:app, app)
+     |> assign(:allowed_transitions, Applications.allowed_transitions(app))}
   end
 
   @impl true
@@ -87,6 +113,28 @@ defmodule DebtStalkerWeb.ApplicationDetailLive do
           </div>
         <% end %>
       </div>
+
+      <%= if @allowed_transitions != [] do %>
+        <div class="mt-6 bg-white shadow rounded-lg p-6">
+          <h2 class="text-lg font-bold mb-4">Update Status</h2>
+          <form id="status-update-form" phx-submit="update_status" class="flex gap-4 items-end">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-700">New Status</label>
+              <select name="status" class="mt-1 block w-full rounded border px-3 py-2">
+                <%= for status <- @allowed_transitions do %>
+                  <option value={status}>{status}</option>
+                <% end %>
+              </select>
+            </div>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+            >
+              Update
+            </button>
+          </form>
+        </div>
+      <% end %>
     </div>
     """
   end

@@ -58,10 +58,23 @@ config :tailwind,
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
-# Configure Elixir's Logger
+# Configure Elixir's Logger — structured JSON via logger_json (all environments)
+config :logger, :default_handler, formatter: {LoggerJSON.Formatters.Basic, metadata: :all}
+
+# Register metadata keys used across the application (Credo + logger_json)
 config :logger, :default_formatter,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  metadata: [
+    :application_id,
+    :country,
+    :status,
+    :from_status,
+    :worker,
+    :event_id,
+    :event_type,
+    :event_count,
+    :notification_status,
+    :reason
+  ]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
@@ -69,7 +82,13 @@ config :phoenix, :json_library, Jason
 # Configure Oban
 config :debt_stalker, Oban,
   repo: DebtStalker.Repo,
-  queues: [default: 10, events: 20, notifications: 10]
+  queues: [default: 10, events: 20, notifications: 10],
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"* * * * *", DebtStalker.Workers.EventDispatcherWorker}
+     ]}
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

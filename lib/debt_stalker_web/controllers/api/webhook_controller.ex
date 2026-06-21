@@ -6,6 +6,8 @@ defmodule DebtStalkerWeb.Api.WebhookController do
   """
   use DebtStalkerWeb, :controller
 
+  require Logger
+
   alias DebtStalker.Repo
 
   @spec receive_webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -62,6 +64,11 @@ defmodule DebtStalkerWeb.Api.WebhookController do
   defp store_and_process(conn, params) do
     app_id = params["application_id"]
     payload_hash = :crypto.hash(:sha256, Jason.encode!(params)) |> Base.encode16(case: :lower)
+
+    Logger.info("Webhook received",
+      application_id: app_id,
+      status: params["status"]
+    )
 
     # Only store webhook_events row if application_id is present (NOT NULL constraint)
     if app_id do

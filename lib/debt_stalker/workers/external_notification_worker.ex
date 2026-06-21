@@ -8,6 +8,8 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   """
   use Oban.Worker, queue: :notifications, max_attempts: 3
 
+  require Logger
+
   alias DebtStalker.Applications
   alias DebtStalker.Repo
 
@@ -81,6 +83,13 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
         inserted_at: DateTime.utc_now()
       }
     ])
+
+    Logger.info("Notification sent",
+      application_id: app.id,
+      status: app.status,
+      worker: "ExternalNotificationWorker",
+      notification_status: status
+    )
 
     :ok
   end

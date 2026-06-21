@@ -70,8 +70,9 @@ config :debt_stalker, DebtStalkerWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :debt_stalker, dev_routes: true
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :default_formatter, format: "[$level] $message\n"
+# Structured JSON logging in development (via logger_json, configured in config.exs)
+# Override log level for development
+config :logger, level: :debug
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.

@@ -55,5 +55,27 @@ defmodule DebtStalker.Workers.RiskEvaluationWorkerTest do
     test "non-existent application does not crash" do
       assert :ok = perform_job(RiskEvaluationWorker, %{application_id: Ecto.UUID.generate()})
     end
+
+    test "handles invalid_transition gracefully without crashing" do
+      # Create an app and manually move it to a state where pending_risk
+      # transition is invalid (e.g. approved)
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+      {:ok, _} = Applications.update_status(app.id, "approved", "system")
+
+      # Running the worker on an approved app should be a no-op (not_evaluable)
+      assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
+    end
+
+    test "handles update_status failure during pending_risk transition" do
+      # If the app is in a state where submitted→pending_risk is invalid,
+      # the worker should handle the error gracefully
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+
+      # Now app is in pending_risk — worker should evaluate and not crash
+      # even if the status update to approved/rejected has issues
+      assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
+    end
   end
 end
