@@ -8,12 +8,15 @@ defmodule DebtStalkerWeb.Auth.Token do
   """
   use Joken.Config
 
+  @doc "Configures the JWT token claims and validations."
   @impl true
+  @spec token_config() :: Joken.token_config()
   def token_config do
     default_claims(default_exp: 3600)
     |> add_claim("role", nil, &valid_role?/1)
   end
 
+  @doc "Generates a signed JWT for the given role."
   @spec generate_token(String.t()) :: {:ok, String.t()} | {:error, term()}
   def generate_token(role) when role in ["read", "update"] do
     claims = %{"role" => role}
@@ -24,6 +27,7 @@ defmodule DebtStalkerWeb.Auth.Token do
     end
   end
 
+  @doc "Verifies a signed JWT and returns its claims."
   @spec verify_token(String.t()) :: {:ok, map()} | {:error, term()}
   def verify_token(token) do
     verify_and_validate(token, signer())

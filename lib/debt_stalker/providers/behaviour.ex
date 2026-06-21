@@ -7,8 +7,13 @@ defmodule DebtStalker.Providers.Behaviour do
   structured results.
   """
 
+  @typedoc "Possible errors returned by a provider adapter."
   @type provider_error :: :timeout | :unavailable | :invalid_document | :rejection
+
+  @typedoc "Result of fetching provider data."
   @type fetch_result :: {:ok, provider_summary()} | {:error, provider_error()}
+
+  @typedoc "Normalized provider summary map."
   @type provider_summary :: %{
           provider_status: String.t(),
           risk_indicators: map(),

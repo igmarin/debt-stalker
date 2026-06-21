@@ -1,4 +1,11 @@
 defmodule DebtStalkerWeb.Router do
+  @moduledoc """
+  HTTP router for DebtStalker.
+
+  Defines browser and API pipelines, LiveView routes, REST endpoints,
+  and dev-only tooling such as LiveDashboard.
+  """
+
   use DebtStalkerWeb, :router
 
   pipeline :browser do

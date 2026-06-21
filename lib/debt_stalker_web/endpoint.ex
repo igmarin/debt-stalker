@@ -1,4 +1,11 @@
 defmodule DebtStalkerWeb.Endpoint do
+  @moduledoc """
+  Phoenix endpoint for the DebtStalker web interface.
+
+  Configures sockets, static assets, request parsers, sessions,
+  telemetry, and routes requests to the router.
+  """
+
   use Phoenix.Endpoint, otp_app: :debt_stalker
 
   # The session will be stored in the cookie and signed,

@@ -1,12 +1,23 @@
 defmodule DebtStalkerWeb.Telemetry do
+  @moduledoc """
+  Telemetry supervisor for DebtStalker.
+
+  Registers Phoenix, database, and VM metrics reporters.
+  """
+
   use Supervisor
   import Telemetry.Metrics
 
+  @doc "Starts the telemetry supervisor."
+  @spec start_link(term()) :: Supervisor.on_start()
   def start_link(arg) do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
   @impl true
+  @spec init(term()) ::
+          {:ok,
+           {Supervisor.sup_flags(), [Supervisor.child_spec() | {module(), term()} | module()]}}
   def init(_arg) do
     children = [
       # Telemetry poller will execute the given period measurements
@@ -19,6 +30,8 @@ defmodule DebtStalkerWeb.Telemetry do
     Supervisor.init(children, strategy: :one_for_one)
   end
 
+  @doc "Returns the list of telemetry metrics to be published."
+  @spec metrics() :: [Telemetry.Metrics.t()]
   def metrics do
     [
       # Phoenix Metrics

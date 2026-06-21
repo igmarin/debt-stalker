@@ -17,8 +17,12 @@ defmodule DebtStalkerWeb do
   those modules here.
   """
 
+  @doc "Returns the static asset paths served by the endpoint."
+  @spec static_paths() :: [String.t()]
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 
+  @doc "Returns the quoted router imports and configuration."
+  @spec router() :: Macro.t()
   def router do
     quote do
       use Phoenix.Router, helpers: false
@@ -30,12 +34,16 @@ defmodule DebtStalkerWeb do
     end
   end
 
+  @doc "Returns the quoted channel configuration."
+  @spec channel() :: Macro.t()
   def channel do
     quote do
       use Phoenix.Channel
     end
   end
 
+  @doc "Returns the quoted controller configuration."
+  @spec controller() :: Macro.t()
   def controller do
     quote do
       use Phoenix.Controller, formats: [:html, :json]
@@ -48,6 +56,8 @@ defmodule DebtStalkerWeb do
     end
   end
 
+  @doc "Returns the quoted LiveView configuration."
+  @spec live_view() :: Macro.t()
   def live_view do
     quote do
       use Phoenix.LiveView
@@ -56,6 +66,8 @@ defmodule DebtStalkerWeb do
     end
   end
 
+  @doc "Returns the quoted LiveComponent configuration."
+  @spec live_component() :: Macro.t()
   def live_component do
     quote do
       use Phoenix.LiveComponent
@@ -64,6 +76,8 @@ defmodule DebtStalkerWeb do
     end
   end
 
+  @doc "Returns the quoted HTML component configuration."
+  @spec html() :: Macro.t()
   def html do
     quote do
       use Phoenix.Component
@@ -96,6 +110,8 @@ defmodule DebtStalkerWeb do
     end
   end
 
+  @doc "Returns the quoted verified routes configuration."
+  @spec verified_routes() :: Macro.t()
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
@@ -108,6 +124,7 @@ defmodule DebtStalkerWeb do
   @doc """
   When used, dispatch to the appropriate controller/live_view/etc.
   """
+  @spec __using__(atom()) :: Macro.t()
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end

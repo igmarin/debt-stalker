@@ -11,6 +11,7 @@ defmodule DebtStalkerWeb.Api.WebhookController do
 
   alias DebtStalker.Repo
 
+  @doc "Receives, verifies, and enqueues a provider webhook event."
   @spec receive_webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def receive_webhook(conn, params) do
     with :ok <- verify_signature(conn, params),

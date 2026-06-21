@@ -16,7 +16,9 @@ defmodule DebtStalker.Workers.RiskEvaluationWorker do
   alias DebtStalker.Applications
   alias DebtStalker.Risk
 
+  @doc "Evaluates risk for an application and transitions its status."
   @impl true
+  @spec perform(Oban.Job.t()) :: :ok | {:error, term()}
   def perform(%Oban.Job{args: %{"application_id" => app_id}}) do
     with {:ok, app} <- Applications.get_application(app_id),
          :ok <- ensure_evaluable(app) do

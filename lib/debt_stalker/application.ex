@@ -1,11 +1,15 @@
 defmodule DebtStalker.Application do
-  # See https://elixir.hexdocs.pm/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
+  @moduledoc """
+  OTP application supervisor for DebtStalker.
+
+  Starts the repository, PubSub, Oban, web endpoint, and other
+  top-level supervision tree children.
+  """
 
   use Application
 
   @impl true
+  @spec start(Application.start_type(), term()) :: {:ok, pid()} | {:error, term()}
   def start(_type, _args) do
     children = [
       DebtStalkerWeb.Telemetry,
@@ -24,9 +28,8 @@ defmodule DebtStalker.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
   @impl true
+  @spec config_change([{atom(), term()}], [{atom(), term()}], [atom()]) :: :ok
   def config_change(changed, _new, removed) do
     DebtStalkerWeb.Endpoint.config_change(changed, removed)
     :ok

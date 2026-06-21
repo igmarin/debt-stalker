@@ -9,7 +9,10 @@ defmodule DebtStalker.Countries.Behaviour do
   - Allowed status transitions (can narrow the global set)
   """
 
+  @typedoc "Result of validating an identity document."
   @type validation_result :: :ok | {:error, String.t()}
+
+  @typedoc "Result of validating financial thresholds."
   @type financial_result :: %{additional_review_required: boolean(), reasons: [String.t()]}
 
   @doc "Validates the identity document format for this country."

@@ -15,7 +15,9 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
 
   @batch_size 50
 
+  @doc "Drains the application events outbox and dispatches events to workers."
   @impl true
+  @spec perform(Oban.Job.t()) :: :ok
   def perform(_job) do
     {:ok, _count} = claim_and_dispatch()
     :ok

@@ -9,6 +9,7 @@ defmodule DebtStalkerWeb.Api.HealthController do
 
   alias DebtStalker.Repo
 
+  @doc "Returns the health status of the application and database."
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, _params) do
     db_status = check_database()

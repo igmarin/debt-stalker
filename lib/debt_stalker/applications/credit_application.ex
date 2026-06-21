@@ -32,11 +32,13 @@ defmodule DebtStalker.Applications.CreditApplication do
     timestamps()
   end
 
+  @typedoc "A credit application record."
   @type t :: %__MODULE__{}
 
   @required_fields ~w(country full_name identity_document requested_amount monthly_income)a
   @optional_fields ~w(status additional_review_required provider_summary risk_result application_date identity_document_hash)a
 
+  @doc "Returns a changeset for creating or updating a credit application."
   @spec changeset(t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
   def changeset(application, attrs) do
     application
@@ -78,11 +80,13 @@ defmodule DebtStalker.Applications.CreditApplication do
     end
   end
 
+  @doc "Returns a SHA-256 hash of the identity document for deduplication."
   @spec hash_document(String.t()) :: String.t()
   def hash_document(document) do
     :crypto.hash(:sha256, document) |> Base.encode16(case: :lower)
   end
 
+  @doc "Redacts an identity document to last-4 for display or responses."
   @spec redact_document(String.t() | nil) :: String.t()
   def redact_document(nil), do: "****"
   def redact_document(document) when byte_size(document) <= 4, do: "****"
@@ -92,6 +96,7 @@ defmodule DebtStalker.Applications.CreditApplication do
     "****#{last_four}"
   end
 
+  @doc "Returns the list of valid application statuses."
   @spec valid_statuses() :: [String.t()]
   def valid_statuses, do: @valid_statuses
 end

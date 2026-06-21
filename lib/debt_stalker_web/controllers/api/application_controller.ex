@@ -20,6 +20,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
 
   plug DebtStalkerWeb.Auth.RequireRolePlug, [role: "read"] when action in [:index, :show]
 
+  @doc "Lists credit applications with filters and cursor pagination."
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, params) do
     filters = build_filters(params)
@@ -33,6 +34,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     })
   end
 
+  @doc "Returns a single credit application by id."
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
     case Applications.get_application(id) do
@@ -48,6 +50,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     end
   end
 
+  @doc "Creates a new credit application."
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, params) do
     attrs = %{
@@ -71,6 +74,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     end
   end
 
+  @doc "Transitions a credit application to a new status."
   @spec update_status(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def update_status(conn, %{"id" => id, "status" => new_status}) do
     triggered_by = conn.assigns[:current_role] || "api"
