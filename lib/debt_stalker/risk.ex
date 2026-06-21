@@ -40,41 +40,16 @@ defmodule DebtStalker.Risk do
 
       review_required = country_module.additional_review_required?(financials_params)
 
+      score_acceptable = country_module.acceptable_risk_score?(app.provider_summary)
+
       new_status =
         cond do
           review_required -> "additional_review"
-          risk_score_acceptable?(app) -> "approved"
+          score_acceptable -> "approved"
           true -> "rejected"
         end
 
       {:ok, new_status}
-    end
-  end
-
-  @doc """
-  Returns the acceptable risk score threshold for a given country.
-
-  Uses `credit_score` for ES and `buro_score` for MX.
-  """
-  @spec risk_score_threshold(String.t()) :: non_neg_integer() | nil
-  def risk_score_threshold(country) do
-    case country do
-      "ES" -> 650
-      "MX" -> 600
-      _ -> nil
-    end
-  end
-
-  defp risk_score_acceptable?(app) do
-    case app.provider_summary do
-      %{"risk_indicators" => %{"credit_score" => score}} when is_integer(score) ->
-        score >= 650
-
-      %{"risk_indicators" => %{"buro_score" => score}} when is_integer(score) ->
-        score >= 600
-
-      _ ->
-        true
     end
   end
 

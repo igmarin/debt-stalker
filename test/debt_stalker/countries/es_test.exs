@@ -119,6 +119,24 @@ defmodule DebtStalker.Countries.ESTest do
     end
   end
 
+  describe "acceptable_risk_score?/1" do
+    test "returns true when credit_score is at or above 650" do
+      assert ES.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 650}})
+      assert ES.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 700}})
+    end
+
+    test "returns false when credit_score is below 650" do
+      refute ES.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 649}})
+      refute ES.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 500}})
+    end
+
+    test "returns true when provider summary has no credit_score" do
+      assert ES.acceptable_risk_score?(%{})
+      assert ES.acceptable_risk_score?(%{"risk_indicators" => %{}})
+      assert ES.acceptable_risk_score?(%{"risk_indicators" => %{"buro_score" => 700}})
+    end
+  end
+
   # Helper: compute the DNI checksum letter
   defp dni_checksum_letter(number) do
     letters = "TRWAGMYFPDXBNJZSQVHLCKE"

@@ -27,6 +27,9 @@ defmodule DebtStalker.Countries.Behaviour do
   @doc "Returns whether additional review is required given the application params."
   @callback additional_review_required?(params :: map()) :: boolean()
 
+  @doc "Returns whether the provider risk score is acceptable for this country."
+  @callback acceptable_risk_score?(provider_summary :: map()) :: boolean()
+
   @doc "Returns the allowed status transitions for this country (narrows global set)."
   @callback allowed_status_transitions() :: %{String.t() => [String.t()]}
 end
