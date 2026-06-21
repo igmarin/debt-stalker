@@ -48,17 +48,11 @@ defmodule DebtStalker.CredoChecks.NoCountryBranching do
     String.contains?(filename, "countries") or
       String.contains?(filename, "providers") or
       String.contains?(filename, "credo_checks") or
-      test_path?(filename) or
-      web_template?(filename)
+      test_path?(filename)
   end
 
   defp test_path?(filename) do
     String.contains?(filename, "/test/") or String.starts_with?(filename, "test/")
-  end
-
-  defp web_template?(filename) do
-    String.contains?(filename, "_live.ex") or
-      String.contains?(filename, "_html.ex")
   end
 
   defp check_line(source_file, {line, line_no}, country_codes) do

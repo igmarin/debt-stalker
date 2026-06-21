@@ -74,6 +74,21 @@ defmodule DebtStalker.CredoChecks.NoCountryBranchingTest do
     |> assert_issue()
   end
 
+  test "flags country branching in LiveView modules" do
+    source = """
+    defmodule DebtStalkerWeb.ApplicationsLive do
+      def handle_event("submit", %{"country" => country}, socket) do
+        if country == "ES", do: {:noreply, socket}
+      end
+    end
+    """
+
+    source
+    |> to_source_file("lib/debt_stalker_web/live/applications_live.ex")
+    |> run_check(@described_check)
+    |> assert_issue()
+  end
+
   test "does NOT flag when no country code in branching" do
     source = """
     defmodule DebtStalker.Risk do

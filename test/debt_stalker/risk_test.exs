@@ -20,6 +20,17 @@ defmodule DebtStalker.RiskTest do
     monthly_income: Decimal.new("2000")
   }
 
+  describe "risk_score_threshold/1" do
+    test "returns configured threshold for supported countries" do
+      assert 650 = Risk.risk_score_threshold("ES")
+      assert 600 = Risk.risk_score_threshold("MX")
+    end
+
+    test "returns nil for unsupported countries" do
+      assert is_nil(Risk.risk_score_threshold("XX"))
+    end
+  end
+
   describe "evaluate/1" do
     test "returns approved for normal app with good credit score" do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
