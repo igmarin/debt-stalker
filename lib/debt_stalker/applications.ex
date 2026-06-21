@@ -14,9 +14,9 @@ defmodule DebtStalker.Applications do
 
   alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries.Registry, as: CountryRegistry
-  alias DebtStalker.Providers.ProviderSummary
   alias DebtStalker.Providers.CircuitBreaker
   alias DebtStalker.Providers.CircuitBreakers
+  alias DebtStalker.Providers.ProviderSummary
   alias DebtStalker.Providers.Registry, as: ProviderRegistry
   alias DebtStalker.Repo
 
@@ -388,17 +388,9 @@ defmodule DebtStalker.Applications do
   defp fetch_provider(%{country: country, identity_document: document}) do
     with {:ok, adapter} <- ProviderRegistry.lookup(country),
          {:ok, breaker} <- CircuitBreakers.lookup(country) do
-      case CircuitBreaker.call(breaker, fn ->
-             adapter.fetch(country, %{identity_document: document})
-           end) do
-        {:ok, summary} ->
-          DebtStalker.Telemetry.emit_provider_call(country, :success)
-          {:ok, summary}
-
-        {:error, reason} ->
-          DebtStalker.Telemetry.emit_provider_call(country, :error, error_reason: reason)
-          {:error, :provider_error}
-      end
+      breaker
+      |> CircuitBreaker.call(fn -> adapter.fetch(country, %{identity_document: document}) end)
+      |> handle_provider_result(country)
     else
       {:error, :unsupported_provider} ->
         DebtStalker.Telemetry.emit_provider_call(country, :error,
@@ -407,5 +399,15 @@ defmodule DebtStalker.Applications do
 
         {:error, :provider_error}
     end
+  end
+
+  defp handle_provider_result({:ok, summary}, country) do
+    DebtStalker.Telemetry.emit_provider_call(country, :success)
+    {:ok, summary}
+  end
+
+  defp handle_provider_result({:error, reason}, country) do
+    DebtStalker.Telemetry.emit_provider_call(country, :error, error_reason: reason)
+    {:error, :provider_error}
   end
 end
