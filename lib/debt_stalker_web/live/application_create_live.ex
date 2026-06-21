@@ -7,6 +7,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
   alias DebtStalker.Applications
   alias DebtStalker.Countries
+  alias DebtStalker.Countries.Registry, as: CountryRegistry
 
   @doc "Mounts the new application form LiveView."
   @impl true
@@ -23,6 +24,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
       )
       |> assign(:errors, %{})
       |> assign(:submitted, false)
+      |> assign(:country_options, CountryRegistry.supported_countries())
       |> assign(:document_hint, Countries.get_document_hint(form_params["country"]))
 
     {:ok, socket}
@@ -107,8 +109,9 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
           <label class="block text-sm font-medium text-gray-700">Country</label>
           <select name="application[country]" class="mt-1 block w-full rounded border px-3 py-2">
             <option value="">Select country</option>
-            <option value="ES" selected={@form.params["country"] == "ES"}>Spain (ES)</option>
-            <option value="MX" selected={@form.params["country"] == "MX"}>Mexico (MX)</option>
+            <%= for country <- @country_options do %>
+              <option value={country} selected={@form.params["country"] == country}>{country}</option>
+            <% end %>
           </select>
           <%= if @errors[:country] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:country], ", ")}</p>
