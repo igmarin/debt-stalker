@@ -281,7 +281,7 @@ flowchart TD
     subgraph Async[Oban Workers]
         Disp[EventDispatcherWorker<br/>FOR UPDATE SKIP LOCKED]
         RiskW[RiskEvaluationWorker]
-        AuditW[AuditWorker]
+        AuditW[AuditWorker<br/>(deferred — see ADR-0004)]
         NotifW[ExternalNotificationWorker]
         WebhookW[ProviderWebhookWorker]
     end
@@ -327,7 +327,8 @@ write (create / update status)
   → PostgreSQL TRIGGER (AFTER INSERT / AFTER UPDATE OF status)
     → INSERT row into application_events (outbox)
       → EventDispatcherWorker claims unprocessed rows with FOR UPDATE SKIP LOCKED
-        → enqueues specialized Oban jobs (Risk / Audit / Notification / Webhook)
+        → enqueues specialized Oban jobs (Risk / Notification / Webhook)
+          → audit is synchronous in Ecto.Multi (see ADR-0004)
           → workers call back through Applications context (validated transition)
             → audit row + PubSub broadcast → LiveView updates
 ```

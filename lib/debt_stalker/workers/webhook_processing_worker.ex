@@ -30,6 +30,7 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
           reason: "not_found"
         )
 
+        mark_webhook_processed(app_id)
         :ok
 
       {:error, :invalid_transition} ->
@@ -40,6 +41,7 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
           reason: "invalid_transition"
         )
 
+        mark_webhook_processed(app_id)
         :ok
     end
   end
