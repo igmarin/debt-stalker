@@ -167,7 +167,8 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       circuit_state: :closed,
       failure_count: 0,
       opened_at: nil,
-      adapter: nil
+      adapter: nil,
+      trial_in_flight: false
     }
 
     {:ok, state}
@@ -190,7 +191,7 @@ defmodule DebtStalker.Providers.CircuitBreaker do
 
   @impl true
   def handle_call(:check_access, _from, state) do
-    case maybe_transition_to_half_open(state) do
+    case check_and_grant_access(state) do
       {:circuit_open, state} ->
         {:reply, :circuit_open, state}
 
@@ -213,22 +214,38 @@ defmodule DebtStalker.Providers.CircuitBreaker do
 
   @impl true
   def handle_call(:reset, _from, state) do
-    {:reply, :ok, %{state | circuit_state: :closed, failure_count: 0, opened_at: nil}}
+    {:reply, :ok,
+     %{state | circuit_state: :closed, failure_count: 0, opened_at: nil, trial_in_flight: false}}
   end
 
   # --- Private: state transitions ---
 
-  defp maybe_transition_to_half_open(%{circuit_state: :open, opened_at: opened_at} = state) do
+  # Closed: always allow.
+  defp check_and_grant_access(%{circuit_state: :closed} = state) do
+    {:allowed, state}
+  end
+
+  # Open: transition to half-open if cooldown elapsed and grant the single
+  # trial slot to this caller.
+  defp check_and_grant_access(%{circuit_state: :open, opened_at: opened_at} = state) do
     elapsed = System.monotonic_time(:millisecond) - opened_at
 
     if elapsed >= state.config.cooldown_ms do
-      {:allowed, %{state | circuit_state: :half_open}}
+      {:allowed, %{state | circuit_state: :half_open, trial_in_flight: true}}
     else
       {:circuit_open, state}
     end
   end
 
-  defp maybe_transition_to_half_open(state), do: {:allowed, state}
+  # Half-open: allow only if the trial slot is free; otherwise reject so
+  # concurrent callers fail fast while the single trial is in-flight.
+  defp check_and_grant_access(%{circuit_state: :half_open, trial_in_flight: false} = state) do
+    {:allowed, %{state | trial_in_flight: true}}
+  end
+
+  defp check_and_grant_access(%{circuit_state: :half_open, trial_in_flight: true} = state) do
+    {:circuit_open, state}
+  end
 
   # --- Private: failure/success recording ---
 
@@ -279,7 +296,8 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       state
       | circuit_state: :open,
         failure_count: 0,
-        opened_at: System.monotonic_time(:millisecond)
+        opened_at: System.monotonic_time(:millisecond),
+        trial_in_flight: false
     }
   end
 
@@ -302,7 +320,7 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       }
     )
 
-    %{state | circuit_state: :closed, failure_count: 0, opened_at: nil}
+    %{state | circuit_state: :closed, failure_count: 0, opened_at: nil, trial_in_flight: false}
   end
 
   defp extract_country(%{adapter: {_, _, [country | _]}}), do: country
