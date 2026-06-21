@@ -45,8 +45,9 @@ defmodule DebtStalker.Risk do
       new_status =
         cond do
           review_required -> "additional_review"
-          score_acceptable -> "approved"
-          true -> "rejected"
+          score_acceptable == true -> "approved"
+          score_acceptable == false -> "rejected"
+          :unknown -> "additional_review"
         end
 
       {:ok, new_status}
@@ -65,14 +66,14 @@ defmodule DebtStalker.Risk do
 
   # Handles the optional acceptable_risk_score?/1 callback.
   # Countries that implement it (ES, MX) delegate to their logic.
-  # Countries that don't implement it default to false (fail-safe:
-  # applications without a score check go to additional_review,
-  # not automatic approval).
+  # Countries that don't implement it return :unknown, which routes
+  # the application to additional_review (fail-safe: no automatic
+  # approval or rejection without a score check).
   defp acceptable_risk_score?(country_module, provider_summary) do
     if function_exported?(country_module, :acceptable_risk_score?, 1) do
       country_module.acceptable_risk_score?(provider_summary)
     else
-      false
+      :unknown
     end
   end
 end
