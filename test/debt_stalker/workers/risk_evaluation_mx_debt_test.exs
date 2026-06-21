@@ -20,11 +20,39 @@ defmodule DebtStalker.Workers.RiskEvaluationMxDebtTest do
     monthly_income: Decimal.new("2000")
   }
 
+  # CURP chosen so simulated existing_debt exceeds 18x income when combined with requested_amount,
+  # without triggering the 10x income-ratio rule alone (8000 < 10 * 2000).
+  @mx_high_debt_attrs %{
+    country: "MX",
+    full_name: "Maria Lopez",
+    identity_document: "GARC850101HDFRRL27",
+    requested_amount: Decimal.new("8000"),
+    monthly_income: Decimal.new("2000")
+  }
+
   describe "MX provider_debt evaluation" do
+    test "routes to additional_review when provider debt exceeds 18x income (AC2.6 E2E)" do
+      {:ok, app} = Applications.create_application(@mx_high_debt_attrs)
+
+      existing_debt =
+        app.provider_summary["risk_indicators"]["existing_debt"]
+        |> Decimal.new()
+
+      total_debt = Decimal.add(existing_debt, app.requested_amount)
+      threshold = Decimal.mult(app.monthly_income, 18)
+
+      assert Decimal.gt?(total_debt, threshold),
+             "fixture must exceed debt threshold; adjust identity_document or amounts"
+
+      perform_job(RiskEvaluationWorker, %{application_id: app.id})
+
+      {:ok, updated} = Applications.get_application(app.id)
+      assert updated.status == "additional_review"
+    end
+
     test "extracts existing_debt from provider_summary for MX risk evaluation" do
       {:ok, app} = Applications.create_application(@mx_attrs)
 
-      # The MX adapter returns existing_debt in provider_summary.risk_indicators
       assert app.provider_summary != nil
       assert app.provider_summary["risk_indicators"]["existing_debt"] != nil
 
@@ -32,8 +60,6 @@ defmodule DebtStalker.Workers.RiskEvaluationMxDebtTest do
 
       {:ok, updated} = Applications.get_application(app.id)
 
-      # The simulated adapter returns a deterministic existing_debt based on document hash.
-      # With GARC850101HDFRRL09, the debt value is rem(:erlang.phash2(document, 99), 50_000)
       existing_debt =
         app.provider_summary["risk_indicators"]["existing_debt"]
         |> Decimal.new()
@@ -42,11 +68,9 @@ defmodule DebtStalker.Workers.RiskEvaluationMxDebtTest do
       threshold = Decimal.mult(app.monthly_income, 18)
 
       if Decimal.gt?(total_debt, threshold) do
-        # Should be additional_review due to debt_ratio_exceeded
-        assert updated.status in ["additional_review", "approved", "rejected"]
+        assert updated.status == "additional_review"
       else
-        # Normal flow based on income ratio only
-        assert updated.status in ["approved", "additional_review"]
+        assert updated.status in ["approved", "rejected"]
       end
     end
 
