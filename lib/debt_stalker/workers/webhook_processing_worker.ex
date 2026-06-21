@@ -4,6 +4,16 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
 
   Applies the status transition specified in the webhook payload and
   marks the corresponding webhook_events row as processed.
+
+  Return behavior:
+  - `:ok` on a successful transition.
+  - `{:cancel, :not_found}` when the referenced application does not exist.
+    This is a permanent failure; Oban should not retry because the
+    application will never appear.
+  - `:ok` on `{:error, :invalid_transition}` after marking the webhook event
+    processed. The transition is invalid for the current application state,
+    but retrying will never succeed, so we treat it as handled and do not
+    requeue the job.
   """
   use Oban.Worker, queue: :events, max_attempts: 3
 
@@ -13,9 +23,8 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
   alias DebtStalker.Repo
   alias Ecto.Adapters.SQL
 
-  @doc "Applies a status transition from a verified webhook event."
   @impl true
-  @spec perform(Oban.Job.t()) :: :ok
+  @spec perform(Oban.Job.t()) :: :ok | {:cancel, :not_found}
   def perform(%Oban.Job{
         args: %{"application_id" => app_id, "status" => status, "triggered_by" => triggered_by}
       }) do
@@ -32,8 +41,7 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
           reason: "not_found"
         )
 
-        mark_webhook_processed(app_id)
-        :ok
+        {:cancel, :not_found}
 
       {:error, :invalid_transition} ->
         Logger.warning("Webhook processing skipped: invalid_transition",
@@ -49,8 +57,6 @@ defmodule DebtStalker.Workers.WebhookProcessingWorker do
   end
 
   # Marks all unprocessed webhook_events for the given application as processed.
-  # This is a no-op when no matching row exists (e.g., :not_found path where
-  # the application doesn't exist). The UPDATE matches zero rows without raising.
   @spec mark_webhook_processed(Ecto.UUID.t()) :: :ok
   defp mark_webhook_processed(app_id) do
     {:ok, uuid_binary} = Ecto.UUID.dump(app_id)
