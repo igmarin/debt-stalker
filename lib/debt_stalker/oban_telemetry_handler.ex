@@ -5,9 +5,22 @@ defmodule DebtStalker.ObanTelemetryHandler do
 
   Attaches to `[:oban, :job, :stop]` and `[:oban, :job, :exception]` events
   and emits a normalized event with `:worker` and `:result` metadata.
+
+  Started as a supervised GenServer to ensure reliable attachment and
+  automatic re-attachment on restart.
   """
 
+  use GenServer
+
   @handler_id :debt_stalker_oban_business_metrics
+
+  # --- Client API ---
+
+  @doc "Starts the telemetry handler GenServer."
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
 
   @doc """
   Attaches the telemetry handler to Oban job events.
@@ -50,6 +63,22 @@ defmodule DebtStalker.ObanTelemetryHandler do
     worker = to_string(metadata.worker)
     DebtStalker.Telemetry.emit_oban_job(worker, :error)
   end
+
+  # --- GenServer callbacks ---
+
+  @impl true
+  def init(_opts) do
+    attach()
+    {:ok, %{}}
+  end
+
+  @impl true
+  def terminate(_reason, _state) do
+    detach()
+    :ok
+  end
+
+  # --- Private ---
 
   @spec classify_result(term()) :: :success | :error
   defp classify_result(:ok), do: :success
