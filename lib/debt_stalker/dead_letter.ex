@@ -62,7 +62,7 @@ defmodule DebtStalker.DeadLetter do
       attempt: job.attempt,
       max_attempts: job.max_attempts,
       last_error: last_error,
-      captured_at: DateTime.utc_now()
+      captured_at: DateTime.utc_now() |> DateTime.truncate(:second)
     }
 
     # Idempotent: check if already captured, then insert.
@@ -142,6 +142,116 @@ defmodule DebtStalker.DeadLetter do
     |> Repo.one()
   end
 
+  @doc """
+  Retrieves a single dead-letter entry by ID.
+
+  ## Parameters
+
+  - `id` — the dead-letter entry ID
+
+  ## Returns
+
+  - `%DeadLetterJob{}` if found
+  - `nil` if not found
+  """
+  @spec get(pos_integer()) :: DeadLetterJob.t() | nil
+  def get(id) do
+    Repo.get(DeadLetterJob, id)
+  end
+
+  @doc """
+  Re-enqueues a dead-lettered job as a new Oban job.
+
+  The new job is created with the same worker and safe args (PII-redacted).
+  The dead-letter entry is marked with `reenqueued_at` to prevent duplicate
+  re-enqueues. Workers are already idempotent, so replaying does not
+  duplicate side effects.
+
+  ## Parameters
+
+  - `id` — the dead-letter entry ID
+
+  ## Returns
+
+  - `{:ok, %Oban.Job{}}` on success
+  - `{:error, :not_found}` if the entry does not exist
+  - `{:error, :already_reenqueued}` if the entry was already re-enqueued
+  - `{:error, :unknown_worker}` if the worker module cannot be resolved
+  """
+  @spec reenqueue(pos_integer()) ::
+          {:ok, Oban.Job.t()}
+          | {:error, :not_found}
+          | {:error, :already_reenqueued}
+          | {:error, :unknown_worker}
+          | {:error, :insert_failed}
+          | {:error, :update_failed}
+  def reenqueue(id) do
+    # The entire operation runs inside a transaction with a row lock
+    # (SELECT ... FOR UPDATE) to prevent concurrent reenqueue calls from
+    # both seeing reenqueued_at=nil and creating duplicate Oban jobs.
+    Repo.transaction(fn ->
+      with {:ok, entry} <- lock_entry_for_reenqueue(id),
+           {:ok, worker_module} <- resolve_worker(entry.worker),
+           {:ok, new_job} <- insert_reenqueued_job(worker_module, entry),
+           {:ok, _updated} <- mark_reenqueued(entry) do
+        new_job
+      else
+        {:error, :not_found} -> Repo.rollback(:not_found)
+        {:error, :already_reenqueued} -> Repo.rollback(:already_reenqueued)
+        {:error, :unknown_worker} -> Repo.rollback(:unknown_worker)
+        {:error, :insert_failed} -> Repo.rollback(:insert_failed)
+        {:error, :update_failed} -> Repo.rollback(:update_failed)
+      end
+    end)
+    |> normalize_transaction_result()
+  end
+
+  @spec lock_entry_for_reenqueue(pos_integer()) ::
+          {:ok, DeadLetterJob.t()}
+          | {:error, :not_found}
+          | {:error, :already_reenqueued}
+  defp lock_entry_for_reenqueue(id) do
+    # SELECT ... FOR UPDATE locks the row so concurrent transactions
+    # block until this transaction commits or rolls back.
+    query = from(d in DeadLetterJob, where: d.id == ^id, lock: "FOR UPDATE")
+
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      %DeadLetterJob{reenqueued_at: nil} = entry -> {:ok, entry}
+      %DeadLetterJob{} -> {:error, :already_reenqueued}
+    end
+  end
+
+  defp normalize_transaction_result({:ok, job}), do: {:ok, job}
+  defp normalize_transaction_result({:error, reason}), do: {:error, reason}
+
+  @doc """
+  Re-enqueues all pending (not yet re-enqueued) dead-letter entries.
+
+  Skips entries with unresolvable worker modules.
+
+  ## Returns
+
+  - `{:ok, count}` where count is the number of successfully re-enqueued jobs
+  """
+  @spec reenqueue_pending() :: {:ok, non_neg_integer()}
+  def reenqueue_pending do
+    pending =
+      from(d in DeadLetterJob, where: is_nil(d.reenqueued_at))
+      |> Repo.all()
+
+    count =
+      pending
+      |> Enum.reduce(0, fn entry, acc ->
+        case reenqueue(entry.id) do
+          {:ok, _} -> acc + 1
+          _ -> acc
+        end
+      end)
+
+    {:ok, count}
+  end
+
   # --- Private ---
 
   defp extract_last_error([]), do: nil
@@ -193,5 +303,60 @@ defmodule DebtStalker.DeadLetter do
         acc
       end
     end)
+  end
+
+  @spec resolve_worker(String.t()) :: {:ok, module()} | {:error, :unknown_worker}
+  defp resolve_worker(worker_name) do
+    module = Module.concat([worker_name])
+
+    case Code.ensure_loaded(module) do
+      {:module, ^module} ->
+        if function_exported?(module, :perform, 1) do
+          {:ok, module}
+        else
+          {:error, :unknown_worker}
+        end
+
+      _ ->
+        {:error, :unknown_worker}
+    end
+  end
+
+  @spec insert_reenqueued_job(module(), DeadLetterJob.t()) ::
+          {:ok, Oban.Job.t()} | {:error, :insert_failed}
+  defp insert_reenqueued_job(worker_module, entry) do
+    # Use the redacted args stored at capture time — safe metadata only.
+    # Workers are idempotent, so replaying with these args won't duplicate
+    # side effects even if the original job partially completed.
+    # Only include application_id if present (some jobs may not have one).
+    args =
+      case entry.application_id do
+        nil -> entry.args
+        app_id -> Map.put(entry.args, "application_id", app_id)
+      end
+
+    result =
+      args
+      |> worker_module.new(queue: String.to_atom(entry.queue || "events"))
+      |> Oban.insert()
+
+    case result do
+      {:ok, job} -> {:ok, job}
+      {:error, _changeset} -> {:error, :insert_failed}
+    end
+  end
+
+  @spec mark_reenqueued(DeadLetterJob.t()) ::
+          {:ok, DeadLetterJob.t()} | {:error, :update_failed}
+  defp mark_reenqueued(entry) do
+    result =
+      entry
+      |> Ecto.Changeset.change(reenqueued_at: DateTime.utc_now() |> DateTime.truncate(:second))
+      |> Repo.update()
+
+    case result do
+      {:ok, updated} -> {:ok, updated}
+      {:error, _changeset} -> {:error, :update_failed}
+    end
   end
 end

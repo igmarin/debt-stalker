@@ -1,5 +1,9 @@
 defmodule DebtStalker.BusinessMetricsTest do
-  use DebtStalker.DataCase, async: true
+  # async: false because Prometheus metrics are process-global and shared
+  # across all tests. Parallel tests interfere with counter reads, causing
+  # flaky assertions (e.g. initial_count == final_count when another test
+  # increments the counter between reads).
+  use DebtStalker.DataCase, async: false
 
   alias DebtStalker.Applications
 
@@ -16,14 +20,24 @@ defmodule DebtStalker.BusinessMetricsTest do
       metrics_output = TelemetryMetricsPrometheus.Core.scrape(:prometheus_metrics)
 
       initial_count =
-        extract_counter_value(metrics_output, "debt_stalker_applications_created_count")
+        extract_labeled_counter(
+          metrics_output,
+          "debt_stalker_applications_created_count",
+          "ES",
+          "submitted"
+        )
 
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
       metrics_output2 = TelemetryMetricsPrometheus.Core.scrape(:prometheus_metrics)
 
       final_count =
-        extract_counter_value(metrics_output2, "debt_stalker_applications_created_count")
+        extract_labeled_counter(
+          metrics_output2,
+          "debt_stalker_applications_created_count",
+          "ES",
+          "submitted"
+        )
 
       assert final_count > initial_count
     end
@@ -95,6 +109,16 @@ defmodule DebtStalker.BusinessMetricsTest do
         "^#{metric_name}\\{[^}]*to_status=\"#{label_value}\"[^}]*\\}\\s+(\\d+(?:\\.\\d+)?)$",
         "m"
       )
+
+    case Regex.run(pattern, output) do
+      [_, value] -> parse_number(value)
+      nil -> 0.0
+    end
+  end
+
+  defp extract_labeled_counter(output, metric_name, country, status) do
+    pattern =
+      ~r/^#{metric_name}\{[^}]*country="#{country}"[^}]*,?status="#{status}"[^}]*\}\s+(\d+(?:\.\d+)?)$/m
 
     case Regex.run(pattern, output) do
       [_, value] -> parse_number(value)
