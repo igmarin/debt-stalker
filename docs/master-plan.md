@@ -641,3 +641,24 @@ Each handoff file includes:
 - Key decisions already made (from prior phases)
 - The critical path + parallelizable tasks
 - Which GitHub milestone/issues to work from
+
+## 9. Optional Real Providers (Future Reference)
+
+Current implementation (Phase 1 delivered, Phase 2 in progress) uses:
+- Local format + checksum validation for DNI (ES) and CURP (MX) — see `DebtStalker.Countries`.
+- Simulated deterministic provider adapters (`DebtStalker.Providers.ESAdapter` / `MXAdapter`) that return normalized `ProviderSummary` only.
+
+These choices are intentional (see Decision D11) to satisfy reproducibility, fast local setup, repeatable tests, and zero external secrets.
+
+For future consideration (after current phases), researched options for **real** services are documented in:
+
+**→ `docs/optional-real-providers.md`**
+
+That document covers:
+- CURP lookup / validation services (official gob.mx + commercial with free tiers such as Didit, Tlaloc, Veriff, etc.)
+- DNI validation reality (local checksum is complete and authoritative; stronger name-binding is paid KYC)
+- Free developer sandboxes for banking/credit data: BBVA API Market (ES + MX), Santander developer portals, Belvo (MX/CO/BR)
+- SantanderAI GitHub org (AI/ML tools — relevant for future risk/fraud/fairness work, not for ID or raw provider fetch)
+- Integration considerations and decision criteria ("when would it be worthy?")
+
+**Important:** Any real adapter work would be additive only (new optional adapters behind the existing `Providers.Behaviour`), with simulation remaining the default for tests/CI/seeds. This is tracked as potential post-Phase 2 / "optional providers" future work. No changes to active phases.
