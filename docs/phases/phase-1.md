@@ -427,3 +427,32 @@ T0.0 (branch)
 **Critical path:** T0.0 → T1.2 → T1.3 → T1.4 → T2.1 → T2.2/T2.3 → T4.1 → T4.3 → T5.1 → T5.2 → T6.2 → T7.1 → T8.3 → T9.2
 
 **Parallelizable early:** T2.x (countries) and T3.x (providers) can proceed in parallel once T2.1/T3.1 are done. T6.1 (JWT) is independent and can start early.
+
+---
+
+## 8. Phase 1 Refinement Items (Pre-Phase 2)
+
+> Created from the Phase 1 validation review (`docs/reviews/phase-1-validation-report.md`). These items must be completed **before** the Phase 2 milestone opens. They are tracked under the `phase-1-refinement` label.
+
+### Blockers for Phase 2
+
+| Issue | Title | Area | Rationale |
+|-------|-------|------|-----------|
+| #74 | Move country-specific risk thresholds into country modules | Domain | Hardcoded `ES → 650` / `MX → 600` in `DebtStalker.Risk` violates the no-country-branching contract. |
+| #75 | Replace hardcoded provider adapter map with provider registry | Domain | `@provider_adapters` in `Applications` forces two edits per new country instead of one registry entry. |
+| #76 | Remove country branching from LiveView create form | Web | `ApplicationCreateLive` chooses placeholder text via `if country == "ES"`. |
+| #77 | Fix `WebhookProcessingWorker` permanent error handling | Async | `:not_found` should return `:cancel`; `:invalid_transition` handling must be explicit. |
+| #78 | Implement promised Credo custom checks | Infrastructure | `.credo.exs` lacks `NoCountryBranching`, `RequireSpec`, and `NoIOInspect` checks promised in Phase 0. |
+
+### Documentation
+
+| Issue | Title | Rationale |
+|-------|-------|-----------|
+| #80 | Document how to integrate a new country | Provide a single recipe for adding a country without implementing PT/IT/CO/BR. |
+
+### Notes for Phase 2 Handoff
+
+- The `phase-1-refinement` label groups all follow-up work discovered during validation.
+- Items #74–#78 are architecture-contract fixes; skipping them makes Phase 2/3 expansion fragile.
+- Item #80 is documentation-only and can be picked up by any team member.
+- See `docs/reviews/phase-1-validation-report.md` for the full validation report, quality gate output, and remaining Phase 2 readiness gaps.
