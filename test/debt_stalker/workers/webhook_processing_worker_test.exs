@@ -1,4 +1,5 @@
 defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
+  @moduledoc false
   use DebtStalker.DataCase, async: false
   use Oban.Testing, repo: DebtStalker.Repo
 
@@ -78,12 +79,13 @@ defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
       assert processed_val == true
     end
 
-    test "non-existent application does not crash and logs warning" do
+    test "non-existent application returns cancel and does not mark webhook processed" do
       fake_id = Ecto.UUID.generate()
+      {:ok, uuid_binary} = Ecto.UUID.dump(fake_id)
 
       logs =
         capture_log(fn ->
-          assert :ok =
+          assert {:cancel, :not_found} =
                    perform_job(WebhookProcessingWorker, %{
                      "application_id" => fake_id,
                      "status" => "approved",
@@ -93,6 +95,18 @@ defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
 
       assert logs =~ "Webhook processing skipped"
       assert logs =~ "not_found"
+
+      # No webhook event should be marked processed for a missing application.
+      # The FK prevents inserting one for a non-existent app, so we simply
+      # assert there are no rows for this application_id.
+      {:ok, %{rows: rows}} =
+        SQL.query(
+          DebtStalker.Repo,
+          "SELECT processed FROM webhook_events WHERE application_id = $1",
+          [uuid_binary]
+        )
+
+      assert rows == []
     end
 
     test "invalid transition does not crash and logs warning" do
