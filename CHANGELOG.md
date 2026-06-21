@@ -33,9 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Telemetry events for HTTP, Ecto, Oban, provider calls, and status transitions
   - Prometheus metrics exporter (port 9568) and LiveDashboard (`/dev/dashboard` in dev)
   - Business metrics: applications created, Oban jobs, provider latency, status transitions
-  - Dead-letter table and `DeadLetter` context (capture API; Oban hook in PR #90)
-  - Provider circuit breaker module (production wiring in PR #91)
-  - Test coverage gate at 85% (PR #93)
+  - Dead-letter table, `DeadLetter` context, and Oban exhaustion capture wiring
+  - Provider circuit breaker module wired into provider fetches
+  - Test coverage gate at 85%
+  - Custom Credo checks for architecture contracts: no country branching outside country/provider modules, public `@spec` enforcement, and no committed `IO.inspect`
 
 ## [0.1.0] - 2026-06-20
 

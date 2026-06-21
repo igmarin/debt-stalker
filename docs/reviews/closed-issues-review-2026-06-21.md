@@ -8,16 +8,16 @@
 
 ## Executive summary
 
-The codebase is in strong shape for Phase 1 and partial Phase 2. Phase 1 review gaps (GAP-1, GAP-3–5) are resolved in `main`. The highest-priority follow-up PRs are now split between merged fixes and pending review items:
+The codebase is in strong shape for Phase 1 and partial Phase 2. Phase 1 review gaps (GAP-1, GAP-3–5) are resolved in `main`. The highest-priority follow-up PRs are now merged except for this documentation sync PR:
 
 | PR | Issue | Status | Fix |
 |----|-------|--------|-----|
 | [#89](https://github.com/igmarin/debt-stalker/pull/89) | GAP-2 E2E | Merged | MX `existing_debt` simulation + deterministic worker test |
-| [#90](https://github.com/igmarin/debt-stalker/pull/90) | #53 | Pending merge approval | Oban exhaustion → `DeadLetter.capture/1` |
+| [#90](https://github.com/igmarin/debt-stalker/pull/90) | #53 | Merged | Oban exhaustion → `DeadLetter.capture/1` |
 | [#91](https://github.com/igmarin/debt-stalker/pull/91) | #52 | Merged | Circuit breaker wired into `fetch_provider/1` |
 | [#93](https://github.com/igmarin/debt-stalker/pull/93) | Coverage | Merged | 85% coverage gate (Option A) |
+| [#95](https://github.com/igmarin/debt-stalker/pull/95) | #78 | Merged | Custom Credo checks for architecture contracts |
 | [#94](https://github.com/igmarin/debt-stalker/pull/94) | Docs | This PR | README, CHANGELOG, Postman, this report |
-| [#95](https://github.com/igmarin/debt-stalker/pull/95) | #78 | Pending CI/merge approval | Custom Credo checks for architecture contracts |
 
 ---
 
@@ -35,9 +35,9 @@ The codebase is in strong shape for Phase 1 and partial Phase 2. Phase 1 review 
 | Severity | Finding | Status |
 |----------|---------|--------|
 | Critical | MX debt rule not E2E-testable (adapter capped debt ~98) | Resolved in #89 |
-| Critical | DLQ not hooked to Oban exhaustion | Addressed in #90; pending merge approval |
+| Critical | DLQ not hooked to Oban exhaustion | Resolved in #90 |
 | Critical | Circuit breaker orphaned from fetch path | Resolved in #91 |
-| Important | Risk score thresholds in `Risk`, not `Countries` | Addressed in #95; pending CI/merge approval |
+| Important | Risk score thresholds in `Risk`, not `Countries` | Resolved in #95 |
 | Important | `WebhookProcessingWorker` permanent errors return `:ok` | Branch `77-fix-webhook-processing-worker-permanent-errors` exists |
 | Suggestion | `emit_status_transition/5` `@spec` mismatch | Deferred |
 
@@ -50,9 +50,9 @@ The codebase is in strong shape for Phase 1 and partial Phase 2. Phase 1 review 
 | `Countries` | Strong |
 | `Providers` | Strong after #91 wiring |
 | `Applications` | Good (inline audit per ADR-0004) |
-| `Risk` | Improved by #95 threshold delegation; pending merge approval |
+| `Risk` | Improved by #95 threshold delegation |
 | `Workers` | Good (delegate to contexts) |
-| `DeadLetter` | Good module; Oban wiring addressed in #90 and pending merge approval |
+| `DeadLetter` | Complete after #90 Oban wiring |
 | `Audit` / `Notifications` | Not extracted (acceptable for current phase) |
 
 ---
@@ -74,7 +74,7 @@ The codebase is in strong shape for Phase 1 and partial Phase 2. Phase 1 review 
 | README | Missing health, observability, coverage command | Updated |
 | CHANGELOG | Wrong webhook path, missing Phase 2 partials | Fixed + Phase 2 partial |
 | Postman | No health endpoint | Health folder added |
-| `phase-2.md` | Says "no code written" | Still stale — update after remaining Phase 2 PRs merge |
+| `phase-2.md` | Says "no code written" | Still stale — update after remaining Phase 2 planning is finalized |
 | `phase-1-code-review.md` | Stale GAP-4/5 | Superseded by this report |
 
 ---
@@ -108,16 +108,14 @@ The codebase is in strong shape for Phase 1 and partial Phase 2. Phase 1 review 
 |-------|--------|---------|
 | Phase 0 (#1–#18) | Scaffold, CI, rs-guard, docs | Complete |
 | Phase 1 (#19–#47) | ES+MX slice | Complete after #89 |
-| Phase 2 (#48–#53) | Telemetry, metrics, breaker, DLQ | Partial on `main`; #90 completes DLQ wiring when merged |
-| Phase 1 refinement (#78, #80) | Credo checks + country docs | #80 merged; #78 pending #95 |
+| Phase 2 (#48–#53) | Telemetry, metrics, breaker, DLQ | Partial on `main`; DLQ and breaker wiring are complete after #90/#91 |
+| Phase 1 refinement (#78, #80) | Credo checks + country docs | Complete after #95 and #96 |
 | #63 | PII backfill | Correctly closed wontfix |
 
 ---
 
 ## Recommended merge order
 
-1. #90 (DLQ wiring; checks green, pending merge approval)
-2. #95 (custom Credo checks; pending fresh CI/merge approval)
-3. #94 (docs sync; can merge after #90/#95 for the most accurate final documentation, or independently if the report keeps pending statuses)
+1. #94 (final docs sync) after fresh CI remains green.
 
-Run `make coverage` and rs-guard on each PR before merge. **Do not merge without your review.**
+Run `make coverage` and rs-guard before merge. **Do not merge without your review.**
