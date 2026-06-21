@@ -16,6 +16,7 @@ defmodule DebtStalker.Telemetry do
 
   ## Measurements
 
+  - `:count` — always 1 (for counter metrics)
   - `:duration` — monotonic time delta in native units (may be nil if not measured)
 
   ## Metadata
@@ -30,7 +31,7 @@ defmodule DebtStalker.Telemetry do
   def emit_status_transition(application_id, country, from_status, to_status, triggered_by) do
     :telemetry.execute(
       [:debt_stalker, :status_transition, :stop],
-      %{duration: nil},
+      %{count: 1, duration: nil},
       %{
         application_id: application_id,
         country: country,
@@ -49,6 +50,7 @@ defmodule DebtStalker.Telemetry do
 
   ## Measurements
 
+  - `:count` — always 1 (for counter metrics)
   - `:duration` — monotonic time delta in native units (may be nil if not measured)
 
   ## Metadata
@@ -72,7 +74,7 @@ defmodule DebtStalker.Telemetry do
 
     :telemetry.execute(
       [:debt_stalker, :provider, :fetch, :stop],
-      %{duration: nil},
+      %{count: 1, duration: nil},
       metadata
     )
 
