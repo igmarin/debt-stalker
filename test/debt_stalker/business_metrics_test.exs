@@ -1,5 +1,5 @@
 defmodule DebtStalker.BusinessMetricsTest do
-  use DebtStalker.DataCase, async: true
+  use DebtStalker.DataCase, async: false
 
   alias DebtStalker.Applications
 

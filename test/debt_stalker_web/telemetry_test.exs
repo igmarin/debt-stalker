@@ -1,5 +1,5 @@
 defmodule DebtStalkerWeb.TelemetryTest do
-  use DebtStalkerWeb.ConnCase, async: true
+  use DebtStalkerWeb.ConnCase, async: false
 
   describe "HTTP request telemetry (built-in)" do
     test "emits [:phoenix, :endpoint, :stop] on HTTP request" do
