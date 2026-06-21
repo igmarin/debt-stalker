@@ -165,4 +165,10 @@ defmodule DebtStalker.Countries.MXTest do
       refute MX.acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => 700}})
     end
   end
+
+  describe "document_hint/0" do
+    test "returns a CURP example" do
+      assert MX.document_hint() =~ "CURP"
+    end
+  end
 end

@@ -6,29 +6,24 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
   use DebtStalkerWeb, :live_view
 
   alias DebtStalker.Applications
+  alias DebtStalker.Countries
 
   @doc "Mounts the new application form LiveView."
   @impl true
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
+    form_params = Map.get(params, "application", %{})
+
     socket =
       socket
       |> assign(:page_title, "New Application")
       |> assign(
         :form,
-        to_form(
-          %{
-            "country" => "",
-            "full_name" => "",
-            "identity_document" => "",
-            "requested_amount" => "",
-            "monthly_income" => ""
-          },
-          as: "application"
-        )
+        to_form(form_params, as: "application")
       )
       |> assign(:errors, %{})
       |> assign(:submitted, false)
+      |> assign(:document_hint, Countries.get_document_hint(form_params["country"]))
 
     {:ok, socket}
   end
@@ -38,7 +33,12 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("validate", %{"application" => params}, socket) do
-    {:noreply, assign(socket, :form, to_form(params, as: "application"))}
+    socket =
+      socket
+      |> assign(:form, to_form(params, as: "application"))
+      |> assign(:document_hint, Countries.get_document_hint(params["country"]))
+
+    {:noreply, socket}
   end
 
   def handle_event("save", %{"application" => params}, socket) do
@@ -61,7 +61,14 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         errors = format_errors(changeset)
-        {:noreply, assign(socket, :errors, errors)}
+
+        socket =
+          socket
+          |> assign(:form, to_form(params, as: "application"))
+          |> assign(:document_hint, Countries.get_document_hint(params["country"]))
+          |> assign(:errors, errors)
+
+        {:noreply, socket}
     end
   end
 
@@ -128,11 +135,7 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
             name="application[identity_document]"
             value={@form.params["identity_document"]}
             class="mt-1 block w-full rounded border px-3 py-2"
-            placeholder={
-              if @form.params["country"] == "ES",
-                do: "12345678Z (DNI)",
-                else: "GARC850101HDFRRL09 (CURP)"
-            }
+            placeholder={@document_hint}
           />
           <%= if @errors[:identity_document] do %>
             <p class="text-red-600 text-sm mt-1">{Enum.join(@errors[:identity_document], ", ")}</p>

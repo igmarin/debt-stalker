@@ -84,6 +84,11 @@ defmodule DebtStalker.Countries.MX do
     }
   end
 
+  @doc "Returns a short document hint for Mexican forms."
+  @impl true
+  @spec document_hint() :: String.t()
+  def document_hint, do: "GARC850101HDFRRL09 (CURP)"
+
   # Private
 
   defp maybe_flag_income_ratio(reasons, amount, income) do
