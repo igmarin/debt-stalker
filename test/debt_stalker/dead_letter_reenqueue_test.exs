@@ -1,5 +1,7 @@
 defmodule DebtStalker.DeadLetterReEnqueueTest do
-  use DebtStalker.DataCase, async: true
+  # async: false because the concurrency test needs serialized sandbox access
+  # to properly test row-level locking with concurrent tasks.
+  use DebtStalker.DataCase, async: false
 
   alias DebtStalker.DeadLetter
 
@@ -123,6 +125,41 @@ defmodule DebtStalker.DeadLetterReEnqueueTest do
       # PII was redacted at capture time, so it's not in the new job
       refute new_job.args["identity_document"] =~ "12345678"
       refute new_job.args["full_name"] =~ "John"
+    end
+  end
+
+  describe "reenqueue/1 concurrency" do
+    test "concurrent reenqueue calls do not create duplicate Oban jobs" do
+      job =
+        make_job(
+          400,
+          %{"application_id" => "app-concurrent"},
+          "DebtStalker.Workers.RiskEvaluationWorker",
+          "error"
+        )
+
+      {:ok, entry} = DeadLetter.capture(job)
+
+      # The Ecto sandbox owns the connection for this test.
+      # We must allow child tasks to use the same connection.
+      parent = self()
+
+      tasks =
+        Enum.map(1..5, fn _ ->
+          Task.async(fn ->
+            Ecto.Adapters.SQL.Sandbox.allow(DebtStalker.Repo, parent, self())
+            DeadLetter.reenqueue(entry.id)
+          end)
+        end)
+
+      results = Task.await_many(tasks, 5000)
+
+      # Exactly one should succeed, the rest should be :already_reenqueued
+      successes = Enum.count(results, fn r -> match?({:ok, _}, r) end)
+      already = Enum.count(results, fn r -> match?({:error, :already_reenqueued}, r) end)
+
+      assert successes == 1
+      assert already == 4
     end
   end
 
