@@ -80,6 +80,12 @@ defmodule DebtStalker.Providers.CircuitBreaker do
     GenServer.call(pid, :state)
   end
 
+  @doc "Resets the circuit to closed state. Used to isolate tests."
+  @spec reset(pid()) :: :ok
+  def reset(pid) do
+    GenServer.call(pid, :reset)
+  end
+
   @doc """
   Executes a function through the circuit breaker.
 
@@ -203,6 +209,11 @@ defmodule DebtStalker.Providers.CircuitBreaker do
       end
 
     {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_call(:reset, _from, state) do
+    {:reply, :ok, %{state | circuit_state: :closed, failure_count: 0, opened_at: nil}}
   end
 
   # --- Private: state transitions ---

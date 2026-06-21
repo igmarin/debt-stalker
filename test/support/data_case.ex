@@ -29,6 +29,7 @@ defmodule DebtStalker.DataCase do
 
   setup tags do
     DebtStalker.DataCase.setup_sandbox(tags)
+    DebtStalker.Providers.CircuitBreakers.reset_all()
     :ok
   end
 
