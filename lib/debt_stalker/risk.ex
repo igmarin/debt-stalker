@@ -22,7 +22,8 @@ defmodule DebtStalker.Risk do
 
   Returns `{:ok, status}` where status is one of:
   - `"approved"` — risk score acceptable, no additional review needed
-  - `"additional_review"` — country thresholds exceeded
+  - `"additional_review"` — country thresholds exceeded, or the country
+    module does not implement `acceptable_risk_score?/1` (fail-safe)
   - `"rejected"` — risk score below acceptable threshold
 
   Returns `{:error, :unsupported_country}` if the application's country
@@ -40,41 +41,17 @@ defmodule DebtStalker.Risk do
 
       review_required = country_module.additional_review_required?(financials_params)
 
+      score_acceptable = acceptable_risk_score?(country_module, app.provider_summary)
+
       new_status =
         cond do
           review_required -> "additional_review"
-          risk_score_acceptable?(app) -> "approved"
-          true -> "rejected"
+          score_acceptable == true -> "approved"
+          score_acceptable == false -> "rejected"
+          true -> "additional_review"
         end
 
       {:ok, new_status}
-    end
-  end
-
-  @doc """
-  Returns the acceptable risk score threshold for a given country.
-
-  Uses `credit_score` for ES and `buro_score` for MX.
-  """
-  @spec risk_score_threshold(String.t()) :: non_neg_integer() | nil
-  def risk_score_threshold(country) do
-    case country do
-      "ES" -> 650
-      "MX" -> 600
-      _ -> nil
-    end
-  end
-
-  defp risk_score_acceptable?(app) do
-    case app.provider_summary do
-      %{"risk_indicators" => %{"credit_score" => score}} when is_integer(score) ->
-        score >= 650
-
-      %{"risk_indicators" => %{"buro_score" => score}} when is_integer(score) ->
-        score >= 600
-
-      _ ->
-        true
     end
   end
 
@@ -87,4 +64,17 @@ defmodule DebtStalker.Risk do
   end
 
   defp extract_provider_debt(_), do: Decimal.new("0")
+
+  # Handles the optional acceptable_risk_score?/1 callback.
+  # Countries that implement it (ES, MX) delegate to their logic.
+  # Countries that don't implement it return :unknown, which routes
+  # the application to additional_review (fail-safe: no automatic
+  # approval or rejection without a score check).
+  defp acceptable_risk_score?(country_module, provider_summary) do
+    if function_exported?(country_module, :acceptable_risk_score?, 1) do
+      country_module.acceptable_risk_score?(provider_summary)
+    else
+      :unknown
+    end
+  end
 end

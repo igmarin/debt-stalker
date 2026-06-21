@@ -96,11 +96,11 @@ defmodule DebtStalker.RiskTest do
       assert {:ok, "additional_review"} = Risk.evaluate(app)
     end
 
-    test "handles missing provider_summary gracefully" do
+    test "handles missing provider_summary gracefully (fail-safe: rejected)" do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
       app = %{app | provider_summary: nil}
-      # With no provider summary, risk score defaults to acceptable
-      assert {:ok, "approved"} = Risk.evaluate(app)
+      # With no provider summary, risk score is not acceptable (fail-safe)
+      assert {:ok, "rejected"} = Risk.evaluate(app)
     end
 
     test "handles invalid existing_debt value gracefully" do
@@ -129,6 +129,46 @@ defmodule DebtStalker.RiskTest do
       app = %{app | country: "XX"}
 
       assert {:error, :unsupported_country} = Risk.evaluate(app)
+    end
+
+    test "delegates to country module for ES with high credit score" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      app = %{app | provider_summary: %{"risk_indicators" => %{"credit_score" => 750}}}
+      assert {:ok, "approved"} = Risk.evaluate(app)
+    end
+
+    test "delegates to country module for ES with low credit score" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      app = %{app | provider_summary: %{"risk_indicators" => %{"credit_score" => 400}}}
+      assert {:ok, "rejected"} = Risk.evaluate(app)
+    end
+
+    test "delegates to country module for MX with high buro score" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "MX",
+          full_name: "Carlos Lopez",
+          identity_document: "GARC850101HDFRRL09",
+          requested_amount: Decimal.new("5000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"buro_score" => 800}}}
+      assert {:ok, "approved"} = Risk.evaluate(app)
+    end
+
+    test "delegates to country module for MX with low buro score" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "MX",
+          full_name: "Carlos Lopez",
+          identity_document: "GARC850101HDFRRL09",
+          requested_amount: Decimal.new("5000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"buro_score" => 400}}}
+      assert {:ok, "rejected"} = Risk.evaluate(app)
     end
   end
 end
