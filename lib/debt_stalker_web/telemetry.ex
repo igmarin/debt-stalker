@@ -14,10 +14,9 @@ defmodule DebtStalkerWeb.Telemetry do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
+  @doc "Initializes the telemetry supervisor children."
   @impl true
-  @spec init(term()) ::
-          {:ok,
-           {Supervisor.sup_flags(), [Supervisor.child_spec() | {module(), term()} | module()]}}
+  @spec init(term()) :: {:ok, {Supervisor.sup_flags(), [Supervisor.child_spec()]}}
   def init(_arg) do
     children = [
       # Telemetry poller will execute the given period measurements

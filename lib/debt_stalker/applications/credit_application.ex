@@ -88,12 +88,18 @@ defmodule DebtStalker.Applications.CreditApplication do
 
   @doc "Redacts an identity document to last-4 for display or responses."
   @spec redact_document(String.t() | nil) :: String.t()
-  def redact_document(nil), do: "****"
-  def redact_document(document) when byte_size(document) <= 4, do: "****"
-
   def redact_document(document) do
-    last_four = String.slice(document, -4, 4)
-    "****#{last_four}"
+    cond do
+      is_nil(document) ->
+        "****"
+
+      byte_size(document) <= 4 ->
+        "****"
+
+      true ->
+        last_four = String.slice(document, -4, 4)
+        "****#{last_four}"
+    end
   end
 
   @doc "Returns the list of valid application statuses."
