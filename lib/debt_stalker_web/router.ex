@@ -26,6 +26,8 @@ defmodule DebtStalkerWeb.Router do
   scope "/api", DebtStalkerWeb.Api do
     pipe_through :api
 
+    get "/health", HealthController, :index
+
     post "/auth/token", AuthController, :create
 
     get "/applications", ApplicationController, :index
