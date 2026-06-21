@@ -1,4 +1,8 @@
 defmodule DebtStalker.BusinessMetricsTest do
+  # async: false because Prometheus metrics are process-global and shared
+  # across all tests. Parallel tests interfere with counter reads, causing
+  # flaky assertions (e.g. initial_count == final_count when another test
+  # increments the counter between reads).
   use DebtStalker.DataCase, async: false
 
   alias DebtStalker.Applications
@@ -19,8 +23,8 @@ defmodule DebtStalker.BusinessMetricsTest do
         extract_labeled_counter(
           metrics_output,
           "debt_stalker_applications_created_count",
-          "country",
-          "ES"
+          "ES",
+          "submitted"
         )
 
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
@@ -31,11 +35,11 @@ defmodule DebtStalker.BusinessMetricsTest do
         extract_labeled_counter(
           metrics_output2,
           "debt_stalker_applications_created_count",
-          "country",
-          "ES"
+          "ES",
+          "submitted"
         )
 
-      assert final_count >= initial_count + 1.0
+      assert final_count > initial_count
     end
 
     test "provider_latency histogram tracks provider call duration" do
@@ -70,7 +74,7 @@ defmodule DebtStalker.BusinessMetricsTest do
           "pending_risk"
         )
 
-      assert final >= initial + 1.0
+      assert final > initial
     end
 
     test "oban_jobs counter tracks job execution by worker and result" do
@@ -89,6 +93,16 @@ defmodule DebtStalker.BusinessMetricsTest do
     end
   end
 
+  defp extract_counter_value(output, metric_name) do
+    # Match counter with or without labels
+    pattern = Regex.compile!("^#{metric_name}(?:\\{[^}]*\\})?\\s+(\\d+(?:\\.\\d+)?)$", "m")
+
+    case Regex.run(pattern, output) do
+      [_, value] -> parse_number(value)
+      nil -> 0.0
+    end
+  end
+
   defp extract_labeled_counter(output, metric_name, label_value) do
     pattern =
       Regex.compile!(
@@ -102,12 +116,9 @@ defmodule DebtStalker.BusinessMetricsTest do
     end
   end
 
-  defp extract_labeled_counter(output, metric_name, label_key, label_value) do
+  defp extract_labeled_counter(output, metric_name, country, status) do
     pattern =
-      Regex.compile!(
-        "^#{metric_name}\\{[^}]*#{label_key}=\"#{label_value}\"[^}]*\\}\\s+(\\d+(?:\\.\\d+)?)$",
-        "m"
-      )
+      ~r/^#{metric_name}\{[^}]*country="#{country}"[^}]*,?status="#{status}"[^}]*\}\s+(\d+(?:\.\d+)?)$/m
 
     case Regex.run(pattern, output) do
       [_, value] -> parse_number(value)
