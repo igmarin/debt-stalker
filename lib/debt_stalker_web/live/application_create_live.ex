@@ -48,12 +48,6 @@ defmodule DebtStalkerWeb.ApplicationCreateLive do
 
     case Applications.create_application(attrs) do
       {:ok, app} ->
-        Phoenix.PubSub.broadcast(
-          DebtStalker.PubSub,
-          "applications:list",
-          {:application_created, app}
-        )
-
         socket =
           socket
           |> put_flash(:info, "Application created successfully")
