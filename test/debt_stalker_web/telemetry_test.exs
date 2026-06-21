@@ -50,7 +50,7 @@ defmodule DebtStalkerWeb.TelemetryTest do
       # Wait for the specific message with route == "/api/health"
       # to avoid picking up stale messages from other tests
       assert_receive {[:phoenix, :router_dispatch, :stop], _measurements,
-                      %{route: "/api/health"} = metadata},
+                      %{route: "/api/health"}},
                      1000
     end
   end

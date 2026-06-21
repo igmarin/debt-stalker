@@ -93,16 +93,6 @@ defmodule DebtStalker.BusinessMetricsTest do
     end
   end
 
-  defp extract_counter_value(output, metric_name) do
-    # Match counter with or without labels
-    pattern = Regex.compile!("^#{metric_name}(?:\\{[^}]*\\})?\\s+(\\d+(?:\\.\\d+)?)$", "m")
-
-    case Regex.run(pattern, output) do
-      [_, value] -> parse_number(value)
-      nil -> 0.0
-    end
-  end
-
   defp extract_labeled_counter(output, metric_name, label_value) do
     pattern =
       Regex.compile!(
