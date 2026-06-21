@@ -51,6 +51,16 @@ defmodule DebtStalker.Countries.ES do
     required
   end
 
+  @doc "Returns whether the provider risk score is acceptable for Spain."
+  @impl true
+  @spec acceptable_risk_score?(map()) :: boolean()
+  def acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => score}})
+      when is_integer(score) do
+    score >= 650
+  end
+
+  def acceptable_risk_score?(_provider_summary), do: false
+
   @doc "Returns the allowed status transitions for Spain."
   @impl true
   @spec allowed_status_transitions() :: %{String.t() => [String.t()]}
@@ -67,16 +77,6 @@ defmodule DebtStalker.Countries.ES do
   @impl true
   @spec risk_score_threshold() :: non_neg_integer()
   def risk_score_threshold, do: 650
-
-  @doc "Returns whether the provider summary indicates an acceptable credit score for Spain."
-  @impl true
-  @spec acceptable_risk_score?(map() | nil) :: boolean()
-  def acceptable_risk_score?(%{"risk_indicators" => %{"credit_score" => score}})
-      when is_integer(score) do
-    score >= 650
-  end
-
-  def acceptable_risk_score?(_), do: true
 
   @doc "Returns a short document hint for Spanish forms."
   @impl true
