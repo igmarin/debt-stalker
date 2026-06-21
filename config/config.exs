@@ -68,12 +68,17 @@ config :logger, :default_formatter,
     :country,
     :status,
     :from_status,
+    :to_status,
+    :from_state,
+    :to_state,
     :worker,
     :event_id,
     :event_type,
     :event_count,
     :notification_status,
-    :reason
+    :reason,
+    :error_module,
+    :error_message
   ]
 
 # Use Jason for JSON parsing in Phoenix
