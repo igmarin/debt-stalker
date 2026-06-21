@@ -21,6 +21,8 @@ defmodule DebtStalker.DeadLetter do
   alias DebtStalker.DeadLetter.DeadLetterJob
   alias DebtStalker.Repo
 
+  # String-keyed lists (Oban args are always string-keyed).
+  # ~w/1 creates string lists by default — NOT atom lists.
   @sensitive_keys ~w(identity_document full_name payload document tax_id ssn)
   @safe_keys ~w(application_id event_type status triggered_by)
 
@@ -63,7 +65,9 @@ defmodule DebtStalker.DeadLetter do
       captured_at: DateTime.utc_now()
     }
 
-    # Idempotent: check if already captured
+    # Idempotent: check if already captured, then insert.
+    # If a concurrent insert wins the race, the unique_constraint on job_id
+    # triggers — we handle that by returning the existing entry.
     case Repo.get_by(DeadLetterJob, job_id: job.id) do
       nil ->
         %DeadLetterJob{}
@@ -81,6 +85,7 @@ defmodule DebtStalker.DeadLetter do
         |> Ecto.Changeset.validate_required([:job_id, :worker, :attempt, :max_attempts])
         |> Ecto.Changeset.unique_constraint(:job_id)
         |> Repo.insert()
+        |> handle_race_condition(job.id)
 
       existing ->
         {:ok, existing}
@@ -150,6 +155,25 @@ defmodule DebtStalker.DeadLetter do
   end
 
   defp extract_last_error(_), do: nil
+
+  @spec handle_race_condition({:ok, DeadLetterJob.t()} | {:error, Ecto.Changeset.t()}, integer()) ::
+          {:ok, DeadLetterJob.t()} | {:error, Ecto.Changeset.t()}
+  defp handle_race_condition({:ok, entry}, _job_id), do: {:ok, entry}
+
+  defp handle_race_condition({:error, changeset}, job_id) do
+    # If the unique_constraint on job_id triggered, a concurrent insert
+    # won the race — return the existing entry.
+    if errors_on(changeset, :job_id) != [] do
+      {:ok, Repo.get_by!(DeadLetterJob, job_id: job_id)}
+    else
+      {:error, changeset}
+    end
+  end
+
+  defp errors_on(changeset, field) do
+    changeset.errors
+    |> Enum.filter(fn {key, _} -> key == field end)
+  end
 
   @spec redact_args(map()) :: map()
   defp redact_args(args) when is_map(args) do
