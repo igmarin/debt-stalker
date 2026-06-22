@@ -5,7 +5,6 @@ setup: ## Install deps, create DB, run migrations, seed
 	mix ecto.setup
 	mix assets.setup
 	mix assets.build
-	mix run priv/repo/seeds.exs
 
 db: ## Create + migrate database
 	mix ecto.create
@@ -14,7 +13,7 @@ db: ## Create + migrate database
 migrate: ## Run migrations
 	mix ecto.migrate
 
-seed: ## Run seeds (100 demo apps by default; override with SEED_COUNT/SEED_MODE)
+seed: ## Run seeds (1_000 demo apps by default; override with SEED_COUNT/SEED_MODE)
 	mix run priv/repo/seeds.exs
 
 run: ## Start Phoenix server (ensure Postgres is up)

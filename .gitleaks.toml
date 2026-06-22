@@ -1,0 +1,17 @@
+title = "Debt Stalker Gitleaks Config"
+
+[allowlist]
+description = "Allowlisted paths and patterns for dev/test placeholders"
+paths = [
+  '''config/dev.exs''',
+  '''config/test.exs''',
+  '''k8s/secret.yaml''',
+  '''docs/.*''',
+  '''test/.*''',
+  '''priv/repo/seeds.exs''',
+]
+regexes = [
+  '''CHANGE_ME.*''',
+  '''dev-jwt-secret-not-for-production''',
+  '''not-for-production''',
+]

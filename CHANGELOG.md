@@ -29,14 +29,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Postman collection: all Phase 1 endpoints with auto-token scripts
   - Concurrency integration test: verifies SKIP LOCKED parallel safety
 
-- **Phase 2 (partial) — Resilience & Observability**
+- **Phase 2 — Resilience, Observability & Production Hardening**
   - Telemetry events for HTTP, Ecto, Oban, provider calls, and status transitions
   - Prometheus metrics exporter (port 9568) and LiveDashboard (`/dev/dashboard` in dev)
   - Business metrics: applications created, Oban jobs, provider latency, status transitions
   - Dead-letter table, `DeadLetter` context, and Oban exhaustion capture wiring
-  - Provider circuit breaker module wired into provider fetches
+  - Provider circuit breaker module wired into provider fetches (custom GenServer, ADR-0005)
   - Test coverage gate at 85%
   - Custom Credo checks for architecture contracts: no country branching outside country/provider modules, public `@spec` enforcement, and no committed `IO.inspect`
+  - Rate limiting plug (token bucket, per-IP sliding window) for auth and webhook endpoints (ADR-0007)
+  - Application-level cache (Cachex) for get_application/1 with PubSub invalidation
+  - Multi-stage Dockerfile + mix release config (hexpm/elixir builder, debian:bookworm-slim runtime)
+  - lib/debt_stalker/release.ex with migrate/0, rollback/2, version/0 for prod release tasks
+  - Web/worker deployment split: deployment-web.yaml (PHX_SERVER=true, OBAN_QUEUES=false) + deployment-worker.yaml (Oban queues)
+  - Liveness/readiness probes: /api/health/live (no DB check) + /api/health/ready (DB check)
+  - Worker HPA (autoscaling/v2, CPU 70% + memory 80%, min 2 max 10 replicas)
+  - Deploy script (scripts/deploy.sh) with migration job, rollout status, and rollback support
+  - Scaling demo script (scripts/scaling-demo.sh)
+  - CI k8s manifest dry-run validation (Python YAML validation on every PR)
+  - CD workflow (cd.yml): image build + push to GHCR, deploy with manual approval gate
+  - PII ciphertext-at-rest verification test (raw SQL assertion, hash lookup, redaction)
+  - Gitleaks secret-scanning CI job with .gitleaks.toml allowlist for dev/test placeholders
+  - Log-scrubbing audit test (7 tests exercising every log path, no PII/secrets/raw payloads)
+  - Environment variable contract documented in README
+  - Postman collection: Rate Limiting, Provider Failures, DLQ Inspection folders
+  - ADR-0005 (circuit breaker: custom GenServer), ADR-0006 (DLQ: table + telemetry), ADR-0007 (rate limiter)
+
+### Fixed
+
+- Circuit breaker half-open concurrency bug (F1/#97): single-probe enforcement via Process.monitor
+- Provider_error audited Multi insert (F2/#98): audit_log now inserted atomically with status update
+- Credo checks moved from lib/ to test/support/ to fix prod compilation (Credo.Check is dev-only)
+
+### Security
+
+- PII encryption verified at rest: identity_document is ciphertext in DB, hash lookup intact
+- All secrets sourced from env vars (runtime.exs fail-fast in prod) + k8s Secrets
+- Secret-scanning in CI (gitleaks) prevents accidental secret commits
+- Log-scrubbing audit confirms no PII, secrets, or raw provider payloads in any log path
 
 ## [0.1.0] - 2026-06-20
 
