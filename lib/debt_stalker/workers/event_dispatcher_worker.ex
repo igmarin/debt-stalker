@@ -78,13 +78,21 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
   end
 
   defp claim_and_dispatch_batch(batch_size) do
-    {:ok, stats} =
-      Repo.transaction(fn ->
-        events = claim_events(batch_size)
-        dispatch_events(events)
-      end)
+    case Repo.transaction(fn ->
+           events = claim_events(batch_size)
+           dispatch_events(events)
+         end) do
+      {:ok, stats} ->
+        stats
 
-    stats
+      {:error, reason} ->
+        Logger.error("EventDispatcher batch transaction failed",
+          worker: "EventDispatcherWorker",
+          reason: inspect(reason)
+        )
+
+        raise "Event dispatcher batch transaction failed: #{inspect(reason)}"
+    end
   end
 
   defp claim_events(batch_size) do
