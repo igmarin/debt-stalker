@@ -227,12 +227,11 @@ defmodule DebtStalker.Countries.MXTest do
 
     test "returns structured error atoms (not bare strings)" do
       result = MX.validate_document("TOOSHORT")
-      assert {:error, atom} = result when is_atom(atom)
+      assert {:error, atom} = result
+      assert is_atom(atom)
     end
 
     test "validates all major state codes (sample from official list)" do
-      base = "GARC850101H"
-
       valid_states = [
         "DF",
         "MX",
@@ -288,10 +287,8 @@ defmodule DebtStalker.Countries.MXTest do
       # approximate; adjust if needed for regex
       curp_2005 = "GARC050101HDFRRA05"
       # We primarily test the code path
-      assert match?(
-               {:ok, _} or {:error, _},
-               MX.validate_document(curp_2005, birth_date: ~D[2005-01-01])
-             )
+      result = MX.validate_document(curp_2005, birth_date: ~D[2005-01-01])
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
   end
 end

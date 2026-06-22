@@ -58,8 +58,10 @@ defmodule DebtStalker.Countries.ESTest do
     test "NIE with Y and Z prefixes" do
       # These are illustrative; the validator computes the correct letter
       # will likely fail checksum but exercises code path
-      assert match?({:ok, _} or {:error, _}, ES.validate_document("Y2345678X"))
-      assert match?({:ok, _} or {:error, _}, ES.validate_document("Z0000000T"))
+      y_result = ES.validate_document("Y2345678X")
+      z_result = ES.validate_document("Z0000000T")
+      assert match?({:ok, _}, y_result) or match?({:error, _}, y_result)
+      assert match?({:ok, _}, z_result) or match?({:error, _}, z_result)
     end
 
     test "DNI with leading zeros is handled correctly (exact 8 after pad)" do
