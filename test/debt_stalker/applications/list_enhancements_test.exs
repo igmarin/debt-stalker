@@ -159,5 +159,52 @@ defmodule DebtStalker.Applications.ListEnhancementsTest do
       assert is_list(analytics.timeline)
       refute Enum.any?(analytics.by_country, &(&1.country == "MX"))
     end
+
+    test "derives KPI stats from status breakdown instead of separate count queries" do
+      {:ok, es_app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(es_app.id, "pending_risk", "system")
+
+      {:ok, mx_app} =
+        Applications.create_application(%{
+          country: "MX",
+          full_name: "Maria Lopez",
+          identity_document: "GARC850101HDFRRL09",
+          requested_amount: Decimal.new("8000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      {:ok, _} = Applications.update_status(mx_app.id, "pending_risk", "system")
+
+      stats = Applications.dashboard_stats(%{country: "ES"})
+
+      assert stats.total == stats.pending_risk
+      assert stats.pending_risk >= 1
+      assert stats.additional_review == 0
+      assert stats.provider_errors == 0
+    end
+  end
+
+  describe "count_decided_today/1" do
+    test "respects country filter" do
+      {:ok, es_app} = Applications.create_application(@valid_es_attrs)
+      {:ok, es_app} = Applications.update_status(es_app.id, "pending_risk", "system")
+      {:ok, _} = Applications.update_status(es_app.id, "approved", "system")
+
+      {:ok, mx_app} =
+        Applications.create_application(%{
+          country: "MX",
+          full_name: "Maria Lopez",
+          identity_document: "GARC850101HDFRRL09",
+          requested_amount: Decimal.new("8000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      {:ok, mx_app} = Applications.update_status(mx_app.id, "pending_risk", "system")
+      {:ok, _} = Applications.update_status(mx_app.id, "approved", "system")
+
+      assert Applications.count_decided_today(%{country: "ES"}) == 1
+      assert Applications.count_decided_today(%{country: "MX"}) == 1
+      assert Applications.count_decided_today(%{}) == 2
+    end
   end
 end

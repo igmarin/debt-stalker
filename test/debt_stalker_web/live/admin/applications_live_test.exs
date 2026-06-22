@@ -124,6 +124,15 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       assert html =~ "Applicant"
     end
 
+    test "ignores invalid page param without crashing", %{conn: conn} do
+      {:ok, _} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      assert render_click(view, "paginate", %{"page" => "abc"}) =~ "Juan Garcia"
+      assert render_patch(view, ~p"/admin/applications?page=invalid") =~ "Juan Garcia"
+    end
+
     test "updates in real-time via PubSub", %{conn: conn} do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")

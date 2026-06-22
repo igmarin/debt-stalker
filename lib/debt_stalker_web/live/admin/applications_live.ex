@@ -80,7 +80,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   end
 
   def handle_event("paginate", %{"page" => page}, socket) do
-    filters = Map.put(socket.assigns.filters, :page, String.to_integer(page))
+    current_page = Map.get(socket.assigns.filters, :page, 1)
+    filters = Map.put(socket.assigns.filters, :page, FilterParams.parse_int(page, current_page))
     {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 

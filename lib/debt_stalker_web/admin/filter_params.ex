@@ -47,6 +47,21 @@ defmodule DebtStalkerWeb.Admin.FilterParams do
   def format_date_for_input(nil), do: nil
   def format_date_for_input(%Date{} = date), do: Date.to_iso8601(date)
 
+  @doc "Parses a positive integer from a string, falling back to the default."
+  @spec parse_int(term(), pos_integer()) :: pos_integer()
+  def parse_int(nil, default), do: default
+  def parse_int("", default), do: default
+
+  def parse_int(value, default) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, _} when int > 0 -> int
+      _ -> default
+    end
+  end
+
+  def parse_int(value, _default) when is_integer(value) and value > 0, do: value
+  def parse_int(_, default), do: default
+
   @doc "Toggles sort direction when the same column is selected again."
   @spec toggle_sort(map(), String.t()) :: map()
   def toggle_sort(filters, field) when field in @allowed_sort_fields do
@@ -65,6 +80,8 @@ defmodule DebtStalkerWeb.Admin.FilterParams do
     |> Map.put(:sort_dir, next_dir)
     |> Map.put(:page, 1)
   end
+
+  def toggle_sort(filters, _field), do: filters
 
   @doc "Returns the list of allowed sort fields."
   @spec allowed_sort_fields() :: [String.t()]
@@ -90,19 +107,6 @@ defmodule DebtStalkerWeb.Admin.FilterParams do
   end
 
   defp parse_date(%Date{} = date), do: date
-
-  defp parse_int(nil, default), do: default
-  defp parse_int("", default), do: default
-
-  defp parse_int(value, default) when is_binary(value) do
-    case Integer.parse(value) do
-      {int, _} when int > 0 -> int
-      _ -> default
-    end
-  end
-
-  defp parse_int(value, _default) when is_integer(value) and value > 0, do: value
-  defp parse_int(_, default), do: default
 
   defp valid_sort_by(field) when field in @allowed_sort_fields, do: field
   defp valid_sort_by(_), do: @default_sort_by

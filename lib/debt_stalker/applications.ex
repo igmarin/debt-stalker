@@ -280,17 +280,26 @@ defmodule DebtStalker.Applications do
   @doc """
   Counts status transitions that ended in `approved` or `rejected` today.
 
-  This is the decision velocity KPI for the admin dashboard.
+  Applies dashboard filters (`:country`, `:date_from`, `:date_to`) via a join
+  to the application. The `:status` filter is ignored because decisions are
+  always terminal statuses.
   """
-  @spec count_decided_today() :: non_neg_integer()
-  def count_decided_today do
+  @spec count_decided_today(map()) :: non_neg_integer()
+  def count_decided_today(filters \\ %{}) do
+    filters =
+      filters
+      |> normalize_filters()
+      |> Map.delete(:status)
+
     today = Date.utc_today()
     start_dt = DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
     end_dt = DateTime.new!(today, ~T[23:59:59], "Etc/UTC")
 
     DebtStalker.Applications.StatusTransition
+    |> join(:inner, [t], a in CreditApplication, on: t.application_id == a.id)
     |> where([t], t.to_status in ["approved", "rejected"])
     |> where([t], t.inserted_at >= ^start_dt and t.inserted_at <= ^end_dt)
+    |> apply_joined_application_filters(filters)
     |> Repo.aggregate(:count, :id)
   end
 
@@ -339,10 +348,11 @@ defmodule DebtStalker.Applications do
         }
   def dashboard_analytics(filters) do
     filters = normalize_filters(filters)
+    breakdown = status_breakdown(filters)
 
     %{
-      stats: dashboard_stats(filters),
-      status_breakdown: status_breakdown(filters),
+      stats: stats_from_breakdown(breakdown, filters),
+      status_breakdown: breakdown,
       by_country: applications_by_country(filters),
       timeline: applications_timeline(filters, 7)
     }
@@ -358,14 +368,7 @@ defmodule DebtStalker.Applications do
         }
   def dashboard_stats(filters) do
     filters = normalize_filters(filters)
-
-    %{
-      total: count_applications(filters),
-      pending_risk: count_applications(Map.put(filters, :status, "pending_risk")),
-      additional_review: count_applications(Map.put(filters, :status, "additional_review")),
-      provider_errors: count_applications(Map.put(filters, :status, "provider_error")),
-      decided_today: count_decided_today()
-    }
+    stats_from_breakdown(status_breakdown(filters), filters)
   end
 
   # Private — pagination
@@ -429,6 +432,18 @@ defmodule DebtStalker.Applications do
 
   # Private — analytics
 
+  defp stats_from_breakdown(breakdown, filters) do
+    counts_by_status = Map.new(breakdown, &{&1.status, &1.count})
+
+    %{
+      total: Enum.sum(Enum.map(breakdown, & &1.count)),
+      pending_risk: Map.get(counts_by_status, "pending_risk", 0),
+      additional_review: Map.get(counts_by_status, "additional_review", 0),
+      provider_errors: Map.get(counts_by_status, "provider_error", 0),
+      decided_today: count_decided_today(filters)
+    }
+  end
+
   defp status_breakdown(filters) do
     filters
     |> filtered_query()
@@ -473,6 +488,39 @@ defmodule DebtStalker.Applications do
     |> maybe_filter_country(filters)
     |> maybe_filter_status(filters)
     |> maybe_filter_date_range(filters)
+  end
+
+  defp apply_joined_application_filters(query, filters) do
+    query
+    |> maybe_filter_country_joined(filters)
+    |> maybe_filter_date_range_joined(filters)
+  end
+
+  defp maybe_filter_country_joined(query, %{country: country}) when is_binary(country) do
+    where(query, [t, a], a.country == ^country)
+  end
+
+  defp maybe_filter_country_joined(query, _filters), do: query
+
+  defp maybe_filter_date_range_joined(query, filters) do
+    query =
+      case Map.get(filters, :date_from) do
+        nil ->
+          query
+
+        date_from ->
+          from_dt = DateTime.new!(date_from, ~T[00:00:00], "Etc/UTC")
+          where(query, [t, a], a.application_date >= ^from_dt)
+      end
+
+    case Map.get(filters, :date_to) do
+      nil ->
+        query
+
+      date_to ->
+        to_dt = DateTime.new!(date_to, ~T[23:59:59], "Etc/UTC")
+        where(query, [t, a], a.application_date <= ^to_dt)
+    end
   end
 
   defp normalize_filters(filters) when is_map(filters) do
