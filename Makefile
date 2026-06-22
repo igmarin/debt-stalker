@@ -14,7 +14,7 @@ db: ## Create + migrate database
 migrate: ## Run migrations
 	mix ecto.migrate
 
-seed: ## Run seeds (10 applications + demo JWT tokens)
+seed: ## Run seeds (1_000 demo apps by default; override with SEED_COUNT/SEED_MODE)
 	mix run priv/repo/seeds.exs
 
 run: ## Start Phoenix server (ensure Postgres is up)
