@@ -42,7 +42,7 @@ defmodule DebtStalkerWeb.PageController do
   @doc "Authenticates the admin password and sets the admin session role."
   @spec do_login(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def do_login(conn, %{"password" => password}) do
-    if Plug.Crypto.secure_compare(password, admin_password()) do
+    if valid_password?(password, admin_password()) do
       conn
       |> put_session("role", "admin")
       |> put_flash(:info, "Welcome back")
@@ -90,4 +90,12 @@ defmodule DebtStalkerWeb.PageController do
   defp admin_password do
     Application.fetch_env!(:debt_stalker, :admin_password)
   end
+
+  defp valid_password?(submitted, expected)
+       when is_binary(submitted) and is_binary(expected) do
+    byte_size(submitted) == byte_size(expected) and
+      Plug.Crypto.secure_compare(submitted, expected)
+  end
+
+  defp valid_password?(_, _), do: false
 end

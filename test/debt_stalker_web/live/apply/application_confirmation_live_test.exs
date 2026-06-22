@@ -24,6 +24,8 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLiveTest do
       assert html =~ app.id
       assert html =~ "Juan Garcia"
       assert html =~ "Submitted"
+      assert html =~ "Copy reference ID"
+      assert html =~ ~s(phx:copy)
     end
 
     test "updates status badge in real time", %{conn: conn} do

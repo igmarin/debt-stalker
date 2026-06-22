@@ -239,7 +239,7 @@ defmodule DebtStalker.Applications do
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:list",
-          {:status_changed, %{from: app.status, to: new_status}}
+          {:status_changed, %{id: app.id, from: app.status, to: new_status}}
         )
 
         {:ok, updated}

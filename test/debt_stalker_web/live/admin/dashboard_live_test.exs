@@ -29,6 +29,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin")
       assert html =~ "Dashboard"
       assert html =~ "Total applications"
+      assert html =~ "Provider errors"
       assert html =~ "Juan Garcia"
     end
 

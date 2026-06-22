@@ -29,6 +29,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
       |> assign(:country_options, CountryRegistry.supported_countries())
       |> assign(:status_options, status_options())
       |> assign(:filters, %{limit: 20})
+      |> assign(:highlighted_id, nil)
 
     {:ok, socket}
   end
@@ -62,24 +63,12 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("filter", params, socket) do
-    filters =
-      %{limit: 20}
-      |> maybe_put(:country, params["country"])
-      |> maybe_put(:status, params["status"])
-      |> maybe_put(:date_from, parse_date(params["date_from"]))
-      |> maybe_put(:date_to, parse_date(params["date_to"]))
-
     query_params =
       %{}
       |> maybe_put("country", params["country"])
       |> maybe_put("status", params["status"])
       |> maybe_put("date_from", params["date_from"])
       |> maybe_put("date_to", params["date_to"])
-
-    socket =
-      socket
-      |> assign(:filters, filters)
-      |> apply_filters()
 
     {:noreply, push_patch(socket, to: ~p"/admin/applications?#{query_params}")}
   end
@@ -96,12 +85,20 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
 
   @doc "Refreshes the list when applications are created or updated."
   @impl true
-  def handle_info({:application_created, _app}, socket) do
-    {:noreply, apply_filters(socket)}
+  def handle_info({:application_created, app}, socket) do
+    {:noreply, refresh_with_highlight(socket, app.id)}
+  end
+
+  def handle_info({:status_changed, %{id: id}}, socket) do
+    {:noreply, refresh_with_highlight(socket, id)}
   end
 
   def handle_info({:status_changed, _details}, socket) do
     {:noreply, apply_filters(socket)}
+  end
+
+  def handle_info({:clear_highlight, _id}, socket) do
+    {:noreply, assign(socket, :highlighted_id, nil)}
   end
 
   @doc "Renders the applications list."
@@ -175,7 +172,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
                 </thead>
                 <tbody>
                   <%= for app <- @applications do %>
-                    <tr id={"app-#{app.id}"}>
+                    <tr id={"app-#{app.id}"} class={row_highlight_class(app.id, @highlighted_id)}>
                       <td>{app.country}</td>
                       <td class="whitespace-nowrap">{app.full_name}</td>
                       <td class="font-mono">
@@ -228,6 +225,19 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     |> assign(:applications, result.entries)
     |> assign(:next_cursor, result.cursor)
   end
+
+  defp refresh_with_highlight(socket, id) do
+    if connected?(socket) do
+      Process.send_after(self(), {:clear_highlight, id}, 2_000)
+    end
+
+    socket
+    |> apply_filters()
+    |> assign(:highlighted_id, id)
+  end
+
+  defp row_highlight_class(id, id), do: "bg-primary/15 transition-colors duration-1000"
+  defp row_highlight_class(_id, _highlighted_id), do: nil
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)

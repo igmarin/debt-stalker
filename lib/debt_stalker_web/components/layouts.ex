@@ -37,6 +37,18 @@ defmodule DebtStalkerWeb.Layouts do
           <li :if={@current_role == "admin"}>
             <.link navigate={~p"/admin/applications"} class="btn btn-ghost btn-sm">Applications</.link>
           </li>
+          <li :if={@current_role == "admin"}>
+            <.form
+              for={%{}}
+              id="switch-to-applicant"
+              action={~p"/set-role"}
+              method="post"
+              class="inline"
+            >
+              <input type="hidden" name="role" value="applicant" />
+              <button type="submit" class="btn btn-ghost btn-sm">Switch to applicant</button>
+            </.form>
+          </li>
           <li :if={@current_role}>
             <.link href={~p"/admin/logout"} method="delete" class="btn btn-ghost btn-sm">
               Log out

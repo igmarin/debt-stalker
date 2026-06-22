@@ -101,6 +101,12 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
             Fill in your details. We will validate your document and income information for your country.
           </p>
 
+          <ul class="steps steps-horizontal w-full mb-6 text-xs sm:text-sm">
+            <li class={["step", step_active?(1, @form) && "step-primary"]}>Country</li>
+            <li class={["step", step_active?(2, @form) && "step-primary"]}>Details</li>
+            <li class="step">Submit</li>
+          </ul>
+
           <form id="apply-form" phx-change="validate" phx-submit="save" class="space-y-4">
             <.input
               field={@form[:country]}
@@ -163,4 +169,10 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
       _ -> nil
     end
   end
+
+  defp step_active?(1, form), do: present?(form[:country].value)
+  defp step_active?(2, form), do: step_active?(1, form) and present?(form[:full_name].value)
+
+  defp present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp present?(_), do: false
 end

@@ -75,11 +75,19 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
           </div>
 
           <h1 class="card-title text-2xl justify-center">Application received</h1>
-          <p class="text-base-content/70 mb-6">
+          <p class="text-base-content/70 mb-2">
             Your reference ID is <span class="font-mono font-bold">{@app.id}</span>. Save it to track your application later.
           </p>
 
-          <div class="flex justify-center mb-6">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm mb-6"
+            phx-click={JS.dispatch("phx:copy", detail: %{text: @app.id})}
+          >
+            <.icon name="hero-clipboard-document" class="size-4" /> Copy reference ID
+          </button>
+
+          <div class="flex justify-center mb-6" aria-live="polite" aria-atomic="true">
             <.status_badge status={@app.status} class="badge-lg" />
           </div>
 

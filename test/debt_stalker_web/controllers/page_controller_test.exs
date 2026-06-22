@@ -6,6 +6,7 @@ defmodule DebtStalkerWeb.PageControllerTest do
     assert html_response(conn, 200) =~ "Debt Stalker"
     assert html_response(conn, 200) =~ "Apply for credit"
     assert html_response(conn, 200) =~ "Admin review"
+    assert html_response(conn, 200) =~ "Postman collection"
   end
 
   test "POST /set-role redirects applicants to the form", %{conn: conn} do
@@ -36,6 +37,14 @@ defmodule DebtStalkerWeb.PageControllerTest do
 
   test "POST /admin/login with invalid password shows an error", %{conn: conn} do
     conn = post(conn, ~p"/admin/login", %{"password" => "wrong"})
+    assert html_response(conn, 200) =~ "Invalid password"
+    refute get_session(conn, "role")
+  end
+
+  test "POST /admin/login with wrong-length password shows an error without crashing", %{
+    conn: conn
+  } do
+    conn = post(conn, ~p"/admin/login", %{"password" => "x"})
     assert html_response(conn, 200) =~ "Invalid password"
     refute get_session(conn, "role")
   end

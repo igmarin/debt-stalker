@@ -108,8 +108,9 @@ A clean, centered page with:
 - Theme toggle in the corner.
 - Footer with a link to the API docs / Postman collection.
 
-Clicking a CTA sets a lightweight session role (`:applicant` or `:admin`) and
-redirects.
+Clicking **Apply for credit** sets the applicant session role and redirects.
+Clicking **Admin review** goes to a password-protected login page; successful
+authentication sets the admin session role.
 
 ### 5.2 Applicant Form (`/apply`)
 
@@ -233,8 +234,10 @@ For the companion UI we introduce a simple session role:
 
 Implementation:
 
-- A small plug `DebtStalkerWeb.Plugs.SetRole` reads/writes the role from the
-  session when the user clicks a landing CTA.
+- `DebtStalkerWeb.Plugs.AssignRole` reads the role from the session and assigns
+  `:current_role` to the connection.
+- `PageController.set_role/2` sets the applicant role when the landing CTA is
+  submitted; admin role is only set through `PageController.do_login/2`.
 - A LiveView `on_mount` hook `DebtStalkerWeb.Live.RoleAuth` enforces the role
   per LiveView module (`:applicant`, `:admin`, or `:any`).
 - The API continues to use its existing JWT `read`/`update` roles unchanged.
@@ -296,7 +299,7 @@ Keep the existing PubSub topics and add UX polish:
 
 | Phase | Work | Files to touch |
 |-------|------|----------------|
-| **A. Shell & navigation** | New root layout with navbar, app layout, landing page, role plug/hook, route updates | `components/layouts.ex`, `components/layouts/root.html.heex`, new `page_html/home.html.heex`, `plugs/set_role.ex`, `live/role_auth.ex`, `router.ex` |
+| **A. Shell & navigation** | New root layout with navbar, landing page, role plug/hook, admin login, route updates | `components/layouts.ex`, `components/layouts/root.html.heex`, `page_html/home.html.heex`, `page_html/login.html.heex`, `plugs/assign_role.ex`, `live/role_auth.ex`, `page_controller.ex`, `router.ex` |
 | **B. Applicant flow** | Apply form (reuse/create LiveView), confirmation/tracker, empty/success states | `live/apply/application_form_live.ex`, `live/apply/application_confirmation_live.ex`, `components/ui.ex` |
 | **C. Admin flow** | Dashboard KPIs, admin list with filters, detail with audit + status update | `live/admin/dashboard_live.ex`, `live/admin/applications_live.ex`, `live/admin/application_detail_live.ex`, `components/ui.ex` |
 | **D. Polish & tests** | Responsive pass, real-time highlight/toast, LiveView tests for each persona, route redirects | Tests under `test/debt_stalker_web/live/`, `router.ex` |
@@ -320,9 +323,10 @@ Keep the existing PubSub topics and add UX polish:
 
 ## 13. Open Decisions / Notes
 
-- **Role gating**: this plan uses a lightweight browser session role, not a
-  full username/password login. If the user later needs real admin accounts,
-  the same hooks and plugs can be extended without changing page designs.
+- **Role gating**: applicants use a lightweight session role; admins use a
+  single shared password (env-configured) for the companion UI. This is not a
+  full identity provider. The same hooks and plugs can be extended later without
+  changing page designs.
 - **Logo**: for the MVP we can use a text wordmark plus a Heroicon; a custom
   SVG logo can be added later without structural changes.
 - **Language**: UI text will be in English; i18n can be layered on later using

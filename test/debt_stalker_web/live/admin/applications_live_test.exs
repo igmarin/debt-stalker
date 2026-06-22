@@ -4,6 +4,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
   import Phoenix.LiveViewTest
 
   alias DebtStalker.Applications
+  alias DebtStalker.Countries
 
   @valid_es_attrs %{
     country: "ES",
@@ -74,6 +75,52 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       html = render(view)
       assert html =~ "pending_risk"
+    end
+
+    test "highlights updated rows in real time", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      send(view.pid, {:status_changed, %{id: app.id, from: "submitted", to: "pending_risk"}})
+
+      html = render(view)
+      assert html =~ "bg-primary/15"
+
+      send(view.pid, {:clear_highlight, app.id})
+
+      html = render(view)
+      refute html =~ "bg-primary/15"
+    end
+
+    test "does not paginate when no cursor is available", %{conn: conn} do
+      {:ok, _} = Applications.create_application(@valid_es_attrs)
+      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      refute html =~ "Load more"
+
+      html = render_click(view, "next_page")
+      assert html =~ "Juan Garcia"
+    end
+
+    test "loads the next page when cursor is available", %{conn: conn} do
+      for i <- 1..21 do
+        {:ok, _} =
+          Applications.create_application(%{
+            @valid_es_attrs
+            | full_name: "Applicant #{i}",
+              identity_document: Countries.random_identity_document("ES")
+          })
+      end
+
+      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+      assert html =~ "Load more"
+
+      html =
+        view
+        |> element("button", "Load more")
+        |> render_click()
+
+      assert html =~ "Applicant"
     end
   end
 end

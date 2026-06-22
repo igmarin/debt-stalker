@@ -9,6 +9,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLiveTest do
       assert html =~ "Apply for credit"
       assert html =~ "Country"
       assert html =~ "Full name"
+      assert html =~ "steps"
     end
 
     test "redirects to landing when no role is set", %{conn: conn} do

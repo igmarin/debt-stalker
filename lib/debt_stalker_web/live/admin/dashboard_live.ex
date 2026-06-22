@@ -49,13 +49,18 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
         <:subtitle>Overview of credit applications across all countries.</:subtitle>
       </.header>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
         <.stat_card title="Total applications" value={@stats.total} icon="hero-document-text" />
         <.stat_card title="Pending risk" value={@stats.pending_risk} icon="hero-clock" />
         <.stat_card
           title="Additional review"
           value={@stats.additional_review}
           icon="hero-exclamation-triangle"
+        />
+        <.stat_card
+          title="Provider errors"
+          value={@stats.provider_errors}
+          icon="hero-server-stack"
         />
         <.stat_card
           title="Decided today"
@@ -123,6 +128,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
       total: Applications.count_applications(%{}),
       pending_risk: Applications.count_applications(%{status: "pending_risk"}),
       additional_review: Applications.count_applications(%{status: "additional_review"}),
+      provider_errors: Applications.count_applications(%{status: "provider_error"}),
       decided_today: Applications.count_decided_today()
     }
 
