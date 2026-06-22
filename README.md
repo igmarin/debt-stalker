@@ -248,7 +248,7 @@ The system is designed to grow to **millions of credit applications**:
 | **API cursor pagination** | Implemented | API uses capped `(application_date, id)` cursors and avoids `OFFSET` degradation. |
 | **Admin page pagination** | MVP | Admin tables use bounded page pagination for flexible sorting; high-volume admin search should move to sort-specific keyset pagination or indexed search. |
 | **Composite indexes** | Implemented | `(country, status, application_date)`, `(application_date)`, `identity_document_hash`. |
-| **Outbox consumption** | Implemented | `FOR UPDATE SKIP LOCKED` batches are parallel-safe; current default drains 50 events per dispatcher run and should be tuned for sustained high volume. |
+| **Outbox consumption** | Implemented | `FOR UPDATE SKIP LOCKED` batches are parallel-safe; defaults drain up to 5 batches × 50 events per dispatcher run, configurable via env. |
 | **App detail cache** | Implemented | Cachex with 60s TTL + PubSub invalidation on status change. |
 | **Web/worker split** | Implemented | k8s `deployment-web` can disable queues via `OBAN_QUEUES=false`; `deployment-worker` scales independently. |
 | **Range partitioning** | Planned (Phase 4) | Partition `credit_applications` by `application_date` (e.g., monthly ranges). Keeps hot data small and enables partition pruning. |
@@ -258,7 +258,7 @@ The system is designed to grow to **millions of credit applications**:
 
 ### Current MVP scale envelope
 
-The MVP uses scale-ready primitives, but it has not been load-tested at million-row volume. Current defaults are intentionally conservative: API lists cap cursor pages at 100 records, admin lists are bounded but offset-based for sortable operations, and the outbox dispatcher drains 50 events per run by default. For sustained high volume, tune dispatcher batch/cadence, track outbox lag, add sort-specific indexes or keyset cursors for admin tables, and replace live dashboard aggregates with rollups or materialized stats.
+The MVP uses scale-ready primitives, but it has not been load-tested at million-row volume. Current defaults are intentionally conservative: API lists cap cursor pages at 100 records, admin lists are bounded but offset-based for sortable operations, and the outbox dispatcher drains up to 250 events per run by default. For sustained high volume, tune dispatcher batch/cadence, alert on outbox lag metrics, add sort-specific indexes or keyset cursors for admin tables, and replace live dashboard aggregates with rollups or materialized stats.
 
 ### Recommended indexes today
 
@@ -271,9 +271,9 @@ CREATE INDEX idx_applications_country_status_date
 CREATE INDEX idx_applications_identity_document_hash
   ON credit_applications (identity_document_hash);
 
--- Outbox drainer
-CREATE INDEX idx_application_events_unprocessed
-  ON application_events (processed_at, inserted_at)
+-- Outbox drainer depth/lag query
+CREATE INDEX application_events_unprocessed_inserted_at_idx
+  ON application_events (inserted_at)
   WHERE processed_at IS NULL;
 
 -- Status-transition history
@@ -287,11 +287,13 @@ CREATE INDEX idx_status_transitions_application_id
   Concurrency is env-configurable.
 - **Cache**: Cachex for application detail reads, invalidated via PubSub on every
   status change. ETS caches static country/provider config at boot.
-- **Concurrency safety**: Outbox dispatcher uses `FOR UPDATE SKIP LOCKED` so
-  multiple dispatcher jobs can claim work without conflicts. Current defaults drain
-  50 events per run; production throughput should tune batch size, cadence, and
-  worker replicas together. Status transitions are validated idempotently through
-  the `Applications` context.
+- **Concurrency safety**: Outbox dispatcher uses `FOR UPDATE SKIP LOCKED` inside
+  transactional batches so multiple dispatcher jobs can claim work without conflicts.
+  Current defaults drain up to 5 batches of 50 events per run. Production throughput
+  can tune `EVENT_DISPATCHER_BATCH_SIZE`, `EVENT_DISPATCHER_MAX_BATCHES_PER_RUN`,
+  cron cadence, and worker replicas together. Dispatcher runs emit processed/failed,
+  remaining backlog, and oldest-event-age metrics. Status transitions are validated
+  idempotently through the `Applications` context.
 
 ## Deployment
 
@@ -332,6 +334,8 @@ No secrets are committed to the repository.
 | `OBAN_QUEUE_DEFAULT` | No | Default queue concurrency (default: `10`) |
 | `OBAN_QUEUE_EVENTS` | No | Events queue concurrency (default: `20`) |
 | `OBAN_QUEUE_NOTIFICATIONS` | No | Notifications queue concurrency (default: `10`) |
+| `EVENT_DISPATCHER_BATCH_SIZE` | No | Outbox events claimed per batch (default: `50`) |
+| `EVENT_DISPATCHER_MAX_BATCHES_PER_RUN` | No | Max batches drained by one dispatcher job (default: `5`) |
 | `LOG_LEVEL` | No | Log level (default: `info` in prod) |
 | `RATE_LIMIT_AUTH_TOKEN` | No | Auth token rate limit per window (default: `10`) |
 | `RATE_LIMIT_WEBHOOK` | No | Webhook rate limit per window (default: `20`) |

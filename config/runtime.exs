@@ -144,6 +144,25 @@ if config_env() == :prod do
   config :debt_stalker,
          :app_cache_ttl_ms,
          String.to_integer(System.get_env("APP_CACHE_TTL_MS", "60000"))
+
+  parse_optional_positive_integer = fn env_name, default ->
+    case System.get_env(env_name) do
+      nil ->
+        default
+
+      value ->
+        case Integer.parse(value) do
+          {integer, ""} when integer > 0 -> integer
+          _ -> default
+        end
+    end
+  end
+
+  # Outbox dispatcher throughput (configurable via env)
+  config :debt_stalker, :event_dispatcher,
+    batch_size: parse_optional_positive_integer.("EVENT_DISPATCHER_BATCH_SIZE", 50),
+    max_batches_per_run:
+      parse_optional_positive_integer.("EVENT_DISPATCHER_MAX_BATCHES_PER_RUN", 5)
 end
 
 # Dev/test JWT secret, webhook secret, and admin password

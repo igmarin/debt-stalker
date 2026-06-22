@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Telemetry events for HTTP, Ecto, Oban, provider calls, and status transitions
   - Prometheus metrics exporter (port 9568) and LiveDashboard (`/dev/dashboard` in dev)
   - Business metrics: applications created, Oban jobs, provider latency, status transitions
+  - Outbox dispatcher metrics: processed/failed event counts, remaining backlog, oldest-event age
   - Dead-letter table, `DeadLetter` context, and Oban exhaustion capture wiring
   - Provider circuit breaker module wired into provider fetches (custom GenServer, ADR-0005)
   - Test coverage gate at 85%
@@ -107,6 +108,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin sort tests now assert row order instead of only checking that values render
 - README now documents the authorized full-name policy, admin page-pagination tradeoff,
   and current MVP scale envelope
+- EventDispatcherWorker now drains configurable multi-batch runs and emits backlog/lag metrics
+- Added a partial outbox index for unprocessed event depth and lag queries
 
 ### Security
 

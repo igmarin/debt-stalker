@@ -82,6 +82,11 @@ config :logger, :default_formatter,
     :event_id,
     :event_type,
     :event_count,
+    :failed_count,
+    :claimed_count,
+    :batch_count,
+    :remaining_count,
+    :oldest_unprocessed_age_ms,
     :notification_status,
     :reason,
     :error_module,
@@ -107,6 +112,10 @@ config :debt_stalker, :rate_limit,
 # A short TTL limits the PII exposure window and bounds staleness
 # if an update path bypasses explicit invalidation.
 config :debt_stalker, :app_cache_ttl_ms, :timer.seconds(60)
+
+config :debt_stalker, :event_dispatcher,
+  batch_size: 50,
+  max_batches_per_run: 5
 
 # Configure Oban
 config :debt_stalker, Oban,
