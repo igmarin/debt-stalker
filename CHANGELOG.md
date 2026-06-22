@@ -68,6 +68,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secret-scanning in CI (gitleaks) prevents accidental secret commits
 - Log-scrubbing audit confirms no PII, secrets, or raw provider payloads in any log path
 
+## [Unreleased] — Phase 2 Continuation
+
+### Added
+
+- **Issue #1 — README + Mermaid Architecture Diagrams**
+  - Replaced ASCII architecture diagram with Mermaid flowchart
+  - Added Mermaid sequence diagram for the async outbox flow
+  - Expanded scalability section with concrete indexes, partitioning strategy,
+    read replicas, and archiving notes
+  - Fixed health endpoint documentation and linked ExDoc/ADRs/Postman
+
+- **Issue #2 — Postman Collection + API Docs Accuracy**
+  - Fixed health-check test assertion (`"healthy"` instead of `"ok"`)
+  - Added `/api/health/live` and `/api/health/ready` requests
+  - Added cursor-pagination flow example
+  - Added `x-webhook-signature` header with HMAC pre-request script
+  - Fixed token variables and removed non-existent DLQ admin endpoints
+  - Added status transition examples for all terminal/review states
+
+- **Issue #3 — Production/Security Hardening**
+  - New `DebtStalker.Notifications` context for webhook events and outbound
+    notification attempts
+  - Removed `raw_payload` column from `webhook_events`; raw provider payloads
+    are no longer persisted
+  - Raw request body is now captured by `RawBodyReader` so webhook HMAC
+    verification computes over the actual payload
+  - `WEBHOOK_SECRET` is required in production and webhook signatures are
+    required by default
+  - `LIVE_VIEW_SIGNING_SALT` and `SESSION_SIGNING_SALT` are now env-driven
+  - API responses and admin/applicant UI redact `full_name` to first name +
+    last initial
+  - `ApplicationController.update_status/2` now handles unexpected changeset
+    errors gracefully
+
+### Security
+
+- Webhook HMAC verification now works correctly in production
+- Raw provider payloads are no longer stored in `webhook_events`
+- Full-name redaction is consistent across API, admin UI, and applicant UI
+
 ## [0.1.0] - 2026-06-20
 
 ### Added

@@ -35,6 +35,7 @@ defmodule DebtStalkerWeb.Components.AdminFilters do
             value={Map.get(@filters, :country)}
             prompt={gettext("All countries")}
             options={Enum.map(@country_options, &{&1, &1})}
+            phx-debounce="300"
           />
           <.input
             type="select"
@@ -43,18 +44,21 @@ defmodule DebtStalkerWeb.Components.AdminFilters do
             value={Map.get(@filters, :status)}
             prompt={gettext("All statuses")}
             options={status_options()}
+            phx-debounce="300"
           />
           <.input
             type="date"
             name="date_from"
             label={gettext("From")}
             value={FilterParams.format_date_for_input(Map.get(@filters, :date_from))}
+            phx-debounce="300"
           />
           <.input
             type="date"
             name="date_to"
             label={gettext("To")}
             value={FilterParams.format_date_for_input(Map.get(@filters, :date_to))}
+            phx-debounce="300"
           />
           <div class="flex items-end">
             <.link navigate={@clear_path} class="btn btn-ghost w-full gap-2">

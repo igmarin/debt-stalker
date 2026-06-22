@@ -10,16 +10,16 @@ defmodule DebtStalker.Notifications.NotificationAttempt do
   alias DebtStalker.Applications.CreditApplication
 
   @type t :: %__MODULE__{
-          id: Ecto.UUID.t(),
-          application_id: Ecto.UUID.t(),
-          application: CreditApplication.t() | Ecto.Association.NotLoaded.t(),
-          notification_type: String.t(),
-          status: String.t(),
+          id: Ecto.UUID.t() | nil,
+          application_id: Ecto.UUID.t() | nil,
+          application: CreditApplication.t() | Ecto.Association.NotLoaded.t() | nil,
+          notification_type: String.t() | nil,
+          status: String.t() | nil,
           endpoint: String.t() | nil,
           response_code: integer() | nil,
           response_body: String.t() | nil,
-          attempt_number: non_neg_integer(),
-          inserted_at: DateTime.t()
+          attempt_number: non_neg_integer() | nil,
+          inserted_at: DateTime.t() | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}

@@ -78,20 +78,27 @@ defmodule DebtStalkerWeb.Api.WebhookController do
     # General provider messages without an application_id are accepted but do
     # not create a webhook_events row (the table requires application_id) and do
     # not enqueue processing.
-    with {:ok, app_id} <- validate_optional_uuid(app_id),
-         :ok <- record_event(app_id, params, payload_hash),
-         :ok <- enqueue_processing(app_id, params["status"]) do
-      conn |> put_status(200) |> json(%{received: true})
-    else
-      {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.warning("Webhook event storage failed",
-          error_message: inspect(changeset.errors)
-        )
-
-        conn |> put_status(422) |> json(%{error: "invalid_payload"})
-
+    case validate_optional_uuid(app_id) do
       {:error, :invalid_uuid} ->
         conn |> put_status(422) |> json(%{error: "invalid_application_id"})
+
+      {:ok, validated_id} ->
+        case record_event(validated_id, params, payload_hash) do
+          {:error, %Ecto.Changeset{} = changeset} ->
+            Logger.warning("Webhook event storage failed",
+              error_message: inspect(changeset.errors)
+            )
+
+            conn |> put_status(422) |> json(%{error: "invalid_payload"})
+
+          {:ok, _event} ->
+            enqueue_processing(validated_id, params["status"])
+            conn |> put_status(200) |> json(%{received: true})
+
+          :ok ->
+            enqueue_processing(validated_id, params["status"])
+            conn |> put_status(200) |> json(%{received: true})
+        end
     end
   end
 
@@ -107,17 +114,16 @@ defmodule DebtStalkerWeb.Api.WebhookController do
   defp record_event(nil, _params, _payload_hash), do: :ok
 
   defp record_event(app_id, params, payload_hash) do
-    case Notifications.record_webhook_event(%{
-           application_id: app_id,
-           source: params["source"] || "provider",
-           payload_hash: payload_hash,
-           verified: true,
-           processed: false
-         }) do
-      {:ok, _event} -> :ok
-      {:error, changeset} -> {:error, changeset}
-    end
+    Notifications.record_webhook_event(%{
+      application_id: app_id,
+      source: params["source"] || "provider",
+      payload_hash: payload_hash,
+      verified: true,
+      processed: false
+    })
   end
+
+  defp enqueue_processing(nil, _status), do: :ok
 
   defp enqueue_processing(app_id, status) when is_binary(app_id) and is_binary(status) do
     %{application_id: app_id, status: status, triggered_by: "webhook"}

@@ -34,7 +34,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       refute html =~ "Juan Garcia"
       assert html =~ "Solicitudes en el tiempo"
       assert html =~ "Distribución por estado"
-      assert html =~ "<svg"
+      assert html =~ "<canvas"
     end
 
     test "filters dashboard metrics by country", %{conn: conn} do

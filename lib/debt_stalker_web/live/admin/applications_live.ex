@@ -1,6 +1,7 @@
 defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   @moduledoc """
-  Admin-facing list of credit applications with filters, sorting, and page pagination.
+  Admin-facing list of credit applications with filters, sorting, and cursor
+  pagination.
 
   Subscribes to the applications PubSub topic so the list updates in real time.
   """
@@ -15,8 +16,10 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   alias DebtStalkerWeb.Admin.FilterParams
 
   import DebtStalkerWeb.Components.AdminFilters
-  import DebtStalkerWeb.Components.Pagination
+  import DebtStalkerWeb.Components.CursorPagination
   import DebtStalkerWeb.Components.UI
+
+  @default_limit 20
 
   @doc "Mounts the admin applications list."
   @impl true
@@ -35,7 +38,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     {:ok, socket}
   end
 
-  @doc "Applies filters, sort, and page from URL parameters."
+  @doc "Applies filters, sort, and cursor from URL parameters."
   @impl true
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -43,8 +46,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     filters =
       params
       |> FilterParams.from_params()
-      |> Map.put_new(:page, 1)
-      |> Map.put_new(:per_page, 20)
+      |> Map.put_new(:limit, @default_limit)
 
     result = Applications.list_applications(filters)
 
@@ -52,15 +54,12 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
       socket
       |> assign(:filters, filters)
       |> assign(:applications, result.entries)
-      |> assign(:page, result.page)
-      |> assign(:per_page, result.per_page)
-      |> assign(:total_count, result.total_count)
-      |> assign(:total_pages, result.total_pages)
+      |> assign(:cursor, result.cursor)
 
     {:noreply, socket}
   end
 
-  @doc "Handles list interactions (filters, pagination, and sorting)."
+  @doc "Handles list interactions (filters, load more, and sorting)."
   @impl true
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -73,15 +72,19 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
         date_from: parse_date(params["date_from"]),
         date_to: parse_date(params["date_to"])
       })
-      |> Map.put(:page, 1)
+      |> Map.delete(:cursor)
       |> drop_nil_values()
+      |> Map.put_new(:limit, @default_limit)
 
     {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 
-  def handle_event("paginate", %{"page" => page}, socket) do
-    current_page = Map.get(socket.assigns.filters, :page, 1)
-    filters = Map.put(socket.assigns.filters, :page, FilterParams.parse_int(page, current_page))
+  def handle_event("load_more", %{"cursor" => cursor}, socket) do
+    filters =
+      socket.assigns.filters
+      |> Map.put(:cursor, cursor)
+      |> Map.put_new(:limit, @default_limit)
+
     {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 
@@ -197,11 +200,9 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
             </div>
 
             <div class="p-6 border-t border-base-200">
-              <.pagination
-                page={@page}
-                per_page={@per_page}
-                total_count={@total_count}
-                total_pages={@total_pages}
+              <.cursor_pagination
+                cursor={@cursor}
+                displayed_count={length(@applications)}
               />
             </div>
           <% end %>
@@ -241,13 +242,12 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   end
 
   defp reload_list(socket) do
-    result = Applications.list_applications(socket.assigns.filters)
+    filters = Map.delete(socket.assigns.filters, :cursor)
+    result = Applications.list_applications(filters)
 
     socket
     |> assign(:applications, result.entries)
-    |> assign(:page, result.page)
-    |> assign(:total_count, result.total_count)
-    |> assign(:total_pages, result.total_pages)
+    |> assign(:cursor, result.cursor)
   end
 
   defp refresh_with_highlight(socket, id) do

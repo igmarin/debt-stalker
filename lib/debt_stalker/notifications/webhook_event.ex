@@ -13,14 +13,14 @@ defmodule DebtStalker.Notifications.WebhookEvent do
   alias DebtStalker.Applications.CreditApplication
 
   @type t :: %__MODULE__{
-          id: Ecto.UUID.t(),
-          application_id: Ecto.UUID.t(),
-          application: CreditApplication.t() | Ecto.Association.NotLoaded.t(),
-          source: String.t(),
-          payload_hash: String.t(),
-          verified: boolean(),
-          processed: boolean(),
-          inserted_at: DateTime.t()
+          id: Ecto.UUID.t() | nil,
+          application_id: Ecto.UUID.t() | nil,
+          application: CreditApplication.t() | Ecto.Association.NotLoaded.t() | nil,
+          source: String.t() | nil,
+          payload_hash: String.t() | nil,
+          verified: boolean() | nil,
+          processed: boolean() | nil,
+          inserted_at: DateTime.t() | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}

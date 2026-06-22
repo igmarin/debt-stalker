@@ -24,12 +24,72 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/debt_stalker"
 import topbar from "../vendor/topbar"
+import Chart from "../vendor/chart"
+
+const ChartHook = {
+  mounted() {
+    this.renderChart()
+  },
+
+  updated() {
+    this.destroyChart()
+    this.renderChart()
+  },
+
+  destroyed() {
+    this.destroyChart()
+  },
+
+  renderChart() {
+    const canvas = this.el
+    const type = canvas.dataset.chartType
+    const labels = JSON.parse(canvas.dataset.chartLabels || "[]")
+    const values = JSON.parse(canvas.dataset.chartValues || "[]")
+    const datasets = JSON.parse(canvas.dataset.chartDatasets || "null")
+    const options = JSON.parse(canvas.dataset.chartOptions || "{}")
+
+    const config = datasets || {
+      type: type,
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: canvas.dataset.chartColors?.split(",") || [
+              "rgba(59, 130, 246, 0.7)",
+            ],
+          },
+        ],
+      },
+    }
+
+    this.chart = new Chart(canvas.getContext("2d"), {
+      ...config,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: type === "pie" },
+          tooltip: { enabled: true },
+        },
+        ...options,
+      },
+    })
+  },
+
+  destroyChart() {
+    if (this.chart) {
+      this.chart.destroy()
+      this.chart = null
+    }
+  },
+}
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ChartHook},
 })
 
 // Show progress bar on live navigation and form submits

@@ -109,7 +109,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       assert html =~ "9000"
     end
 
-    test "paginates with page controls", %{conn: conn} do
+    test "paginates with cursor controls", %{conn: conn} do
       for i <- 1..21 do
         {:ok, _} =
           Applications.create_application(%{
@@ -119,21 +119,23 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
           })
       end
 
-      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications?per_page=10")
+      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications?limit=10")
       assert html =~ "Mostrando"
+      assert html =~ "Cargar más"
 
-      html = render_click(view, "paginate", %{"page" => "2"})
+      [cursor] = Regex.run(~r/phx-value-cursor=\"([^\"]+)\"/, html, capture: :all_but_first)
+      html = render_click(view, "load_more", %{"cursor" => cursor})
 
       assert html =~ "Applicant"
     end
 
-    test "ignores invalid page param without crashing", %{conn: conn} do
+    test "ignores invalid cursor param without crashing", %{conn: conn} do
       {:ok, _} = Applications.create_application(@valid_es_attrs)
 
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
-      assert render_click(view, "paginate", %{"page" => "abc"}) =~ "Juan G."
-      assert render_patch(view, ~p"/admin/applications?page=invalid") =~ "Juan G."
+      assert render_click(view, "load_more", %{"cursor" => "invalid"}) =~ "Juan G."
+      assert render_patch(view, ~p"/admin/applications?cursor=invalid") =~ "Juan G."
     end
 
     test "updates in real-time via PubSub", %{conn: conn} do
