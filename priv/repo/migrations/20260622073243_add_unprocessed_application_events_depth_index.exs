@@ -2,6 +2,7 @@ defmodule DebtStalker.Repo.Migrations.AddUnprocessedApplicationEventsDepthIndex 
   use Ecto.Migration
 
   @disable_ddl_transaction true
+  @disable_migration_lock true
 
   def up do
     create index(:application_events, [:inserted_at],
