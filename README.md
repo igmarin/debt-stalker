@@ -117,7 +117,30 @@ make seed       # Create 10 demo apps + print JWT tokens
 - **Oban workers**: Async processing with configurable queues (default:10, events:20, notifications:10)
 - **SKIP LOCKED**: Event dispatcher uses advisory locks for concurrent-safe consumption
 - **Cursor pagination**: Stable, efficient pagination without OFFSET
-- **Kubernetes-ready**: k8s manifests in `k8s/` directory (namespace, deployment, service, configmap, secrets, migration job)
+- **Kubernetes-ready**: k8s manifests in `k8s/` directory (namespace, deployment-web, deployment-worker, service, configmap, secrets, migration job, HPA)
+
+## Environment Variables
+
+All secrets are sourced from environment variables (or k8s Secrets in production). No secrets are committed to the repository.
+
+| Variable | Required in prod | Description |
+|----------|-----------------|-------------|
+| `DATABASE_URL` | Yes | Ecto database connection string |
+| `SECRET_KEY_BASE` | Yes | Phoenix secret key base (`mix phx.gen.secret`) |
+| `CLOAK_KEY` | Yes | Base64-encoded 32-byte key for PII encryption at rest |
+| `JWT_SECRET` | Yes | Secret for signing JWT tokens |
+| `WEBHOOK_SECRET` | Yes | HMAC signing secret for inbound webhooks |
+| `PHX_HOST` | No | Hostname for URL generation (default: `localhost`) |
+| `PHX_PORT` | No | HTTP port (default: `4000`) |
+| `PHX_SERVER` | No | Start Phoenix server (default: `false`) |
+| `POOL_SIZE` | No | DB connection pool size (default: `10`) |
+| `OBAN_QUEUES` | No | Set to `false` to disable Oban queues (web deployment) |
+| `OBAN_QUEUE_DEFAULT` | No | Default queue concurrency (default: `10`) |
+| `OBAN_QUEUE_EVENTS` | No | Events queue concurrency (default: `20`) |
+| `OBAN_QUEUE_NOTIFICATIONS` | No | Notifications queue concurrency (default: `10`) |
+| `LOG_LEVEL` | No | Log level (default: `info` in prod) |
+| `RATE_LIMIT_AUTH_TOKEN` | No | Auth token rate limit per window (default: `10`) |
+| `RATE_LIMIT_WEBHOOK` | No | Webhook rate limit per window (default: `20`) |
 
 ## Documentation
 
