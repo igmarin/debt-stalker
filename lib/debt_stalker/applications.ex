@@ -98,13 +98,32 @@ defmodule DebtStalker.Applications do
           |> Map.put(:status, "provider_error")
           |> Map.put(:additional_review_required, false)
 
-        result =
-          %CreditApplication{}
-          |> CreditApplication.changeset(insert_attrs)
-          |> Repo.insert()
-
-        case result do
-          {:ok, app} ->
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(
+          :application,
+          CreditApplication.changeset(%CreditApplication{}, insert_attrs)
+        )
+        |> Ecto.Multi.insert(:transition, fn %{application: app} ->
+          %DebtStalker.Applications.StatusTransition{}
+          |> Ecto.Changeset.change(%{
+            application_id: app.id,
+            from_status: "created",
+            to_status: "provider_error",
+            triggered_by: "provider"
+          })
+        end)
+        |> Ecto.Multi.insert(:audit, fn %{application: app} ->
+          %DebtStalker.Applications.AuditLog{}
+          |> Ecto.Changeset.change(%{
+            application_id: app.id,
+            action: "status_changed",
+            actor: "provider",
+            metadata: %{"from" => "created", "to" => "provider_error"}
+          })
+        end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{application: app}} ->
             Logger.error("Provider error during application creation",
               application_id: app.id,
               country: app.country,
@@ -113,8 +132,8 @@ defmodule DebtStalker.Applications do
 
             {:ok, app}
 
-          error ->
-            error
+          {:error, _step, changeset, _changes} ->
+            {:error, changeset}
         end
     end
   end

@@ -3,6 +3,7 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
 
   alias DebtStalker.Applications
   alias DebtStalker.Applications.CreditApplication
+  alias DebtStalker.Repo
   alias Ecto.Adapters.SQL
 
   @valid_es_attrs %{
@@ -116,6 +117,43 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
       attrs = Map.put(@valid_es_attrs, :identity_document, "00000000T")
       assert {:ok, app} = Applications.create_application(attrs)
       assert app.status == "provider_error"
+    end
+
+    test "provider failure records status transition and audit log" do
+      # Use document that triggers :unavailable
+      attrs = Map.put(@valid_es_attrs, :identity_document, "00000000T")
+      assert {:ok, app} = Applications.create_application(attrs)
+      assert app.status == "provider_error"
+
+      # app.id is a string UUID; the binary_id columns need a binary UUID.
+      {:ok, app_uuid} = Ecto.UUID.dump(app.id)
+
+      # Assert a status_transitions row exists for this application
+      {:ok, %{rows: transition_rows}} =
+        SQL.query(
+          Repo,
+          "SELECT from_status, to_status, triggered_by FROM application_status_transitions WHERE application_id = $1",
+          [app_uuid]
+        )
+
+      assert length(transition_rows) == 1
+      [[from_status, to_status, triggered_by]] = transition_rows
+      assert from_status == "created"
+      assert to_status == "provider_error"
+      assert triggered_by == "provider"
+
+      # Assert an audit_logs row exists for this application
+      {:ok, %{rows: audit_rows}} =
+        SQL.query(
+          Repo,
+          "SELECT action, actor FROM audit_logs WHERE application_id = $1",
+          [app_uuid]
+        )
+
+      assert length(audit_rows) == 1
+      [[action, actor]] = audit_rows
+      assert action == "status_changed"
+      assert actor == "provider"
     end
   end
 end
