@@ -87,7 +87,11 @@ defmodule DebtStalker.Applications.AppCacheTest do
 
       {:ok, _updated} = Applications.update_status(app.id, "pending_risk", "system")
 
-      assert_received {:status_changed, %{from: "submitted", to: "pending_risk"}}, 1000
+      assert_received {:status_changed,
+                       %{from: "submitted", to: "pending_risk", application_id: app_id}},
+                      1000
+
+      assert app_id == app.id
 
       {:ok, app2} = Applications.get_application(app.id)
       assert app2.status == "pending_risk"

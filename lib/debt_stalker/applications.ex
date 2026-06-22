@@ -274,13 +274,13 @@ defmodule DebtStalker.Applications do
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:#{app.id}",
-          {:status_changed, %{from: app.status, to: new_status}}
+          {:status_changed, %{from: app.status, to: new_status, application_id: app.id}}
         )
 
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:list",
-          {:status_changed, %{from: app.status, to: new_status}}
+          {:status_changed, %{from: app.status, to: new_status, application_id: app.id}}
         )
 
         # Invalidate the cached application detail
@@ -317,6 +317,11 @@ defmodule DebtStalker.Applications do
       {:ok, app} ->
         emit_cache_hit(cache_key)
         {:ok, app}
+
+      {:error, _reason} ->
+        # Cache unavailable — treat as miss and fall back to DB.
+        emit_cache_miss(cache_key)
+        {:miss, id}
     end
   end
 

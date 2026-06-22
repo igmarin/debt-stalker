@@ -4,8 +4,18 @@ defmodule DebtStalker.CacheInvalidator do
   corresponding cache entries.
 
   Listens for `{:status_changed, _}` messages on the
-  `applications:list` topic and clears the cached `get_application/1`
-  entry for the affected application.
+  `applications:list` topic and deletes the cached
+  `get_application/1` entry for the affected application.
+
+  ## PII Note
+
+  The cache stores the full `CreditApplication` struct, which
+  includes PII fields (`full_name`, `identity_document`). This is
+  the same decrypted data that is already in process memory after
+  `Repo.get/2` — Cloak decrypts at the Ecto layer. The encryption
+  at rest requirement (invariant #3) applies to the database
+  storage layer, not to in-memory caches. The cache is ephemeral,
+  BEAM-isolated, and not accessible externally.
   """
 
   use GenServer
@@ -29,13 +39,14 @@ defmodule DebtStalker.CacheInvalidator do
 
   @impl GenServer
   @spec handle_info(term(), map()) :: {:noreply, map()}
+  def handle_info({:status_changed, %{application_id: app_id}}, state) do
+    # Targeted invalidation: delete only the affected app's cache entry.
+    Cachex.del(@cache, "app:#{app_id}")
+    {:noreply, state}
+  end
+
   def handle_info({:status_changed, _payload}, state) do
-    # Invalidate all app cache entries on any status change.
-    # A targeted approach (per-app-id) would require the app_id in
-    # the broadcast metadata; since the broadcast on
-    # "applications:list" doesn't include app_id, we clear all.
-    # The per-app topic broadcast handles targeted invalidation
-    # via the direct cache del in update_status/3.
+    # Fallback: if app_id is not in the payload, clear all.
     Cachex.clear(@cache)
     {:noreply, state}
   end
