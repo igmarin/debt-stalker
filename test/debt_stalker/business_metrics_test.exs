@@ -91,6 +91,28 @@ defmodule DebtStalker.BusinessMetricsTest do
 
       assert metrics_output =~ "debt_stalker_oban_jobs"
     end
+
+    test "outbox dispatcher metrics are exported" do
+      :telemetry.execute(
+        [:debt_stalker, :outbox, :dispatch, :stop],
+        %{
+          processed_count: 2,
+          failed_count: 1,
+          claimed_count: 3,
+          batch_count: 2,
+          remaining_count: 4,
+          oldest_unprocessed_age_ms: 1_500
+        },
+        %{worker: "EventDispatcherWorker"}
+      )
+
+      metrics_output = TelemetryMetricsPrometheus.Core.scrape(:prometheus_metrics)
+
+      assert metrics_output =~ "debt_stalker_outbox_events_processed_count"
+      assert metrics_output =~ "debt_stalker_outbox_events_failed_count"
+      assert metrics_output =~ "debt_stalker_outbox_remaining_count"
+      assert metrics_output =~ "debt_stalker_outbox_oldest_unprocessed_age_ms"
+    end
   end
 
   defp extract_labeled_counter(output, metric_name, label_value) do

@@ -11,9 +11,11 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
   require Logger
 
   alias DebtStalker.Repo
+  alias DebtStalker.Telemetry
   alias Ecto.Adapters.SQL
 
-  @batch_size 50
+  @default_batch_size 50
+  @default_max_batches_per_run 5
 
   @doc "Drains the application events outbox and dispatches events to workers."
   @impl true
@@ -34,6 +36,57 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
   """
   @spec claim_and_dispatch() :: {:ok, non_neg_integer()}
   def claim_and_dispatch do
+    %{batch_size: batch_size, max_batches_per_run: max_batches_per_run} = dispatcher_config()
+
+    measurements =
+      batch_size
+      |> drain_batches(max_batches_per_run, empty_dispatch_stats())
+      |> Map.merge(outbox_depth())
+
+    Telemetry.emit_outbox_dispatch(measurements)
+
+    Logger.info("EventDispatcher processed events",
+      worker: "EventDispatcherWorker",
+      event_count: measurements.processed_count,
+      failed_count: measurements.failed_count,
+      claimed_count: measurements.claimed_count,
+      batch_count: measurements.batch_count,
+      remaining_count: measurements.remaining_count,
+      oldest_unprocessed_age_ms: measurements.oldest_unprocessed_age_ms
+    )
+
+    {:ok, measurements.processed_count}
+  end
+
+  defp drain_batches(_batch_size, 0, stats), do: stats
+
+  defp drain_batches(batch_size, batches_remaining, stats) do
+    batch_stats = claim_and_dispatch_batch(batch_size)
+    stats = merge_dispatch_stats(stats, batch_stats)
+
+    cond do
+      batch_stats.claimed_count == 0 ->
+        stats
+
+      batch_stats.claimed_count < batch_size ->
+        stats
+
+      true ->
+        drain_batches(batch_size, batches_remaining - 1, stats)
+    end
+  end
+
+  defp claim_and_dispatch_batch(batch_size) do
+    {:ok, stats} =
+      Repo.transaction(fn ->
+        events = claim_events(batch_size)
+        dispatch_events(events)
+      end)
+
+    stats
+  end
+
+  defp claim_events(batch_size) do
     {:ok, %{rows: events}} =
       SQL.query(
         Repo,
@@ -45,37 +98,35 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
         LIMIT $1
         FOR UPDATE SKIP LOCKED
         """,
-        [@batch_size]
+        [batch_size]
       )
 
-    processed_count =
-      events
-      |> Enum.map(fn event ->
-        case dispatch_event(event) do
-          :ok ->
-            mark_processed(event)
-            1
+    events
+  end
 
-          {:error, reason} ->
-            [_id, _app_id, event_type, _payload] = event
+  defp dispatch_events(events) do
+    events
+    |> Enum.reduce(empty_dispatch_stats(), fn event, stats ->
+      case dispatch_event(event) do
+        :ok ->
+          mark_processed(event)
+          %{stats | processed_count: stats.processed_count + 1}
 
-            Logger.error("Event dispatch failed",
-              worker: "EventDispatcherWorker",
-              event_type: event_type,
-              reason: inspect(reason)
-            )
+        {:error, reason} ->
+          log_dispatch_failure(event, reason)
+          %{stats | failed_count: stats.failed_count + 1}
+      end
+    end)
+    |> Map.put(:claimed_count, length(events))
+    |> Map.put(:batch_count, batch_count(events))
+  end
 
-            0
-        end
-      end)
-      |> Enum.sum()
-
-    Logger.info("EventDispatcher processed events",
+  defp log_dispatch_failure([_id, _app_id, event_type, _payload], reason) do
+    Logger.error("Event dispatch failed",
       worker: "EventDispatcherWorker",
-      event_count: processed_count
+      event_type: event_type,
+      reason: inspect(reason)
     )
-
-    {:ok, processed_count}
   end
 
   defp dispatch_event([_id, application_id, event_type, payload]) do
@@ -119,6 +170,67 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
 
     :ok
   end
+
+  defp outbox_depth do
+    {:ok, %{rows: [[remaining_count, oldest_unprocessed_age_ms]]}} =
+      SQL.query(
+        Repo,
+        """
+        SELECT
+          COUNT(*),
+          COALESCE((EXTRACT(EPOCH FROM (NOW() - MIN(inserted_at))) * 1000)::bigint, 0)
+        FROM application_events
+        WHERE processed_at IS NULL
+        """,
+        []
+      )
+
+    %{
+      remaining_count: remaining_count,
+      oldest_unprocessed_age_ms: oldest_unprocessed_age_ms
+    }
+  end
+
+  defp dispatcher_config do
+    config = Application.get_env(:debt_stalker, :event_dispatcher, []) || []
+
+    %{
+      batch_size:
+        config
+        |> Keyword.get(:batch_size, @default_batch_size)
+        |> positive_integer_or_default(@default_batch_size),
+      max_batches_per_run:
+        config
+        |> Keyword.get(:max_batches_per_run, @default_max_batches_per_run)
+        |> positive_integer_or_default(@default_max_batches_per_run)
+    }
+  end
+
+  defp positive_integer_or_default(value, _default) when is_integer(value) and value > 0,
+    do: value
+
+  defp positive_integer_or_default(_value, default), do: default
+
+  defp empty_dispatch_stats do
+    %{
+      processed_count: 0,
+      failed_count: 0,
+      claimed_count: 0,
+      batch_count: 0
+    }
+  end
+
+  defp merge_dispatch_stats(left, right) do
+    %{
+      processed_count: left.processed_count + right.processed_count,
+      failed_count: left.failed_count + right.failed_count,
+      claimed_count: left.claimed_count + right.claimed_count,
+      batch_count: left.batch_count + right.batch_count
+    }
+  end
+
+  defp batch_count([]), do: 0
+  defp batch_count(_events), do: 1
 
   defp encode_uuid(<<_::128>> = binary) do
     Ecto.UUID.cast!(binary)

@@ -2,6 +2,7 @@ defmodule DebtStalker.Workers.EventDispatcherWorkerTest do
   use DebtStalker.DataCase, async: false
   use Oban.Testing, repo: DebtStalker.Repo
 
+  alias DebtStalker.Countries
   alias DebtStalker.Workers.EventDispatcherWorker
   alias Ecto.Adapters.SQL
 
@@ -79,6 +80,51 @@ defmodule DebtStalker.Workers.EventDispatcherWorkerTest do
       assert length(jobs) == 1
     end
 
+    test "drains up to configured max batches per run" do
+      put_event_dispatcher_config(batch_size: 2, max_batches_per_run: 2)
+
+      for i <- 1..5 do
+        create_application("Applicant #{i}")
+      end
+
+      assert {:ok, 4} = EventDispatcherWorker.claim_and_dispatch()
+      assert unprocessed_event_count() == 1
+      assert length(all_enqueued(worker: DebtStalker.Workers.RiskEvaluationWorker)) == 4
+    end
+
+    test "emits outbox dispatch telemetry with backlog measurements" do
+      put_event_dispatcher_config(batch_size: 1, max_batches_per_run: 1)
+      create_application("First Applicant")
+      create_application("Second Applicant")
+
+      test_pid = self()
+      handler_id = "event-dispatcher-test-#{System.unique_integer([:positive])}"
+
+      :ok =
+        :telemetry.attach(
+          handler_id,
+          [:debt_stalker, :outbox, :dispatch, :stop],
+          fn _event, measurements, metadata, _config ->
+            send(test_pid, {:outbox_dispatch, measurements, metadata})
+          end,
+          nil
+        )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      assert {:ok, 1} = EventDispatcherWorker.claim_and_dispatch()
+
+      assert_receive {:outbox_dispatch, measurements, metadata}, 1_000
+      assert %{worker: "EventDispatcherWorker"} = metadata
+      assert measurements.processed_count == 1
+      assert measurements.failed_count == 0
+      assert measurements.claimed_count == 1
+      assert measurements.batch_count == 1
+      assert measurements.remaining_count == 1
+      assert is_integer(measurements.oldest_unprocessed_age_ms)
+      assert measurements.oldest_unprocessed_age_ms >= 0
+    end
+
     test "failed dispatch leaves event unprocessed for retry" do
       # This test verifies that if dispatch_event fails, the event
       # remains unprocessed and can be retried on the next run.
@@ -146,5 +192,33 @@ defmodule DebtStalker.Workers.EventDispatcherWorkerTest do
       # Verify the worker was actually enqueued (dispatch succeeded)
       assert_enqueued(worker: DebtStalker.Workers.RiskEvaluationWorker)
     end
+  end
+
+  defp put_event_dispatcher_config(config) do
+    previous = Application.get_env(:debt_stalker, :event_dispatcher)
+    Application.put_env(:debt_stalker, :event_dispatcher, config)
+    on_exit(fn -> Application.put_env(:debt_stalker, :event_dispatcher, previous) end)
+  end
+
+  defp create_application(full_name) do
+    attrs = %{
+      @valid_es_attrs
+      | full_name: full_name,
+        identity_document: Countries.random_identity_document("ES")
+    }
+
+    assert {:ok, app} = DebtStalker.Applications.create_application(attrs)
+    app
+  end
+
+  defp unprocessed_event_count do
+    {:ok, %{rows: [[count]]}} =
+      SQL.query(
+        DebtStalker.Repo,
+        "SELECT COUNT(*) FROM application_events WHERE processed_at IS NULL",
+        []
+      )
+
+    count
   end
 end

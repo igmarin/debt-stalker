@@ -127,6 +127,31 @@ defmodule DebtStalkerWeb.Telemetry do
         event_name: [:debt_stalker, :oban, :job, :stop],
         tags: [:worker, :result],
         description: "Number of Oban jobs executed by worker and result"
+      ),
+      counter("debt_stalker.outbox.events.processed.count",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :processed_count,
+        tags: [:worker],
+        description: "Number of outbox events successfully processed by dispatcher runs"
+      ),
+      counter("debt_stalker.outbox.events.failed.count",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :failed_count,
+        tags: [:worker],
+        description: "Number of outbox events that failed dispatch and remain pending"
+      ),
+      last_value("debt_stalker.outbox.remaining.count",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :remaining_count,
+        tags: [:worker],
+        description: "Unprocessed outbox events remaining after the dispatcher run"
+      ),
+      last_value("debt_stalker.outbox.oldest_unprocessed_age_ms",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :oldest_unprocessed_age_ms,
+        tags: [:worker],
+        unit: :millisecond,
+        description: "Age in milliseconds of the oldest unprocessed outbox event"
       )
     ]
   end
@@ -217,6 +242,31 @@ defmodule DebtStalkerWeb.Telemetry do
         event_name: [:debt_stalker, :oban, :job, :stop],
         tags: [:worker, :result],
         description: "Number of Oban jobs executed by worker and result"
+      ),
+      counter("debt_stalker.outbox.events.processed.count",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :processed_count,
+        tags: [:worker],
+        description: "Number of outbox events successfully processed by dispatcher runs"
+      ),
+      counter("debt_stalker.outbox.events.failed.count",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :failed_count,
+        tags: [:worker],
+        description: "Number of outbox events that failed dispatch and remain pending"
+      ),
+      last_value("debt_stalker.outbox.remaining.count",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :remaining_count,
+        tags: [:worker],
+        description: "Unprocessed outbox events remaining after the dispatcher run"
+      ),
+      last_value("debt_stalker.outbox.oldest_unprocessed_age_ms",
+        event_name: [:debt_stalker, :outbox, :dispatch, :stop],
+        measurement: :oldest_unprocessed_age_ms,
+        tags: [:worker],
+        unit: :millisecond,
+        description: "Age in milliseconds of the oldest unprocessed outbox event"
       ),
 
       # Cache: hit/miss metrics

@@ -119,6 +119,41 @@ defmodule DebtStalker.Telemetry do
   end
 
   @doc """
+  Emits a `[:debt_stalker, :outbox, :dispatch, :stop]` telemetry event
+  after the outbox dispatcher finishes a run.
+
+  ## Measurements
+
+  - `:processed_count` — events successfully dispatched and marked processed
+  - `:failed_count` — events that failed dispatch and remain unprocessed
+  - `:claimed_count` — events claimed during this run
+  - `:batch_count` — batches attempted during this run
+  - `:remaining_count` — unprocessed events left in the outbox after this run
+  - `:oldest_unprocessed_age_ms` — age in milliseconds of the oldest remaining event
+
+  ## Metadata
+
+  - `:worker` — always `"EventDispatcherWorker"`
+  """
+  @spec emit_outbox_dispatch(%{
+          processed_count: non_neg_integer(),
+          failed_count: non_neg_integer(),
+          claimed_count: non_neg_integer(),
+          batch_count: non_neg_integer(),
+          remaining_count: non_neg_integer(),
+          oldest_unprocessed_age_ms: non_neg_integer()
+        }) :: :ok
+  def emit_outbox_dispatch(measurements) do
+    :telemetry.execute(
+      [:debt_stalker, :outbox, :dispatch, :stop],
+      measurements,
+      %{worker: "EventDispatcherWorker"}
+    )
+
+    :ok
+  end
+
+  @doc """
   Emits a `[:debt_stalker, :oban, :job, :stop]` telemetry event
   after an Oban job completes (success or failure).
 
