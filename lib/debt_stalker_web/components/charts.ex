@@ -40,8 +40,7 @@ defmodule DebtStalkerWeb.Components.Charts do
           data-chart-type="pie"
           data-chart-datasets={Jason.encode!(@chart_data)}
           aria-label={gettext("Status distribution chart")}
-        >
-        </canvas>
+        ></canvas>
       <% else %>
         <p class="text-sm text-base-content/60 text-center py-8">{gettext("No data for chart")}</p>
       <% end %>
@@ -67,8 +66,7 @@ defmodule DebtStalkerWeb.Components.Charts do
           data-chart-type="bar"
           data-chart-datasets={Jason.encode!(@chart_data)}
           aria-label={gettext("Applications over time chart")}
-        >
-        </canvas>
+        ></canvas>
       <% else %>
         <p class="text-sm text-base-content/60 text-center py-8">{gettext("No data for chart")}</p>
       <% end %>
@@ -94,8 +92,7 @@ defmodule DebtStalkerWeb.Components.Charts do
           data-chart-type="bar"
           data-chart-datasets={Jason.encode!(@chart_data)}
           aria-label={gettext("Applications by country chart")}
-        >
-        </canvas>
+        ></canvas>
       <% else %>
         <p class="text-sm text-base-content/60 text-center py-8">{gettext("No data for chart")}</p>
       <% end %>
@@ -108,7 +105,9 @@ defmodule DebtStalkerWeb.Components.Charts do
   defp build_status_pie_data(data) do
     labels = Enum.map(data, &format_status(&1.status))
     values = Enum.map(data, & &1.count)
-    background_color = Enum.map(data, &Map.get(@status_colors, &1.status, "rgba(59, 130, 246, 0.8)"))
+
+    background_color =
+      Enum.map(data, &Map.get(@status_colors, &1.status, "rgba(59, 130, 246, 0.8)"))
 
     %{
       type: "pie",

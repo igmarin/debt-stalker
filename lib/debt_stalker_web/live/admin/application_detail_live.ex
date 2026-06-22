@@ -163,15 +163,21 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
                 </div>
                 <div :if={@app.provider_summary["risk_indicators"]["credit_score"]}>
                   <dt class="text-base-content/60">{gettext("Credit score")}</dt>
-                  <dd class="font-medium">{@app.provider_summary["risk_indicators"]["credit_score"]}</dd>
+                  <dd class="font-medium">
+                    {@app.provider_summary["risk_indicators"]["credit_score"]}
+                  </dd>
                 </div>
                 <div :if={@app.provider_summary["risk_indicators"]["active_loans"]}>
                   <dt class="text-base-content/60">{gettext("Active loans")}</dt>
-                  <dd class="font-medium">{@app.provider_summary["risk_indicators"]["active_loans"]}</dd>
+                  <dd class="font-medium">
+                    {@app.provider_summary["risk_indicators"]["active_loans"]}
+                  </dd>
                 </div>
                 <div :if={@app.provider_summary["normalized_data"]["monthly_payment"]}>
                   <dt class="text-base-content/60">{gettext("Monthly payment")}</dt>
-                  <dd class="font-medium">{@app.provider_summary["normalized_data"]["monthly_payment"]}</dd>
+                  <dd class="font-medium">
+                    {@app.provider_summary["normalized_data"]["monthly_payment"]}
+                  </dd>
                 </div>
               </dl>
 
