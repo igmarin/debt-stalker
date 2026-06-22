@@ -112,5 +112,4 @@ defmodule DebtStalkerWeb.Components.Charts do
   end
 
   defp safe_content({:safe, content}), do: content
-  defp safe_content(_), do: nil
 end
