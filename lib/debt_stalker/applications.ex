@@ -104,22 +104,26 @@ defmodule DebtStalker.Applications do
           CreditApplication.changeset(%CreditApplication{}, insert_attrs)
         )
         |> Ecto.Multi.insert(:transition, fn %{application: app} ->
-          %DebtStalker.Applications.StatusTransition{}
-          |> Ecto.Changeset.change(%{
-            application_id: app.id,
-            from_status: "created",
-            to_status: "provider_error",
-            triggered_by: "provider"
-          })
+          __MODULE__.StatusTransition.changeset(
+            %__MODULE__.StatusTransition{},
+            %{
+              application_id: app.id,
+              from_status: "created",
+              to_status: "provider_error",
+              triggered_by: "provider"
+            }
+          )
         end)
         |> Ecto.Multi.insert(:audit, fn %{application: app} ->
-          %DebtStalker.Applications.AuditLog{}
-          |> Ecto.Changeset.change(%{
-            application_id: app.id,
-            action: "status_changed",
-            actor: "provider",
-            metadata: %{"from" => "created", "to" => "provider_error"}
-          })
+          __MODULE__.AuditLog.changeset(
+            %__MODULE__.AuditLog{},
+            %{
+              application_id: app.id,
+              action: "status_changed",
+              actor: "provider",
+              metadata: %{"from" => "created", "to" => "provider_error"}
+            }
+          )
         end)
         |> Repo.transaction()
         |> case do
@@ -228,22 +232,26 @@ defmodule DebtStalker.Applications do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:application, Ecto.Changeset.change(app, status: new_status))
     |> Ecto.Multi.insert(:transition, fn _changes ->
-      %DebtStalker.Applications.StatusTransition{}
-      |> Ecto.Changeset.change(%{
-        application_id: app.id,
-        from_status: app.status,
-        to_status: new_status,
-        triggered_by: triggered_by
-      })
+      __MODULE__.StatusTransition.changeset(
+        %__MODULE__.StatusTransition{},
+        %{
+          application_id: app.id,
+          from_status: app.status,
+          to_status: new_status,
+          triggered_by: triggered_by
+        }
+      )
     end)
     |> Ecto.Multi.insert(:audit, fn _changes ->
-      %DebtStalker.Applications.AuditLog{}
-      |> Ecto.Changeset.change(%{
-        application_id: app.id,
-        action: "status_changed",
-        actor: triggered_by,
-        metadata: %{"from" => app.status, "to" => new_status}
-      })
+      __MODULE__.AuditLog.changeset(
+        %__MODULE__.AuditLog{},
+        %{
+          application_id: app.id,
+          action: "status_changed",
+          actor: triggered_by,
+          metadata: %{"from" => app.status, "to" => new_status}
+        }
+      )
     end)
     |> Repo.transaction()
     |> case do

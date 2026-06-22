@@ -2,7 +2,9 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
   use DebtStalker.DataCase, async: true
 
   alias DebtStalker.Applications
+  alias DebtStalker.Applications.AuditLog
   alias DebtStalker.Applications.CreditApplication
+  alias DebtStalker.Applications.StatusTransition
   alias DebtStalker.Repo
   alias Ecto.Adapters.SQL
 
@@ -125,35 +127,38 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
       assert {:ok, app} = Applications.create_application(attrs)
       assert app.status == "provider_error"
 
-      # app.id is a string UUID; the binary_id columns need a binary UUID.
-      {:ok, app_uuid} = Ecto.UUID.dump(app.id)
-
       # Assert a status_transitions row exists for this application
-      {:ok, %{rows: transition_rows}} =
-        SQL.query(
-          Repo,
-          "SELECT from_status, to_status, triggered_by FROM application_status_transitions WHERE application_id = $1",
-          [app_uuid]
-        )
-
-      assert length(transition_rows) == 1
-      [[from_status, to_status, triggered_by]] = transition_rows
-      assert from_status == "created"
-      assert to_status == "provider_error"
-      assert triggered_by == "provider"
+      transition = Repo.get_by(StatusTransition, application_id: app.id)
+      assert transition != nil
+      assert transition.from_status == "created"
+      assert transition.to_status == "provider_error"
+      assert transition.triggered_by == "provider"
 
       # Assert an audit_logs row exists for this application
-      {:ok, %{rows: audit_rows}} =
-        SQL.query(
-          Repo,
-          "SELECT action, actor FROM audit_logs WHERE application_id = $1",
-          [app_uuid]
-        )
+      audit = Repo.get_by(AuditLog, application_id: app.id)
+      assert audit != nil
+      assert audit.action == "status_changed"
+      assert audit.actor == "provider"
+      assert audit.metadata == %{"from" => "created", "to" => "provider_error"}
+    end
 
-      assert length(audit_rows) == 1
-      [[action, actor]] = audit_rows
-      assert action == "status_changed"
-      assert actor == "provider"
+    test "provider failure with invalid attrs returns CreditApplication changeset" do
+      # Provider fails (unavailable document) AND the application attrs
+      # are invalid (missing full_name). The Multi application insert
+      # fails first, returning a CreditApplication changeset — not a
+      # StatusTransition or AuditLog changeset.
+      attrs =
+        @valid_es_attrs
+        |> Map.put(:identity_document, "00000000T")
+        |> Map.delete(:full_name)
+
+      assert {:error, changeset} = Applications.create_application(attrs)
+      assert %Ecto.Changeset{} = changeset
+      assert changeset.data.__struct__ == CreditApplication
+      assert Keyword.has_key?(changeset.errors, :full_name)
+
+      # No application was persisted — full rollback.
+      assert Repo.aggregate(CreditApplication, :count) == 0
     end
   end
 end
