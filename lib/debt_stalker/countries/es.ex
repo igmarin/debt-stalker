@@ -83,6 +83,15 @@ defmodule DebtStalker.Countries.ES do
   @spec document_hint() :: String.t()
   def document_hint, do: "12345678Z (DNI)"
 
+  @doc "Generates a random valid Spanish DNI for demo/seed data."
+  @spec random_identity_document() :: String.t()
+  def random_identity_document do
+    digits = :rand.uniform(99_999_999)
+    digits_str = String.pad_leading(Integer.to_string(digits), 8, "0")
+    letter = String.at(@dni_letters, rem(digits, 23))
+    digits_str <> letter
+  end
+
   # Private
 
   defp parse_dni(document) when byte_size(document) == 9 do

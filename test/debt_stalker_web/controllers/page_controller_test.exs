@@ -8,18 +8,18 @@ defmodule DebtStalkerWeb.PageControllerTest do
     assert html_response(conn, 200) =~ "Admin review"
   end
 
-  test "GET /set-role redirects applicants to the form", %{conn: conn} do
-    conn = get(conn, ~p"/set-role?role=applicant")
+  test "POST /set-role redirects applicants to the form", %{conn: conn} do
+    conn = post(conn, ~p"/set-role", %{"role" => "applicant"})
     assert redirected_to(conn) == "/apply"
   end
 
-  test "GET /set-role does not allow admin role without login", %{conn: conn} do
-    conn = get(conn, ~p"/set-role?role=admin")
+  test "POST /set-role does not allow admin role without login", %{conn: conn} do
+    conn = post(conn, ~p"/set-role", %{"role" => "admin"})
     assert redirected_to(conn) == "/"
   end
 
-  test "GET /set-role with invalid role redirects home", %{conn: conn} do
-    conn = get(conn, ~p"/set-role?role=unknown")
+  test "POST /set-role with invalid role redirects home", %{conn: conn} do
+    conn = post(conn, ~p"/set-role", %{"role" => "unknown"})
     assert redirected_to(conn) == "/"
   end
 
@@ -40,11 +40,11 @@ defmodule DebtStalkerWeb.PageControllerTest do
     refute get_session(conn, "role")
   end
 
-  test "GET /admin/logout clears the session", %{conn: conn} do
+  test "DELETE /admin/logout clears the session", %{conn: conn} do
     conn =
       conn
       |> init_test_session(%{"role" => "admin"})
-      |> get(~p"/admin/logout")
+      |> delete(~p"/admin/logout")
 
     assert redirected_to(conn) == "/"
 

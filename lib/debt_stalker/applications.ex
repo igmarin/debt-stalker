@@ -111,6 +111,12 @@ defmodule DebtStalker.Applications do
               status: "provider_error"
             )
 
+            Phoenix.PubSub.broadcast(
+              DebtStalker.PubSub,
+              "applications:list",
+              {:application_created, app}
+            )
+
             {:ok, app}
 
           error ->
@@ -269,6 +275,23 @@ defmodule DebtStalker.Applications do
     |> maybe_filter_country(filters)
     |> maybe_filter_status(filters)
     |> maybe_filter_date_range(filters)
+    |> Repo.aggregate(:count, :id)
+  end
+
+  @doc """
+  Counts status transitions that ended in `approved` or `rejected` today.
+
+  This is the decision velocity KPI for the admin dashboard.
+  """
+  @spec count_decided_today() :: non_neg_integer()
+  def count_decided_today do
+    today = Date.utc_today()
+    start_dt = DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
+    end_dt = DateTime.new!(today, ~T[23:59:59], "Etc/UTC")
+
+    DebtStalker.Applications.StatusTransition
+    |> where([t], t.to_status in ["approved", "rejected"])
+    |> where([t], t.inserted_at >= ^start_dt and t.inserted_at <= ^end_dt)
     |> Repo.aggregate(:count, :id)
   end
 

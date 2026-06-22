@@ -89,6 +89,21 @@ defmodule DebtStalker.Countries.MX do
   @spec risk_score_threshold() :: non_neg_integer()
   def risk_score_threshold, do: 600
 
+  @doc "Returns a random CURP-like string for demo/seed data."
+  @spec random_identity_document() :: String.t()
+  def random_identity_document do
+    letters = for(_ <- 1..4, do: <<Enum.random(?A..?Z)>>) |> Enum.join()
+    year = String.pad_leading(Integer.to_string(Enum.random(50..99)), 2, "0")
+    month = String.pad_leading(Integer.to_string(Enum.random(1..12)), 2, "0")
+    day = String.pad_leading(Integer.to_string(Enum.random(1..28)), 2, "0")
+
+    tail =
+      for(_ <- 1..8, do: <<Enum.random([Enum.random(?A..?Z), Enum.random(?0..?9)])>>)
+      |> Enum.join()
+
+    letters <> year <> month <> day <> tail
+  end
+
   @doc "Returns a short document hint for Mexican forms."
   @impl true
   @spec document_hint() :: String.t()

@@ -11,6 +11,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
   on_mount {DebtStalkerWeb.Live.RoleAuth, :applicant}
 
   alias DebtStalker.Applications
+  alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries
   alias DebtStalker.Countries.Registry, as: CountryRegistry
 
@@ -35,9 +36,22 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("validate", %{"application" => params}, socket) do
+    attrs = %{
+      country: params["country"],
+      full_name: params["full_name"],
+      identity_document: params["identity_document"],
+      requested_amount: safe_decimal(params["requested_amount"]),
+      monthly_income: safe_decimal(params["monthly_income"])
+    }
+
+    changeset =
+      %CreditApplication{}
+      |> CreditApplication.changeset(attrs)
+      |> Map.put(:action, :validate)
+
     socket =
       socket
-      |> assign(:form, to_form(params, as: "application"))
+      |> assign(:form, to_form(changeset, as: "application"))
       |> assign(:document_hint, Countries.get_document_hint(params["country"]))
 
     {:noreply, socket}
@@ -145,8 +159,8 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
 
   defp safe_decimal(value) when is_binary(value) do
     case Decimal.parse(value) do
-      {decimal, _} -> decimal
-      :error -> nil
+      {decimal, ""} -> decimal
+      _ -> nil
     end
   end
 end

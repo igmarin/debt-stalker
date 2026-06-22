@@ -119,23 +119,11 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
   end
 
   defp load_dashboard(socket) do
-    today = Date.utc_today()
-
     stats = %{
       total: Applications.count_applications(%{}),
       pending_risk: Applications.count_applications(%{status: "pending_risk"}),
       additional_review: Applications.count_applications(%{status: "additional_review"}),
-      decided_today:
-        Applications.count_applications(%{
-          status: "approved",
-          date_from: today,
-          date_to: today
-        }) +
-          Applications.count_applications(%{
-            status: "rejected",
-            date_from: today,
-            date_to: today
-          })
+      decided_today: Applications.count_decided_today()
     }
 
     recent = Applications.list_applications(%{limit: 10}).entries

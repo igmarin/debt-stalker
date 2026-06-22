@@ -31,5 +31,15 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       assert html =~ "Total applications"
       assert html =~ "Juan Garcia"
     end
+
+    test "counts decisions made today", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, app} = Applications.update_status(app.id, "pending_risk", "system")
+      {:ok, _} = Applications.update_status(app.id, "approved", "system")
+
+      {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin")
+      assert html =~ "Decided today"
+      assert html =~ "1"
+    end
   end
 end

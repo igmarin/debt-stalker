@@ -12,25 +12,28 @@
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
-    <.link
-      navigate={~p"/set-role?role=applicant"}
-      class="card bg-base-100 shadow-sm hover:shadow-md transition hover:-translate-y-1 group"
-    >
-      <div class="card-body items-center text-center p-8">
-        <div class="bg-primary/10 text-primary rounded-full p-4 mb-4 group-hover:bg-primary group-hover:text-primary-content transition">
-          <.icon name="hero-document-text" class="size-8" />
+    <.form for={%{}} action={~p"/set-role"} method="post" class="contents">
+      <input type="hidden" name="role" value="applicant" />
+      <button
+        type="submit"
+        class="card bg-base-100 shadow-sm hover:shadow-md transition hover:-translate-y-1 group text-left"
+      >
+        <div class="card-body items-center text-center p-8">
+          <div class="bg-primary/10 text-primary rounded-full p-4 mb-4 group-hover:bg-primary group-hover:text-primary-content transition">
+            <.icon name="hero-document-text" class="size-8" />
+          </div>
+          <h2 class="card-title text-2xl">Apply for credit</h2>
+          <p class="text-base-content/70 mt-2">
+            Submit your application and track its status in real time.
+          </p>
+          <div class="card-actions mt-4">
+            <span class="btn btn-primary">
+              Get started <.icon name="hero-arrow-right" class="size-4" />
+            </span>
+          </div>
         </div>
-        <h2 class="card-title text-2xl">Apply for credit</h2>
-        <p class="text-base-content/70 mt-2">
-          Submit your application and track its status in real time.
-        </p>
-        <div class="card-actions mt-4">
-          <span class="btn btn-primary">
-            Get started <.icon name="hero-arrow-right" class="size-4" />
-          </span>
-        </div>
-      </div>
-    </.link>
+      </button>
+    </.form>
 
     <.link
       navigate={~p"/admin/login"}

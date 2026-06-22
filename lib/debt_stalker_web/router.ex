@@ -26,11 +26,11 @@ defmodule DebtStalkerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    get "/set-role", PageController, :set_role
+    post "/set-role", PageController, :set_role
 
     get "/admin/login", PageController, :login
     post "/admin/login", PageController, :do_login
-    get "/admin/logout", PageController, :logout
+    delete "/admin/logout", PageController, :logout
 
     # Legacy routes — redirect to the new persona-aware paths
     get "/applications", PageController, :redirect_applications

@@ -38,7 +38,7 @@ defmodule DebtStalkerWeb.Layouts do
             <.link navigate={~p"/admin/applications"} class="btn btn-ghost btn-sm">Applications</.link>
           </li>
           <li :if={@current_role}>
-            <.link navigate={~p"/admin/logout"} class="btn btn-ghost btn-sm">
+            <.link href={~p"/admin/logout"} method="delete" class="btn btn-ghost btn-sm">
               Log out
             </.link>
           </li>

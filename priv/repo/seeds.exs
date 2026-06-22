@@ -4,6 +4,7 @@
 #     mix run priv/repo/seeds.exs
 
 alias DebtStalker.Applications.CreditApplication
+alias DebtStalker.Countries
 alias DebtStalker.Repo
 alias DebtStalkerWeb.Auth.Token
 
@@ -60,28 +61,6 @@ statuses = CreditApplication.valid_statuses()
 now = DateTime.utc_now() |> DateTime.to_unix()
 ninety_days_in_seconds = 90 * 24 * 60 * 60
 
-dni_letters = "TRWAGMYFPDXBNJZSQVHLCKE"
-
-random_dni = fn ->
-  digits = :rand.uniform(99_999_999)
-  digits_str = String.pad_leading(Integer.to_string(digits), 8, "0")
-  letter = String.at(dni_letters, rem(digits, 23))
-  digits_str <> letter
-end
-
-random_curp = fn ->
-  letters = for(_ <- 1..4, do: <<Enum.random(?A..?Z)>>) |> Enum.join()
-  year = String.pad_leading(Integer.to_string(Enum.random(50..99)), 2, "0")
-  month = String.pad_leading(Integer.to_string(Enum.random(1..12)), 2, "0")
-  day = String.pad_leading(Integer.to_string(Enum.random(1..28)), 2, "0")
-
-  tail =
-    for(_ <- 1..8, do: <<Enum.random([Enum.random(?A..?Z), Enum.random(?0..?9)])>>)
-    |> Enum.join()
-
-  letters <> year <> month <> day <> tail
-end
-
 random_name = fn ->
   "#{Enum.random(first_names)} #{Enum.random(last_names)} #{Enum.random(last_names)}"
 end
@@ -102,13 +81,7 @@ end
 created_count =
   Enum.reduce(1..100, 0, fn _, acc ->
     country = random_country.()
-
-    document =
-      if country == "ES" do
-        random_dni.()
-      else
-        random_curp.()
-      end
+    document = Countries.random_identity_document(country)
 
     requested_amount = random_decimal.(1_000, 100_000)
     monthly_income = random_decimal.(1_000, 20_000)

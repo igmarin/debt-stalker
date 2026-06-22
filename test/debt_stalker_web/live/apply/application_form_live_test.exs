@@ -33,6 +33,25 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLiveTest do
       assert html =~ "CURP"
     end
 
+    test "shows inline validation errors on change", %{conn: conn} do
+      {:ok, view, _html} = live(with_role(conn, "applicant"), ~p"/apply")
+
+      html =
+        view
+        |> form("#apply-form", %{
+          "application" => %{
+            "country" => "ES",
+            "full_name" => "",
+            "identity_document" => "",
+            "requested_amount" => "",
+            "monthly_income" => ""
+          }
+        })
+        |> render_change()
+
+      assert html =~ "can&#39;t be blank"
+    end
+
     test "initializes document hint from mount params", %{conn: conn} do
       {:ok, _view, html} = live(with_role(conn, "applicant"), ~p"/apply?application[country]=ES")
       assert html =~ "DNI"
