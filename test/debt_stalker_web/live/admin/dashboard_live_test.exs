@@ -23,7 +23,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
                live(with_role(conn, "applicant"), ~p"/admin")
     end
 
-    test "renders dashboard stats", %{conn: conn} do
+    test "renders dashboard stats and charts", %{conn: conn} do
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin")
@@ -31,6 +31,29 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       assert html =~ "Total de solicitudes"
       assert html =~ "Errores del proveedor"
       assert html =~ "Juan Garcia"
+      assert html =~ "Solicitudes en el tiempo"
+      assert html =~ "Distribución por estado"
+      assert html =~ "<svg"
+    end
+
+    test "filters dashboard metrics by country", %{conn: conn} do
+      {:ok, _} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, _} =
+        Applications.create_application(%{
+          country: "MX",
+          full_name: "Maria Lopez",
+          identity_document: "GARC850101HDFRRL09",
+          requested_amount: Decimal.new("8000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin")
+
+      html = render_patch(view, ~p"/admin?country=ES")
+
+      assert html =~ "Juan Garcia"
+      refute html =~ "Maria Lopez"
     end
 
     test "counts decisions made today", %{conn: conn} do

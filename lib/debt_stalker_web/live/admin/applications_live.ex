@@ -1,6 +1,6 @@
 defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   @moduledoc """
-  Admin-facing list of credit applications with filters and cursor pagination.
+  Admin-facing list of credit applications with filters, sorting, and page pagination.
 
   Subscribes to the applications PubSub topic so the list updates in real time.
   """
@@ -12,7 +12,10 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   alias DebtStalker.Applications
   alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries.Registry, as: CountryRegistry
+  alias DebtStalkerWeb.Admin.FilterParams
 
+  import DebtStalkerWeb.Components.AdminFilters
+  import DebtStalkerWeb.Components.Pagination
   import DebtStalkerWeb.Components.UI
 
   @doc "Mounts the admin applications list."
@@ -27,25 +30,21 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
       socket
       |> assign(:page_title, gettext("Applications"))
       |> assign(:country_options, CountryRegistry.supported_countries())
-      |> assign(:status_options, status_options())
-      |> assign(:filters, %{limit: 20})
       |> assign(:highlighted_id, nil)
 
     {:ok, socket}
   end
 
-  @doc "Applies filters and cursor from URL parameters."
+  @doc "Applies filters, sort, and page from URL parameters."
   @impl true
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(params, _url, socket) do
     filters =
-      %{limit: 20}
-      |> maybe_put(:country, params["country"])
-      |> maybe_put(:status, params["status"])
-      |> maybe_put(:date_from, parse_date(params["date_from"]))
-      |> maybe_put(:date_to, parse_date(params["date_to"]))
-      |> maybe_put(:cursor, params["cursor"])
+      params
+      |> FilterParams.from_params()
+      |> Map.put_new(:page, 1)
+      |> Map.put_new(:per_page, 20)
 
     result = Applications.list_applications(filters)
 
@@ -53,34 +52,41 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
       socket
       |> assign(:filters, filters)
       |> assign(:applications, result.entries)
-      |> assign(:next_cursor, result.cursor)
+      |> assign(:page, result.page)
+      |> assign(:per_page, result.per_page)
+      |> assign(:total_count, result.total_count)
+      |> assign(:total_pages, result.total_pages)
 
     {:noreply, socket}
   end
 
-  @doc "Handles list interactions (filters and pagination)."
+  @doc "Handles list interactions (filters, pagination, and sorting)."
   @impl true
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("filter", params, socket) do
-    query_params =
-      %{}
-      |> maybe_put("country", params["country"])
-      |> maybe_put("status", params["status"])
-      |> maybe_put("date_from", params["date_from"])
-      |> maybe_put("date_to", params["date_to"])
+    filters =
+      socket.assigns.filters
+      |> Map.merge(%{
+        country: blank_to_nil(params["country"]),
+        status: blank_to_nil(params["status"]),
+        date_from: parse_date(params["date_from"]),
+        date_to: parse_date(params["date_to"])
+      })
+      |> Map.put(:page, 1)
+      |> drop_nil_values()
 
-    {:noreply, push_patch(socket, to: ~p"/admin/applications?#{query_params}")}
+    {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 
-  def handle_event("next_page", _params, socket) do
-    next_cursor = socket.assigns.next_cursor
+  def handle_event("paginate", %{"page" => page}, socket) do
+    filters = Map.put(socket.assigns.filters, :page, String.to_integer(page))
+    {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
+  end
 
-    if next_cursor do
-      {:noreply, push_patch(socket, to: ~p"/admin/applications?cursor=#{next_cursor}")}
-    else
-      {:noreply, socket}
-    end
+  def handle_event("sort", %{"field" => field}, socket) do
+    filters = FilterParams.toggle_sort(socket.assigns.filters, field)
+    {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 
   @doc "Refreshes the list when applications are created or updated."
@@ -94,7 +100,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   end
 
   def handle_info({:status_changed, _details}, socket) do
-    {:noreply, apply_filters(socket)}
+    {:noreply, reload_list(socket)}
   end
 
   def handle_info({:clear_highlight, _id}, socket) do
@@ -112,39 +118,12 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
         <:subtitle>{gettext("Review and manage credit applications.")}</:subtitle>
       </.header>
 
-      <div class="card bg-base-100 shadow-sm mt-6">
-        <div class="card-body">
-          <form
-            id="filter-form"
-            phx-change="filter"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
-          >
-            <.input
-              type="select"
-              name="country"
-              label={gettext("Country")}
-              value={@filters[:country]}
-              prompt={gettext("All countries")}
-              options={Enum.map(@country_options, &{&1, &1})}
-            />
-            <.input
-              type="select"
-              name="status"
-              label={gettext("Status")}
-              value={@filters[:status]}
-              prompt={gettext("All statuses")}
-              options={@status_options}
-            />
-            <.input type="date" name="date_from" label={gettext("From")} value={@filters[:date_from]} />
-            <.input type="date" name="date_to" label={gettext("To")} value={@filters[:date_to]} />
-            <div class="flex items-end">
-              <.link navigate={~p"/admin/applications"} class="btn btn-ghost w-full">
-                {gettext("Clear")}
-              </.link>
-            </div>
-          </form>
-        </div>
-      </div>
+      <.filter_bar
+        filters={@filters}
+        country_options={@country_options}
+        clear_path={~p"/admin/applications"}
+      />
+      <.active_filter_chips filters={@filters} />
 
       <div class="card bg-base-100 shadow-sm mt-6">
         <div class="card-body p-0 sm:p-6">
@@ -162,13 +141,21 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
               <table class="table table-zebra w-full">
                 <thead>
                   <tr>
-                    <th>{gettext("Country")}</th>
-                    <th>{gettext("Name")}</th>
+                    <.sortable_header field="country" label={gettext("Country")} filters={@filters} />
+                    <.sortable_header field="full_name" label={gettext("Name")} filters={@filters} />
                     <th>{gettext("Document")}</th>
-                    <th>{gettext("Amount")}</th>
-                    <th>{gettext("Status")}</th>
+                    <.sortable_header
+                      field="requested_amount"
+                      label={gettext("Amount")}
+                      filters={@filters}
+                    />
+                    <.sortable_header field="status" label={gettext("Status")} filters={@filters} />
                     <th>{gettext("Review")}</th>
-                    <th>{gettext("Date")}</th>
+                    <.sortable_header
+                      field="application_date"
+                      label={gettext("Date")}
+                      filters={@filters}
+                    />
                     <th class="w-0"></th>
                   </tr>
                 </thead>
@@ -206,13 +193,14 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
               </table>
             </div>
 
-            <%= if @next_cursor do %>
-              <div class="p-6 border-t border-base-200">
-                <button phx-click="next_page" class="btn btn-primary w-full sm:w-auto">
-                  {gettext("Load more")}
-                </button>
-              </div>
-            <% end %>
+            <div class="p-6 border-t border-base-200">
+              <.pagination
+                page={@page}
+                per_page={@per_page}
+                total_count={@total_count}
+                total_pages={@total_pages}
+              />
+            </div>
           <% end %>
         </div>
       </div>
@@ -220,12 +208,43 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     """
   end
 
-  defp apply_filters(socket) do
+  attr :field, :string, required: true
+  attr :label, :string, required: true
+  attr :filters, :map, required: true
+
+  defp sortable_header(assigns) do
+    active? = Map.get(assigns.filters, :sort_by, "application_date") == assigns.field
+    direction = Map.get(assigns.filters, :sort_dir, "desc")
+
+    assigns =
+      assigns
+      |> assign(:active?, active?)
+      |> assign(:direction, direction)
+
+    ~H"""
+    <th>
+      <button
+        type="button"
+        class={["flex items-center gap-1 font-semibold", @active? && "text-primary"]}
+        phx-click="sort"
+        phx-value-field={@field}
+      >
+        {@label}
+        <.icon :if={@active? and @direction == "asc"} name="hero-chevron-up" class="size-3" />
+        <.icon :if={@active? and @direction == "desc"} name="hero-chevron-down" class="size-3" />
+      </button>
+    </th>
+    """
+  end
+
+  defp reload_list(socket) do
     result = Applications.list_applications(socket.assigns.filters)
 
     socket
     |> assign(:applications, result.entries)
-    |> assign(:next_cursor, result.cursor)
+    |> assign(:page, result.page)
+    |> assign(:total_count, result.total_count)
+    |> assign(:total_pages, result.total_pages)
   end
 
   defp refresh_with_highlight(socket, id) do
@@ -234,15 +253,16 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     end
 
     socket
-    |> apply_filters()
+    |> reload_list()
     |> assign(:highlighted_id, id)
   end
 
   defp row_highlight_class(id, id), do: "bg-primary/15 transition-colors duration-1000"
   defp row_highlight_class(_id, _highlighted_id), do: nil
 
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(value), do: value
 
   defp parse_date(""), do: nil
   defp parse_date(nil), do: nil
@@ -252,5 +272,11 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
       {:ok, date} -> date
       {:error, _} -> nil
     end
+  end
+
+  defp drop_nil_values(map) do
+    map
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
   end
 end

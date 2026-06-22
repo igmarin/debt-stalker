@@ -24,7 +24,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       assert html =~ "****678Z"
     end
 
-    test "filters by country", %{conn: conn} do
+    test "filters by country via URL", %{conn: conn} do
       {:ok, _} = Applications.create_application(@valid_es_attrs)
 
       {:ok, _} =
@@ -42,6 +42,25 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       assert html =~ "Juan Garcia"
       refute html =~ "Maria Lopez"
+    end
+
+    test "filters by country via form without blanking results", %{conn: conn} do
+      {:ok, _} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      html =
+        view
+        |> form("#admin-filter-form", %{
+          "country" => "ES",
+          "status" => "",
+          "date_from" => "",
+          "date_to" => ""
+        })
+        |> render_change()
+
+      assert html =~ "Juan Garcia"
+      refute html =~ "No se encontraron solicitudes"
     end
 
     test "filters by status", %{conn: conn} do
@@ -66,6 +85,45 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       assert html =~ "No se encontraron solicitudes"
     end
 
+    test "sorts by amount when header is clicked", %{conn: conn} do
+      {:ok, _} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, _} =
+        Applications.create_application(%{
+          @valid_es_attrs
+          | full_name: "High Amount",
+            identity_document: "87654321X",
+            requested_amount: Decimal.new("9000")
+        })
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      html =
+        view
+        |> element("button[phx-value-field='requested_amount']")
+        |> render_click()
+
+      assert html =~ "9000"
+    end
+
+    test "paginates with page controls", %{conn: conn} do
+      for i <- 1..21 do
+        {:ok, _} =
+          Applications.create_application(%{
+            @valid_es_attrs
+            | full_name: "Applicant #{i}",
+              identity_document: Countries.random_identity_document("ES")
+          })
+      end
+
+      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications?per_page=10")
+      assert html =~ "Mostrando"
+
+      html = render_click(view, "paginate", %{"page" => "2"})
+
+      assert html =~ "Applicant"
+    end
+
     test "updates in real-time via PubSub", %{conn: conn} do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
@@ -74,7 +132,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       Phoenix.PubSub.broadcast(DebtStalker.PubSub, "applications:list", {:status_changed, %{}})
 
       html = render(view)
-      assert html =~ "pending_risk"
+      assert html =~ "Riesgo pendiente"
     end
 
     test "highlights updated rows in real time", %{conn: conn} do
@@ -90,37 +148,6 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       html = render(view)
       refute html =~ "bg-primary/15"
-    end
-
-    test "does not paginate when no cursor is available", %{conn: conn} do
-      {:ok, _} = Applications.create_application(@valid_es_attrs)
-      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
-
-      refute html =~ "Cargar más"
-
-      html = render_click(view, "next_page")
-      assert html =~ "Juan Garcia"
-    end
-
-    test "loads the next page when cursor is available", %{conn: conn} do
-      for i <- 1..21 do
-        {:ok, _} =
-          Applications.create_application(%{
-            @valid_es_attrs
-            | full_name: "Applicant #{i}",
-              identity_document: Countries.random_identity_document("ES")
-          })
-      end
-
-      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
-      assert html =~ "Cargar más"
-
-      html =
-        view
-        |> element("button", "Cargar más")
-        |> render_click()
-
-      assert html =~ "Applicant"
     end
   end
 end

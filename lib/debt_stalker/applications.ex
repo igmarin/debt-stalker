@@ -271,10 +271,9 @@ defmodule DebtStalker.Applications do
   """
   @spec count_applications(map()) :: non_neg_integer()
   def count_applications(filters) do
-    CreditApplication
-    |> maybe_filter_country(filters)
-    |> maybe_filter_status(filters)
-    |> maybe_filter_date_range(filters)
+    filters
+    |> normalize_filters()
+    |> filtered_query()
     |> Repo.aggregate(:count, :id)
   end
 
@@ -295,22 +294,89 @@ defmodule DebtStalker.Applications do
     |> Repo.aggregate(:count, :id)
   end
 
-  @doc """
-  Lists applications with optional filtering and cursor pagination.
+  @default_sort_by "application_date"
+  @default_sort_dir "desc"
 
-  Supported filters: `:country`, `:status`, `:date_from`, `:date_to`, `:limit`, `:cursor`.
-  Returns `%{entries: [...], cursor: nil | binary()}`.
+  @doc """
+  Lists applications with optional filtering, sorting, and pagination.
+
+  **Cursor mode** (API): pass `:limit` and optional `:cursor`.
+  **Page mode** (admin UI): pass `:page` and optional `:per_page`.
+
+  Supported filters: `:country`, `:status`, `:date_from`, `:date_to`.
+  Sorting (page mode): `:sort_by`, `:sort_dir` (`asc` | `desc`).
+
+  Returns a map with `:entries` and either cursor or page metadata.
   """
-  @spec list_applications(map()) :: %{entries: [CreditApplication.t()], cursor: String.t() | nil}
+  @spec list_applications(map()) :: %{
+          entries: [CreditApplication.t()],
+          cursor: String.t() | nil,
+          page: pos_integer() | nil,
+          per_page: pos_integer() | nil,
+          total_count: non_neg_integer() | nil,
+          total_pages: non_neg_integer() | nil
+        }
   def list_applications(filters) do
+    filters = normalize_filters(filters)
+
+    if Map.has_key?(filters, :page) do
+      list_applications_by_page(filters)
+    else
+      list_applications_by_cursor(filters)
+    end
+  end
+
+  @doc """
+  Returns dashboard analytics for the admin overview.
+
+  Includes filtered KPI stats, status/country breakdowns, and a daily timeline.
+  """
+  @spec dashboard_analytics(map()) :: %{
+          stats: map(),
+          status_breakdown: [%{status: String.t(), count: non_neg_integer()}],
+          by_country: [%{country: String.t(), count: non_neg_integer()}],
+          timeline: [%{date: Date.t(), count: non_neg_integer()}]
+        }
+  def dashboard_analytics(filters) do
+    filters = normalize_filters(filters)
+
+    %{
+      stats: dashboard_stats(filters),
+      status_breakdown: status_breakdown(filters),
+      by_country: applications_by_country(filters),
+      timeline: applications_timeline(filters, 7)
+    }
+  end
+
+  @doc "Returns filtered KPI stats for the admin dashboard."
+  @spec dashboard_stats(map()) :: %{
+          total: non_neg_integer(),
+          pending_risk: non_neg_integer(),
+          additional_review: non_neg_integer(),
+          provider_errors: non_neg_integer(),
+          decided_today: non_neg_integer()
+        }
+  def dashboard_stats(filters) do
+    filters = normalize_filters(filters)
+
+    %{
+      total: count_applications(filters),
+      pending_risk: count_applications(Map.put(filters, :status, "pending_risk")),
+      additional_review: count_applications(Map.put(filters, :status, "additional_review")),
+      provider_errors: count_applications(Map.put(filters, :status, "provider_error")),
+      decided_today: count_decided_today()
+    }
+  end
+
+  # Private — pagination
+
+  defp list_applications_by_cursor(filters) do
     limit = Map.get(filters, :limit, 20)
 
     query =
-      CreditApplication
-      |> order_by([a], desc: a.application_date, desc: a.id)
-      |> maybe_filter_country(filters)
-      |> maybe_filter_status(filters)
-      |> maybe_filter_date_range(filters)
+      filters
+      |> filtered_query()
+      |> apply_sort(%{sort_by: @default_sort_by, sort_dir: @default_sort_dir})
       |> maybe_apply_cursor(filters)
       |> limit(^(limit + 1))
 
@@ -325,22 +391,145 @@ defmodule DebtStalker.Applications do
         {results, nil}
       end
 
-    %{entries: entries, cursor: cursor}
+    %{
+      entries: entries,
+      cursor: cursor,
+      page: nil,
+      per_page: nil,
+      total_count: nil,
+      total_pages: nil
+    }
   end
 
-  # Private
+  defp list_applications_by_page(filters) do
+    per_page = filters |> Map.get(:per_page, 20) |> clamp_per_page()
+    page = filters |> Map.get(:page, 1) |> max(1)
 
-  defp maybe_filter_country(query, %{country: country}) do
+    base_query = filtered_query(filters) |> apply_sort(filters)
+    total_count = Repo.aggregate(base_query, :count, :id)
+    total_pages = max(div(total_count + per_page - 1, per_page), 1)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    entries =
+      base_query
+      |> limit(^per_page)
+      |> offset(^offset)
+      |> Repo.all()
+
+    %{
+      entries: entries,
+      cursor: nil,
+      page: page,
+      per_page: per_page,
+      total_count: total_count,
+      total_pages: total_pages
+    }
+  end
+
+  # Private — analytics
+
+  defp status_breakdown(filters) do
+    filters
+    |> filtered_query()
+    |> group_by([a], a.status)
+    |> select([a], %{status: a.status, count: count(a.id)})
+    |> order_by([a], desc: count(a.id))
+    |> Repo.all()
+  end
+
+  defp applications_by_country(filters) do
+    filters
+    |> filtered_query()
+    |> group_by([a], a.country)
+    |> select([a], %{country: a.country, count: count(a.id)})
+    |> order_by([a], desc: count(a.id))
+    |> Repo.all()
+  end
+
+  defp applications_timeline(filters, days) when is_integer(days) and days > 0 do
+    today = Date.utc_today()
+    start_date = Date.add(today, -(days - 1))
+    start_dt = DateTime.new!(start_date, ~T[00:00:00], "Etc/UTC")
+
+    counts =
+      filters
+      |> filtered_query()
+      |> where([a], a.application_date >= ^start_dt)
+      |> group_by([a], fragment("?::date", a.application_date))
+      |> select([a], {fragment("?::date", a.application_date), count(a.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.map(Date.range(start_date, today), fn date ->
+      %{date: date, count: Map.get(counts, date, 0)}
+    end)
+  end
+
+  # Private — query building
+
+  defp filtered_query(filters) do
+    CreditApplication
+    |> maybe_filter_country(filters)
+    |> maybe_filter_status(filters)
+    |> maybe_filter_date_range(filters)
+  end
+
+  defp normalize_filters(filters) when is_map(filters) do
+    filters
+    |> Map.new(fn {key, value} -> {key, normalize_filter_value(value)} end)
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
+  end
+
+  defp normalize_filter_value(""), do: nil
+
+  defp normalize_filter_value(value) when is_binary(value) do
+    if String.trim(value) == "", do: nil, else: value
+  end
+
+  defp normalize_filter_value(value), do: value
+
+  defp maybe_filter_country(query, %{country: country}) when is_binary(country) do
     where(query, [a], a.country == ^country)
   end
 
   defp maybe_filter_country(query, _filters), do: query
 
-  defp maybe_filter_status(query, %{status: status}) do
+  defp maybe_filter_status(query, %{status: status}) when is_binary(status) do
     where(query, [a], a.status == ^status)
   end
 
   defp maybe_filter_status(query, _filters), do: query
+
+  defp apply_sort(query, filters) do
+    sort_by = Map.get(filters, :sort_by, @default_sort_by)
+    sort_dir = if Map.get(filters, :sort_dir, @default_sort_dir) == "asc", do: :asc, else: :desc
+    tie_breaker = if sort_dir == :asc, do: :asc, else: :desc
+
+    case sort_by do
+      "full_name" ->
+        order_by(query, [a], [{^sort_dir, a.full_name}, {^tie_breaker, a.id}])
+
+      "requested_amount" ->
+        order_by(query, [a], [{^sort_dir, a.requested_amount}, {^tie_breaker, a.id}])
+
+      "country" ->
+        order_by(query, [a], [{^sort_dir, a.country}, {^tie_breaker, a.id}])
+
+      "status" ->
+        order_by(query, [a], [{^sort_dir, a.status}, {^tie_breaker, a.id}])
+
+      "application_date" ->
+        order_by(query, [a], [{^sort_dir, a.application_date}, {^tie_breaker, a.id}])
+
+      _ ->
+        order_by(query, [a], desc: a.application_date, desc: a.id)
+    end
+  end
+
+  defp clamp_per_page(value) when is_integer(value), do: value |> max(1) |> min(100)
+  defp clamp_per_page(_), do: 20
 
   defp maybe_filter_date_range(query, filters) do
     query =

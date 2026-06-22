@@ -110,6 +110,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
   end
 
   defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _key, ""), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp parse_int(nil), do: nil
