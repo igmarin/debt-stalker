@@ -93,20 +93,49 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          version: "v1.31.0"
+          python-version: "3.12"
 
-      - name: Validate k8s manifests (client dry-run)
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate k8s manifests
         run: |
-          # Validate all YAML files are syntactically correct and conform to k8s schema
-          for f in k8s/*.yaml; do
-            echo "Validating $f..."
-            kubectl apply --dry-run=client --validate=false -f "$f" 2>&1 || {
-              # Without a cluster, client dry-run still parses YAML and checks basic structure
-              echo "ERROR: $f failed validation"
-              exit 1
-            }
-          done
-          echo "All k8s manifests validated successfully."
+          python3 -c "
+          import yaml, sys, glob
+          errors = []
+          required_fields = {
+              'Deployment': ['apiVersion', 'kind', 'metadata', 'spec'],
+              'Service': ['apiVersion', 'kind', 'metadata', 'spec'],
+              'ConfigMap': ['apiVersion', 'kind', 'metadata', 'data'],
+              'Secret': ['apiVersion', 'kind', 'metadata', 'type'],
+              'Namespace': ['apiVersion', 'kind', 'metadata'],
+              'Job': ['apiVersion', 'kind', 'metadata', 'spec'],
+              'HorizontalPodAutoscaler': ['apiVersion', 'kind', 'metadata', 'spec'],
+          }
+          for f in sorted(glob.glob('k8s/*.yaml')):
+              try:
+                  docs = list(yaml.safe_load_all(open(f)))
+                  for doc in docs:
+                      if doc is None:
+                          continue
+                      kind = doc.get('kind', 'Unknown')
+                      missing = [k for k in required_fields.get(kind, ['apiVersion', 'kind', 'metadata']) if k not in doc]
+                      if missing:
+                          errors.append(f'{f}: {kind} missing required fields: {missing}')
+                      # Check metadata.name exists
+                      if 'metadata' in doc and 'name' not in doc.get('metadata', {}):
+                          errors.append(f'{f}: {kind} missing metadata.name')
+                  print(f'{f}: OK ({len([d for d in docs if d])} doc(s))')
+              except yaml.YAMLError as e:
+                  errors.append(f'{f}: YAML parse error: {e}')
+          if errors:
+              print()
+              for e in errors:
+                  print(f'ERROR: {e}')
+              sys.exit(1)
+          print()
+          print('All k8s manifests validated successfully.')
+          "
