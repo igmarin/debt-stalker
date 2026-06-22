@@ -5,19 +5,24 @@ defmodule DebtStalkerWeb.Plugs.RawBodyReaderTest do
 
   describe "read_body/2" do
     test "stores the raw body in conn.assigns" do
-      conn = Plug.Test.conn("POST", "/api/webhooks/provider-confirmations", "{\"status\":\"approved\"}")
+      conn =
+        Plug.Test.conn(
+          "POST",
+          "/api/webhooks/provider-confirmations",
+          "{\"status\":\"approved\"}"
+        )
 
       assert {:ok, "{\"status\":\"approved\"}", conn} =
-               RawBodyReader.read_body(conn, [length: 1_000_000])
+               RawBodyReader.read_body(conn, length: 1_000_000)
 
       assert conn.assigns[:raw_body] == "{\"status\":\"approved\"}"
     end
 
-    test "returns error for too-large body" do
+    test "returns :more when body exceeds read length" do
       body = String.duplicate("x", 10_000)
       conn = Plug.Test.conn("POST", "/api/webhooks/provider-confirmations", body)
 
-      assert {:error, :too_large} = RawBodyReader.read_body(conn, length: 100)
+      assert {:more, _data, _conn} = RawBodyReader.read_body(conn, length: 100)
     end
   end
 end

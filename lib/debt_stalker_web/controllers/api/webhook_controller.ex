@@ -85,7 +85,7 @@ defmodule DebtStalkerWeb.Api.WebhookController do
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         Logger.warning("Webhook event storage failed",
-          errors: inspect(changeset.errors)
+          error_message: inspect(changeset.errors)
         )
 
         conn |> put_status(422) |> json(%{error: "invalid_payload"})

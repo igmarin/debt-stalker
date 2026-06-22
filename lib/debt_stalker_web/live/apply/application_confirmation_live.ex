@@ -116,7 +116,9 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
             </div>
             <div>
               <dt class="text-base-content/60">{gettext("Full name")}</dt>
-              <dd class="font-medium">{@app.full_name}</dd>
+              <dd class="font-medium">
+                {CreditApplication.redact_full_name(@app.full_name)}
+              </dd>
             </div>
             <div>
               <dt class="text-base-content/60">{gettext("Identity document")}</dt>

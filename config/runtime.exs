@@ -44,11 +44,10 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     session_signing_salt:
       System.get_env("SESSION_SIGNING_SALT") ||
-        raise """
+        raise("""
         environment variable SESSION_SIGNING_SALT is missing.
         Generate one with: mix phx.gen.secret 16
-        """
-
+        """)
 
   # JWT secret for token verification (required in prod)
   jwt_secret =
@@ -128,8 +127,7 @@ if config_env() == :prod do
       Generate one with: mix phx.gen.secret 32
       """
 
-  config :debt_stalker, DebtStalkerWeb.Endpoint,
-    live_view: [signing_salt: live_view_signing_salt]
+  config :debt_stalker, DebtStalkerWeb.Endpoint, live_view: [signing_salt: live_view_signing_salt]
 
   # Rate limits (configurable via env, per-IP sliding window)
   config :debt_stalker, :rate_limit,
@@ -154,8 +152,7 @@ if config_env() in [:dev, :test] do
   config :debt_stalker, :jwt_secret, "dev-jwt-secret-not-for-production"
   config :debt_stalker, :admin_password, System.get_env("ADMIN_PASSWORD", "admin123")
 
-  config :debt_stalker, :webhook_secret,
-    System.get_env("WEBHOOK_SECRET", "dev-webhook-secret")
+  config :debt_stalker, :webhook_secret, System.get_env("WEBHOOK_SECRET", "dev-webhook-secret")
 
   config :debt_stalker, :require_webhook_signature, false
 
