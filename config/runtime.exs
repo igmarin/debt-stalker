@@ -54,13 +54,24 @@ if config_env() == :prod do
   config :debt_stalker, :jwt_secret, jwt_secret
 
   # Oban queues (configurable via env)
+  # Set OBAN_QUEUES=false to disable all queues (web deployment).
+  # Set individual queue sizes for worker deployment.
+  oban_queues =
+    case System.get_env("OBAN_QUEUES", "") do
+      "false" ->
+        false
+
+      _ ->
+        [
+          default: String.to_integer(System.get_env("OBAN_QUEUE_DEFAULT", "10")),
+          events: String.to_integer(System.get_env("OBAN_QUEUE_EVENTS", "20")),
+          notifications: String.to_integer(System.get_env("OBAN_QUEUE_NOTIFICATIONS", "10"))
+        ]
+    end
+
   config :debt_stalker, Oban,
     repo: DebtStalker.Repo,
-    queues: [
-      default: String.to_integer(System.get_env("OBAN_QUEUE_DEFAULT", "10")),
-      events: String.to_integer(System.get_env("OBAN_QUEUE_EVENTS", "20")),
-      notifications: String.to_integer(System.get_env("OBAN_QUEUE_NOTIFICATIONS", "10"))
-    ]
+    queues: oban_queues
 
   # Log level
   config :logger, level: String.to_existing_atom(System.get_env("LOG_LEVEL", "info"))
