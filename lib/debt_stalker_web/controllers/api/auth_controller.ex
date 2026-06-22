@@ -8,6 +8,8 @@ defmodule DebtStalkerWeb.Api.AuthController do
 
   alias DebtStalkerWeb.Auth.Token
 
+  plug DebtStalkerWeb.Plugs.RateLimit, [key: :auth_token] when action == :create
+
   @doc "Generates a JWT for the requested role."
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, %{"role" => role}) when role in ["read", "update"] do

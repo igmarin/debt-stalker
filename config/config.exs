@@ -85,6 +85,16 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Configure Hammer rate limiter (ETS backend)
+config :hammer,
+  backend: {Hammer.Backend.ETS, [expiry_ms: 60_000 * 60, cleanup_interval_ms: 60_000 * 10]}
+
+# Rate limit configuration (per-IP, sliding window)
+# Limits are configurable via env vars in runtime.exs
+config :debt_stalker, :rate_limit,
+  auth_token: [limit: 10, window_ms: 60_000],
+  webhook: [limit: 20, window_ms: 60_000]
+
 # Configure Oban
 config :debt_stalker, Oban,
   repo: DebtStalker.Repo,
