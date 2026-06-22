@@ -44,8 +44,8 @@ defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
         SQL.query(
           DebtStalker.Repo,
           """
-          INSERT INTO webhook_events (id, application_id, source, payload_hash, verified, processed, raw_payload, inserted_at)
-          VALUES ($1, $2, 'provider_es', 'testhash123', true, false, '{}'::jsonb, NOW())
+          INSERT INTO webhook_events (id, application_id, source, payload_hash, verified, processed, inserted_at)
+          VALUES ($1, $2, 'provider_es', 'testhash123', true, false, NOW())
           """,
           [Ecto.UUID.bingenerate(), uuid_binary]
         )
@@ -136,8 +136,8 @@ defmodule DebtStalker.Workers.WebhookProcessingWorkerTest do
         SQL.query(
           DebtStalker.Repo,
           """
-          INSERT INTO webhook_events (id, application_id, source, payload_hash, verified, processed, raw_payload, inserted_at)
-          VALUES ($1, $2, 'provider_es', 'testhash456', true, false, '{}'::jsonb, NOW())
+          INSERT INTO webhook_events (id, application_id, source, payload_hash, verified, processed, inserted_at)
+          VALUES ($1, $2, 'provider_es', 'testhash456', true, false, NOW())
           """,
           [Ecto.UUID.bingenerate(), uuid_binary]
         )

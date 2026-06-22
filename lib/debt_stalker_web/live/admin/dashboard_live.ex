@@ -8,6 +8,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
   on_mount {DebtStalkerWeb.Live.RoleAuth, :admin}
 
   alias DebtStalker.Applications
+  alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries.Registry, as: CountryRegistry
   alias DebtStalkerWeb.Admin.FilterParams
 
@@ -185,7 +186,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
                   <%= for app <- @recent do %>
                     <tr id={"recent-app-#{app.id}"}>
                       <td>{app.country}</td>
-                      <td>{app.full_name}</td>
+                      <td>{CreditApplication.redact_full_name(app.full_name)}</td>
                       <td>{Decimal.to_string(app.requested_amount)}</td>
                       <td><.status_badge status={app.status} /></td>
                       <td>

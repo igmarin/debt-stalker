@@ -14,7 +14,10 @@ defmodule DebtStalkerWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_debt_stalker_key",
-    signing_salt: "25C9SErF",
+    signing_salt:
+      Application.compile_env!(:debt_stalker, DebtStalkerWeb.Endpoint)[
+        :session_signing_salt
+      ],
     same_site: "Lax"
   ]
 
@@ -53,7 +56,8 @@ defmodule DebtStalkerWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
+    json_decoder: Phoenix.json_library(),
+    body_reader: {DebtStalkerWeb.Plugs.RawBodyReader, :read_body, []}
 
   plug Plug.MethodOverride
   plug Plug.Head

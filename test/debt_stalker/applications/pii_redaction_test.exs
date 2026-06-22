@@ -44,6 +44,28 @@ defmodule DebtStalker.Applications.PiiRedactionTest do
     end
   end
 
+  describe "redact_full_name/1" do
+    test "nil returns empty string" do
+      assert CreditApplication.redact_full_name(nil) == ""
+    end
+
+    test "single name is unchanged" do
+      assert CreditApplication.redact_full_name("Maria") == "Maria"
+    end
+
+    test "two names redacts to first + last initial" do
+      assert CreditApplication.redact_full_name("Juan Garcia") == "Juan G."
+    end
+
+    test "three names redacts to first + last initial" do
+      assert CreditApplication.redact_full_name("Juan Garcia Lopez") == "Juan L."
+    end
+
+    test "empty string returns empty string" do
+      assert CreditApplication.redact_full_name("") == ""
+    end
+  end
+
   describe "hash_document/1" do
     test "produces consistent SHA-256 hex" do
       hash1 = CreditApplication.hash_document("12345678Z")

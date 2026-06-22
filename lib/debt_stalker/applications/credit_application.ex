@@ -102,6 +102,28 @@ defmodule DebtStalker.Applications.CreditApplication do
     end
   end
 
+  @doc """
+  Redacts a full name to first name + last initial for display or responses.
+
+  Examples:
+      iex> redact_full_name("Juan Garcia Lopez")
+      "Juan L."
+      iex> redact_full_name("Maria")
+      "Maria"
+  """
+  @spec redact_full_name(String.t() | nil) :: String.t()
+  def redact_full_name(nil), do: ""
+
+  def redact_full_name(full_name) when is_binary(full_name) do
+    parts = String.split(full_name)
+
+    case parts do
+      [] -> ""
+      [first] -> first
+      [first | rest] -> "#{first} #{String.first(List.last(rest))}."
+    end
+  end
+
   @doc "Returns the list of valid application statuses."
   @spec valid_statuses() :: [String.t()]
   def valid_statuses, do: @valid_statuses

@@ -94,6 +94,11 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
         conn
         |> put_status(422)
         |> json(%{error: "invalid_transition"})
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(422)
+        |> json(%{errors: format_changeset_errors(changeset)})
     end
   end
 
@@ -147,7 +152,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     %{
       id: app.id,
       country: app.country,
-      full_name: app.full_name,
+      full_name: CreditApplication.redact_full_name(app.full_name),
       identity_document: CreditApplication.redact_document(app.identity_document),
       requested_amount: Decimal.to_string(app.requested_amount),
       monthly_income: Decimal.to_string(app.monthly_income),

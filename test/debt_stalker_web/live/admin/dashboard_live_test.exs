@@ -30,7 +30,8 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       assert html =~ "Panel"
       assert html =~ "Total de solicitudes"
       assert html =~ "Errores del proveedor"
-      assert html =~ "Juan Garcia"
+      assert html =~ "Juan G."
+      refute html =~ "Juan Garcia"
       assert html =~ "Solicitudes en el tiempo"
       assert html =~ "Distribución por estado"
       assert html =~ "<svg"
@@ -52,8 +53,9 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
 
       html = render_patch(view, ~p"/admin?country=ES")
 
-      assert html =~ "Juan Garcia"
+      assert html =~ "Juan G."
       refute html =~ "Maria Lopez"
+      refute html =~ "Maria L."
     end
 
     test "counts decisions made today", %{conn: conn} do

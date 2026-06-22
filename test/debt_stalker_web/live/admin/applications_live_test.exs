@@ -20,7 +20,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
       assert html =~ "Solicitudes"
-      assert html =~ "Juan Garcia"
+      assert html =~ "Juan G."
+      refute html =~ "Juan Garcia"
       assert html =~ "****678Z"
     end
 
@@ -40,8 +41,9 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       html = render_patch(view, ~p"/admin/applications?country=ES")
 
-      assert html =~ "Juan Garcia"
+      assert html =~ "Juan G."
       refute html =~ "Maria Lopez"
+      refute html =~ "Maria L."
     end
 
     test "filters by country via form without blanking results", %{conn: conn} do
@@ -59,7 +61,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
         })
         |> render_change()
 
-      assert html =~ "Juan Garcia"
+      assert html =~ "Juan G."
+      refute html =~ "Juan Garcia"
       refute html =~ "No se encontraron solicitudes"
     end
 
@@ -70,10 +73,10 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
       html = render_patch(view, ~p"/admin/applications?status=pending_risk")
-      assert html =~ "Juan Garcia"
+      assert html =~ "Juan G."
 
       html = render_patch(view, ~p"/admin/applications?status=approved")
-      refute html =~ "Juan Garcia"
+      refute html =~ "Juan G."
     end
 
     test "shows empty state when filters match nothing", %{conn: conn} do
@@ -129,8 +132,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
-      assert render_click(view, "paginate", %{"page" => "abc"}) =~ "Juan Garcia"
-      assert render_patch(view, ~p"/admin/applications?page=invalid") =~ "Juan Garcia"
+      assert render_click(view, "paginate", %{"page" => "abc"}) =~ "Juan G."
+      assert render_patch(view, ~p"/admin/applications?page=invalid") =~ "Juan G."
     end
 
     test "updates in real-time via PubSub", %{conn: conn} do

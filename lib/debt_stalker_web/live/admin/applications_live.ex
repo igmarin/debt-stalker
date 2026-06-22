@@ -164,7 +164,9 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
                   <%= for app <- @applications do %>
                     <tr id={"app-#{app.id}"} class={row_highlight_class(app.id, @highlighted_id)}>
                       <td>{app.country}</td>
-                      <td class="whitespace-nowrap">{app.full_name}</td>
+                      <td class="whitespace-nowrap">
+                        {CreditApplication.redact_full_name(app.full_name)}
+                      </td>
                       <td class="font-mono">
                         {CreditApplication.redact_document(app.identity_document)}
                       </td>
