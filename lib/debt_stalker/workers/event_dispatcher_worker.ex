@@ -47,6 +47,10 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
 
     Logger.info("EventDispatcher processed events",
       worker: "EventDispatcherWorker",
+      application_id: "system",
+      event_id: "outbox_dispatch",
+      country: "system",
+      status: "completed",
       event_count: measurements.processed_count,
       failed_count: measurements.failed_count,
       claimed_count: measurements.claimed_count,
@@ -86,12 +90,18 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
         stats
 
       {:error, reason} ->
+        safe_reason = sanitized_reason(reason)
+
         Logger.error("EventDispatcher batch transaction failed",
           worker: "EventDispatcherWorker",
-          reason: inspect(reason)
+          application_id: "system",
+          event_id: "outbox_dispatch",
+          country: "system",
+          status: "failed",
+          reason: safe_reason
         )
 
-        raise "Event dispatcher batch transaction failed: #{inspect(reason)}"
+        raise "Event dispatcher batch transaction failed: #{safe_reason}"
     end
   end
 
@@ -130,11 +140,15 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
     |> Map.put(:batch_count, batch_count(events))
   end
 
-  defp log_dispatch_failure([_id, _app_id, event_type, _payload], reason) do
+  defp log_dispatch_failure([event_id, application_id, event_type, payload], reason) do
     Logger.error("Event dispatch failed",
       worker: "EventDispatcherWorker",
+      application_id: encode_uuid(application_id),
+      event_id: encode_uuid(event_id),
+      country: Map.get(payload, "country", "unknown"),
+      status: Map.get(payload, "to_status", "failed"),
       event_type: event_type,
-      reason: inspect(reason)
+      reason: sanitized_reason(reason)
     )
   end
 
@@ -201,7 +215,7 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
   end
 
   defp dispatcher_config do
-    config = Application.get_env(:debt_stalker, :event_dispatcher, []) || []
+    config = Application.get_env(:debt_stalker, :event_dispatcher, [])
 
     %{
       batch_size:
@@ -240,6 +254,13 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
 
   defp batch_count([]), do: 0
   defp batch_count(_events), do: 1
+
+  defp sanitized_reason(%Ecto.Changeset{} = changeset) do
+    errors = Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
+    inspect(%{action: changeset.action, errors: errors, valid?: changeset.valid?})
+  end
+
+  defp sanitized_reason(reason), do: inspect(reason, limit: 50)
 
   defp encode_uuid(<<_::128>> = binary) do
     Ecto.UUID.cast!(binary)
