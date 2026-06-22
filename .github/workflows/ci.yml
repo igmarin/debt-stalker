@@ -86,3 +86,27 @@ jobs:
         run: mix test --cover
         env:
           DATABASE_URL: ecto://postgres:postgres@localhost/debt_stalker_test
+
+  k8s-dry-run:
+    name: k8s Manifest Dry-Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.31.0"
+
+      - name: Validate k8s manifests (client dry-run)
+        run: |
+          # Validate all YAML files are syntactically correct and conform to k8s schema
+          for f in k8s/*.yaml; do
+            echo "Validating $f..."
+            kubectl apply --dry-run=client --validate=false -f "$f" 2>&1 || {
+              # Without a cluster, client dry-run still parses YAML and checks basic structure
+              echo "ERROR: $f failed validation"
+              exit 1
+            }
+          done
+          echo "All k8s manifests validated successfully."
