@@ -5,7 +5,6 @@ setup: ## Install deps, create DB, run migrations, seed
 	mix ecto.setup
 	mix assets.setup
 	mix assets.build
-	mix run priv/repo/seeds.exs
 
 db: ## Create + migrate database
 	mix ecto.create
