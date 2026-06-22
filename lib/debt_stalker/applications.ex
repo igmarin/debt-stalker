@@ -98,13 +98,36 @@ defmodule DebtStalker.Applications do
           |> Map.put(:status, "provider_error")
           |> Map.put(:additional_review_required, false)
 
-        result =
-          %CreditApplication{}
-          |> CreditApplication.changeset(insert_attrs)
-          |> Repo.insert()
-
-        case result do
-          {:ok, app} ->
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(
+          :application,
+          CreditApplication.changeset(%CreditApplication{}, insert_attrs)
+        )
+        |> Ecto.Multi.insert(:transition, fn %{application: app} ->
+          __MODULE__.StatusTransition.changeset(
+            %__MODULE__.StatusTransition{},
+            %{
+              application_id: app.id,
+              from_status: "created",
+              to_status: "provider_error",
+              triggered_by: "provider"
+            }
+          )
+        end)
+        |> Ecto.Multi.insert(:audit, fn %{application: app} ->
+          __MODULE__.AuditLog.changeset(
+            %__MODULE__.AuditLog{},
+            %{
+              application_id: app.id,
+              action: "status_changed",
+              actor: "provider",
+              metadata: %{"from" => "created", "to" => "provider_error"}
+            }
+          )
+        end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{application: app}} ->
             Logger.error("Provider error during application creation",
               application_id: app.id,
               country: app.country,
@@ -113,8 +136,28 @@ defmodule DebtStalker.Applications do
 
             {:ok, app}
 
-          error ->
-            error
+          # Application insert failed — return its changeset so callers see
+          # validation errors on the expected CreditApplication schema.
+          {:error, :application, changeset, _changes} ->
+            {:error, changeset}
+
+          # Transition or audit insert failed — the application data was
+          # valid but the audit trail could not be written. Return a
+          # CreditApplication changeset with a system error so callers
+          # always get a consistent error type.
+          {:error, step, _changeset, %{application: app}} ->
+            Logger.error("Provider error audit trail failed",
+              application_id: app.id,
+              country: app.country,
+              step: step
+            )
+
+            changeset =
+              app
+              |> Ecto.Changeset.change()
+              |> Ecto.Changeset.add_error(:base, "audit trail write failed")
+
+            {:error, changeset}
         end
     end
   end
@@ -189,22 +232,26 @@ defmodule DebtStalker.Applications do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:application, Ecto.Changeset.change(app, status: new_status))
     |> Ecto.Multi.insert(:transition, fn _changes ->
-      %DebtStalker.Applications.StatusTransition{}
-      |> Ecto.Changeset.change(%{
-        application_id: app.id,
-        from_status: app.status,
-        to_status: new_status,
-        triggered_by: triggered_by
-      })
+      __MODULE__.StatusTransition.changeset(
+        %__MODULE__.StatusTransition{},
+        %{
+          application_id: app.id,
+          from_status: app.status,
+          to_status: new_status,
+          triggered_by: triggered_by
+        }
+      )
     end)
     |> Ecto.Multi.insert(:audit, fn _changes ->
-      %DebtStalker.Applications.AuditLog{}
-      |> Ecto.Changeset.change(%{
-        application_id: app.id,
-        action: "status_changed",
-        actor: triggered_by,
-        metadata: %{"from" => app.status, "to" => new_status}
-      })
+      __MODULE__.AuditLog.changeset(
+        %__MODULE__.AuditLog{},
+        %{
+          application_id: app.id,
+          action: "status_changed",
+          actor: triggered_by,
+          metadata: %{"from" => app.status, "to" => new_status}
+        }
+      )
     end)
     |> Repo.transaction()
     |> case do

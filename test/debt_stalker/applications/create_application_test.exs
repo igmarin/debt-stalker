@@ -2,7 +2,10 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
   use DebtStalker.DataCase, async: true
 
   alias DebtStalker.Applications
+  alias DebtStalker.Applications.AuditLog
   alias DebtStalker.Applications.CreditApplication
+  alias DebtStalker.Applications.StatusTransition
+  alias DebtStalker.Repo
   alias Ecto.Adapters.SQL
 
   @valid_es_attrs %{
@@ -116,6 +119,46 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
       attrs = Map.put(@valid_es_attrs, :identity_document, "00000000T")
       assert {:ok, app} = Applications.create_application(attrs)
       assert app.status == "provider_error"
+    end
+
+    test "provider failure records status transition and audit log" do
+      # Use document that triggers :unavailable
+      attrs = Map.put(@valid_es_attrs, :identity_document, "00000000T")
+      assert {:ok, app} = Applications.create_application(attrs)
+      assert app.status == "provider_error"
+
+      # Assert a status_transitions row exists for this application
+      transition = Repo.get_by(StatusTransition, application_id: app.id)
+      assert %StatusTransition{} = transition
+      assert transition.from_status == "created"
+      assert transition.to_status == "provider_error"
+      assert transition.triggered_by == "provider"
+
+      # Assert an audit_logs row exists for this application
+      audit = Repo.get_by(AuditLog, application_id: app.id)
+      assert %AuditLog{} = audit
+      assert audit.action == "status_changed"
+      assert audit.actor == "provider"
+      assert audit.metadata == %{"from" => "created", "to" => "provider_error"}
+    end
+
+    test "provider failure with invalid attrs returns CreditApplication changeset" do
+      # Provider fails (unavailable document) AND the application attrs
+      # are invalid (missing full_name). The Multi application insert
+      # fails first, returning a CreditApplication changeset — not a
+      # StatusTransition or AuditLog changeset.
+      attrs =
+        @valid_es_attrs
+        |> Map.put(:identity_document, "00000000T")
+        |> Map.delete(:full_name)
+
+      assert {:error, changeset} = Applications.create_application(attrs)
+      assert %Ecto.Changeset{} = changeset
+      assert changeset.data.__struct__ == CreditApplication
+      assert Keyword.has_key?(changeset.errors, :full_name)
+
+      # No application was persisted — full rollback.
+      assert Repo.aggregate(CreditApplication, :count) == 0
     end
   end
 end
