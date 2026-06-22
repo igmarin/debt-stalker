@@ -23,7 +23,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
 
     socket =
       socket
-      |> assign(:page_title, "Apply for Credit")
+      |> assign(:page_title, gettext("Apply for Credit"))
       |> assign(:form, to_form(form_params, as: "application"))
       |> assign(:country_options, CountryRegistry.supported_countries())
       |> assign(:document_hint, Countries.get_document_hint(form_params["country"]))
@@ -71,7 +71,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
       {:ok, app} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Application submitted successfully")
+         |> put_flash(:info, gettext("Application submitted successfully"))
          |> redirect(to: ~p"/apply/#{app.id}/confirmation")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -91,42 +91,44 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-8">
       <.link navigate={~p"/"} class="btn btn-ghost btn-sm mb-4">
-        <.icon name="hero-arrow-left" class="size-4" /> Back
+        <.icon name="hero-arrow-left" class="size-4" /> {gettext("Back")}
       </.link>
 
       <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
-          <h1 class="card-title text-2xl mb-2">Apply for credit</h1>
+          <h1 class="card-title text-2xl mb-2">{gettext("Apply for credit")}</h1>
           <p class="text-base-content/70 mb-6">
-            Fill in your details. We will validate your document and income information for your country.
+            {gettext(
+              "Fill in your details. We will validate your document and income information for your country."
+            )}
           </p>
 
           <ul class="steps steps-horizontal w-full mb-6 text-xs sm:text-sm">
-            <li class={["step", step_active?(1, @form) && "step-primary"]}>Country</li>
-            <li class={["step", step_active?(2, @form) && "step-primary"]}>Details</li>
-            <li class="step">Submit</li>
+            <li class={["step", step_active?(1, @form) && "step-primary"]}>{gettext("Country")}</li>
+            <li class={["step", step_active?(2, @form) && "step-primary"]}>{gettext("Details")}</li>
+            <li class="step">{gettext("Submit")}</li>
           </ul>
 
           <form id="apply-form" phx-change="validate" phx-submit="save" class="space-y-4">
             <.input
               field={@form[:country]}
               type="select"
-              label="Country"
-              prompt="Select your country"
+              label={gettext("Country")}
+              prompt={gettext("Select your country")}
               options={Enum.map(@country_options, &{&1, &1})}
             />
 
             <.input
               field={@form[:full_name]}
               type="text"
-              label="Full name"
+              label={gettext("Full name")}
               placeholder="Jane Doe"
             />
 
             <.input
               field={@form[:identity_document]}
               type="text"
-              label="Identity document"
+              label={gettext("Identity document")}
               placeholder={@document_hint}
             />
 
@@ -134,7 +136,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
               <.input
                 field={@form[:requested_amount]}
                 type="number"
-                label="Requested amount"
+                label={gettext("Requested amount")}
                 step="0.01"
                 placeholder="15000"
               />
@@ -142,7 +144,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
               <.input
                 field={@form[:monthly_income]}
                 type="number"
-                label="Monthly income"
+                label={gettext("Monthly income")}
                 step="0.01"
                 placeholder="3000"
               />
@@ -150,7 +152,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
 
             <div class="pt-2">
               <button type="submit" class="btn btn-primary w-full">
-                Submit application
+                {gettext("Submit application")}
               </button>
             </div>
           </form>

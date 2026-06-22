@@ -19,7 +19,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
-      assert html =~ "Applications"
+      assert html =~ "Solicitudes"
       assert html =~ "Juan Garcia"
       assert html =~ "****678Z"
     end
@@ -63,7 +63,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
       html = render_patch(view, ~p"/admin/applications?country=MX")
-      assert html =~ "No applications found"
+      assert html =~ "No se encontraron solicitudes"
     end
 
     test "updates in real-time via PubSub", %{conn: conn} do
@@ -96,7 +96,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       {:ok, _} = Applications.create_application(@valid_es_attrs)
       {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
-      refute html =~ "Load more"
+      refute html =~ "Cargar más"
 
       html = render_click(view, "next_page")
       assert html =~ "Juan Garcia"
@@ -113,11 +113,11 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       end
 
       {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
-      assert html =~ "Load more"
+      assert html =~ "Cargar más"
 
       html =
         view
-        |> element("button", "Load more")
+        |> element("button", "Cargar más")
         |> render_click()
 
       assert html =~ "Applicant"

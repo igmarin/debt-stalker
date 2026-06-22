@@ -6,9 +6,9 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLiveTest do
   describe "Apply.ApplicationFormLive" do
     test "renders the applicant form", %{conn: conn} do
       {:ok, _view, html} = live(with_role(conn, "applicant"), ~p"/apply")
-      assert html =~ "Apply for credit"
-      assert html =~ "Country"
-      assert html =~ "Full name"
+      assert html =~ "Solicitar crédito"
+      assert html =~ "País"
+      assert html =~ "Nombre completo"
       assert html =~ "steps"
     end
 
@@ -50,7 +50,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLiveTest do
         })
         |> render_change()
 
-      assert html =~ "can&#39;t be blank"
+      assert html =~ "no puede estar en blanco"
     end
 
     test "initializes document hint from mount params", %{conn: conn} do
@@ -100,7 +100,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLiveTest do
       {path, flash} = assert_redirect(view)
       assert path =~ "/apply/"
       assert path =~ "/confirmation"
-      assert flash["info"] =~ "submitted"
+      assert flash["info"] =~ "enviada"
     end
 
     test "shows errors for invalid document", %{conn: conn} do

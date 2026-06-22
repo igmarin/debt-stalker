@@ -1,0 +1,568 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:10
+#, elixir-autogen, elixir-format
+msgid "A modern, multi-country credit application companion. Choose your path below."
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:60
+#, elixir-autogen, elixir-format
+msgid "API health"
+msgstr ""
+
+#: lib/debt_stalker_web/components/core_components.ex:375
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:112
+#, elixir-autogen, elixir-format
+msgid "Actor:"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:147
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:134
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:62
+#, elixir-autogen, elixir-format
+msgid "Additional review"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:24
+#, elixir-autogen, elixir-format
+msgid "Admin Dashboard"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:46
+#, elixir-autogen, elixir-format
+msgid "Admin review"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/login.html.heex:7
+#, elixir-autogen, elixir-format
+msgid "Admin sign in"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "All countries"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "All statuses"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:168
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:102
+#, elixir-autogen, elixir-format
+msgid "Amount"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:32
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:94
+#, elixir-autogen, elixir-format
+msgid "Application %{id}"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:31
+#, elixir-autogen, elixir-format
+msgid "Application Submitted"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:109
+#, elixir-autogen, elixir-format
+msgid "Application details"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:78
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:60
+#, elixir-autogen, elixir-format
+msgid "Application no longer available"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:40
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:64
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Application not found"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:80
+#, elixir-autogen, elixir-format
+msgid "Application received"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:74
+#, elixir-autogen, elixir-format
+msgid "Application submitted successfully"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:110
+#, elixir-autogen, elixir-format
+msgid "Application summary"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:41
+#: lib/debt_stalker_web/components/layouts.ex:74
+#: lib/debt_stalker_web/live/admin/applications_live.ex:28
+#: lib/debt_stalker_web/live/admin/applications_live.ex:111
+#, elixir-autogen, elixir-format
+msgid "Applications"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:92
+#, elixir-autogen, elixir-format
+msgid "Applications will appear here once applicants start submitting them."
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:26
+#, elixir-autogen, elixir-format
+msgid "Apply for Credit"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:25
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:99
+#, elixir-autogen, elixir-format
+msgid "Apply for credit"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:148
+#, elixir-autogen, elixir-format
+msgid "Approved"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:74
+#, elixir-autogen, elixir-format
+msgid "Approved or rejected today"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:146
+#: lib/debt_stalker_web/components/layouts.ex:161
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:184
+#, elixir-autogen, elixir-format
+msgid "Audit trail"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:94
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/login.html.heex:25
+#, elixir-autogen, elixir-format
+msgid "Back to home"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:90
+#, elixir-autogen, elixir-format
+msgid "Back to list"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:60
+#, elixir-autogen, elixir-format
+msgid "Built with Phoenix LiveView"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:151
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:142
+#, elixir-autogen, elixir-format
+msgid "Clear"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:92
+#, elixir-autogen, elixir-format
+msgid "Copy reference ID"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:112
+#: lib/debt_stalker_web/live/admin/applications_live.ex:125
+#: lib/debt_stalker_web/live/admin/applications_live.ex:165
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:100
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:113
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:107
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:116
+#, elixir-autogen, elixir-format
+msgid "Country"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:37
+#: lib/debt_stalker_web/components/layouts.ex:72
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:48
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:171
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:72
+#, elixir-autogen, elixir-format
+msgid "Decided today"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:108
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:167
+#, elixir-autogen, elixir-format
+msgid "Document"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/login.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Enter the admin password to access the review dashboard."
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:101
+#, elixir-autogen, elixir-format
+msgid "Fill in your details. We will validate your document and income information for your country."
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:138
+#, elixir-autogen, elixir-format
+msgid "From"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:116
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:117
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:124
+#, elixir-autogen, elixir-format
+msgid "Full name"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:31
+#, elixir-autogen, elixir-format
+msgid "Get started"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:120
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:121
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:131
+#, elixir-autogen, elixir-format
+msgid "Identity document"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_controller.ex:52
+#, elixir-autogen, elixir-format
+msgid "Invalid password"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:61
+#, elixir-autogen, elixir-format
+msgid "Invalid status transition"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:212
+#, elixir-autogen, elixir-format
+msgid "Load more"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:58
+#: lib/debt_stalker_web/components/layouts.ex:83
+#: lib/debt_stalker_web/components/layouts.ex:90
+#: lib/debt_stalker_web/components/layouts.ex:103
+#, elixir-autogen, elixir-format
+msgid "Log out"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_controller.ex:68
+#, elixir-autogen, elixir-format
+msgid "Logged out"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:65
+#: lib/debt_stalker_web/components/layouts.ex:95
+#, elixir-autogen, elixir-format
+msgid "Menu"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:130
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:131
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:147
+#, elixir-autogen, elixir-format
+msgid "Monthly income"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:166
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:101
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:71
+#, elixir-autogen, elixir-format
+msgid "New application"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:171
+#, elixir-autogen, elixir-format
+msgid "New status"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:139
+#: lib/debt_stalker_web/live/admin/applications_live.ex:189
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:154
+#, elixir-autogen, elixir-format
+msgid "No applications found"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:90
+#, elixir-autogen, elixir-format
+msgid "No applications yet"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:186
+#, elixir-autogen, elixir-format
+msgid "No audit entries yet."
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:52
+#, elixir-autogen, elixir-format
+msgid "Open dashboard"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:50
+#, elixir-autogen, elixir-format
+msgid "Overview of credit applications across all countries."
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/login.html.heex:16
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_controller.ex:59
+#, elixir-autogen, elixir-format
+msgid "Password is required"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:146
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:60
+#, elixir-autogen, elixir-format
+msgid "Pending risk"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:68
+#, elixir-autogen, elixir-format
+msgid "Postman collection"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:150
+#, elixir-autogen, elixir-format
+msgid "Provider error"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:67
+#, elixir-autogen, elixir-format
+msgid "Provider errors"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:149
+#, elixir-autogen, elixir-format
+msgid "Provider summary"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:82
+#, elixir-autogen, elixir-format
+msgid "Recent applications"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:149
+#, elixir-autogen, elixir-format
+msgid "Rejected"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:126
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:127
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:139
+#, elixir-autogen, elixir-format
+msgid "Requested amount"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:137
+#, elixir-autogen, elixir-format
+msgid "Required"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:170
+#, elixir-autogen, elixir-format
+msgid "Review"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:112
+#, elixir-autogen, elixir-format
+msgid "Review and manage credit applications."
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:48
+#, elixir-autogen, elixir-format
+msgid "Review applications, filter by country or status, and update decisions."
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:84
+#, elixir-autogen, elixir-format
+msgid "Save it to track your application later."
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:117
+#, elixir-autogen, elixir-format
+msgid "Select your country"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/login.html.heex:19
+#, elixir-autogen, elixir-format
+msgid "Sign in"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:153
+#, elixir-autogen, elixir-format
+msgid "Something went wrong!"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:133
+#: lib/debt_stalker_web/live/admin/applications_live.ex:169
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:103
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:159
+#, elixir-autogen, elixir-format
+msgid "Status changed"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:57
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "Status updated to %{status}"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:109
+#, elixir-autogen, elixir-format
+msgid "Submit"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_form_live.ex:155
+#, elixir-autogen, elixir-format
+msgid "Submit application"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_html/home.html.heex:27
+#, elixir-autogen, elixir-format
+msgid "Submit your application and track its status in real time."
+msgstr ""
+
+#: lib/debt_stalker_web/components/ui.ex:145
+#, elixir-autogen, elixir-format
+msgid "Submitted"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:96
+#, elixir-autogen, elixir-format
+msgid "Submitted %{date}"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "Submitted at"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:53
+#: lib/debt_stalker_web/components/layouts.ex:79
+#, elixir-autogen, elixir-format
+msgid "Switch to applicant"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:139
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "Total applications"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:156
+#, elixir-autogen, elixir-format
+msgid "Try adjusting the filters or wait for new applications to arrive."
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:166
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:176
+#, elixir-autogen, elixir-format
+msgid "Update status"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:200
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:119
+#, elixir-autogen, elixir-format
+msgid "View"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/dashboard_live.ex:84
+#, elixir-autogen, elixir-format
+msgid "View all"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/application_detail_live.ex:153
+#, elixir-autogen, elixir-format
+msgid "View normalized data"
+msgstr ""
+
+#: lib/debt_stalker_web/components/layouts.ex:138
+#, elixir-autogen, elixir-format
+msgid "We can't find the internet"
+msgstr ""
+
+#: lib/debt_stalker_web/controllers/page_controller.ex:48
+#, elixir-autogen, elixir-format
+msgid "Welcome back"
+msgstr ""
+
+#: lib/debt_stalker_web/live/admin/applications_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:102
+#, elixir-autogen, elixir-format
+msgid "Your application has been flagged for additional review."
+msgstr ""
+
+#: lib/debt_stalker_web/live/apply/application_confirmation_live.ex:82
+#, elixir-autogen, elixir-format
+msgid "Your reference ID is"
+msgstr ""
+
+#: lib/debt_stalker_web/components/core_components.ex:81
+#, elixir-autogen, elixir-format
+msgid "close"
+msgstr ""

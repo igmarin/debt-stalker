@@ -11,6 +11,10 @@ config :debt_stalker,
   ecto_repos: [DebtStalker.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+config :debt_stalker, DebtStalkerWeb.Gettext,
+  default_locale: "es",
+  locales: ~w(es en)
+
 # Configure the endpoint
 config :debt_stalker, DebtStalkerWeb.Endpoint,
   url: [host: "localhost"],

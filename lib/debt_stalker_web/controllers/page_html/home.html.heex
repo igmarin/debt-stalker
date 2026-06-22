@@ -7,7 +7,7 @@
       Debt Stalker
     </h1>
     <p class="text-lg text-base-content/70">
-      A modern, multi-country credit application companion. Choose your path below.
+      {gettext("A modern, multi-country credit application companion. Choose your path below.")}
     </p>
   </div>
 
@@ -22,13 +22,13 @@
           <div class="bg-primary/10 text-primary rounded-full p-4 mb-4 group-hover:bg-primary group-hover:text-primary-content transition">
             <.icon name="hero-document-text" class="size-8" />
           </div>
-          <h2 class="card-title text-2xl">Apply for credit</h2>
+          <h2 class="card-title text-2xl">{gettext("Apply for credit")}</h2>
           <p class="text-base-content/70 mt-2">
-            Submit your application and track its status in real time.
+            {gettext("Submit your application and track its status in real time.")}
           </p>
           <div class="card-actions mt-4">
             <span class="btn btn-primary">
-              Get started <.icon name="hero-arrow-right" class="size-4" />
+              {gettext("Get started")} <.icon name="hero-arrow-right" class="size-4" />
             </span>
           </div>
         </div>
@@ -43,13 +43,13 @@
         <div class="bg-secondary/10 text-secondary rounded-full p-4 mb-4 group-hover:bg-secondary group-hover:text-secondary-content transition">
           <.icon name="hero-shield-check" class="size-8" />
         </div>
-        <h2 class="card-title text-2xl">Admin review</h2>
+        <h2 class="card-title text-2xl">{gettext("Admin review")}</h2>
         <p class="text-base-content/70 mt-2">
-          Review applications, filter by country or status, and update decisions.
+          {gettext("Review applications, filter by country or status, and update decisions.")}
         </p>
         <div class="card-actions mt-4">
           <span class="btn btn-secondary">
-            Open dashboard <.icon name="hero-arrow-right" class="size-4" />
+            {gettext("Open dashboard")} <.icon name="hero-arrow-right" class="size-4" />
           </span>
         </div>
       </div>
@@ -57,7 +57,8 @@
   </div>
 
   <p class="text-sm text-base-content/50 mt-12">
-    Built with Phoenix LiveView · <a href="/api/health" class="link">API health</a>
+    {gettext("Built with Phoenix LiveView")} ·
+    <a href="/api/health" class="link">{gettext("API health")}</a>
     ·
     <a
       href="https://github.com/igmarin/debt-stalker/blob/main/docs/postman/debt-stalker.json"
@@ -65,7 +66,7 @@
       target="_blank"
       rel="noopener noreferrer"
     >
-      Postman collection
+      {gettext("Postman collection")}
     </a>
   </p>
 </div>

@@ -28,7 +28,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLiveTest do
       assert html =~ app.id
       assert html =~ "Juan Garcia"
       assert html =~ "****678Z"
-      assert html =~ "Submitted"
+      assert html =~ "Enviada"
     end
 
     test "updates in real-time when status changes", %{conn: conn} do
@@ -39,7 +39,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLiveTest do
       {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
 
       html = render(view)
-      assert html =~ "Pending risk"
+      assert html =~ "Riesgo pendiente"
     end
 
     test "redirects for unknown application", %{conn: conn} do
@@ -52,8 +52,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLiveTest do
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications/#{app.id}")
 
-      assert html =~ "Update status"
-      assert html =~ "Pending risk"
+      assert html =~ "Actualizar estado"
+      assert html =~ "Riesgo pendiente"
     end
 
     test "status update form does not show invalid transitions for submitted app", %{conn: conn} do
@@ -74,7 +74,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLiveTest do
       |> render_submit(%{"status" => "pending_risk"})
 
       html = render(view)
-      assert html =~ "Pending risk"
+      assert html =~ "Riesgo pendiente"
     end
 
     test "invalid status transition does not change status", %{conn: conn} do
@@ -87,8 +87,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLiveTest do
       |> render_submit(%{"status" => "approved"})
 
       html = render(view)
-      assert html =~ "Submitted"
-      refute html =~ "Approved"
+      assert html =~ "Enviada"
+      refute html =~ "Aprobada"
     end
   end
 end

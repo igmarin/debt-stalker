@@ -5,11 +5,16 @@ defmodule DebtStalkerWeb.Components.UITest do
 
   alias DebtStalkerWeb.Components.UI
 
+  setup do
+    Gettext.put_locale(DebtStalkerWeb.Gettext, "es")
+    :ok
+  end
+
   describe "status_badge/1" do
     test "renders a formatted status with semantic color" do
       html = render_component(&UI.status_badge/1, %{status: "approved"})
 
-      assert html =~ "Approved"
+      assert html =~ "Aprobada"
       assert html =~ "badge-success"
     end
   end
@@ -38,10 +43,10 @@ defmodule DebtStalkerWeb.Components.UITest do
 
       html = render_component(&UI.audit_timeline/1, %{entries: [entry]})
 
-      assert html =~ "Status changed"
+      assert html =~ "Estado cambiado"
       assert html =~ "admin"
-      assert html =~ "Submitted"
-      assert html =~ "Pending risk"
+      assert html =~ "Enviada"
+      assert html =~ "Riesgo pendiente"
     end
 
     test "renders naive datetime timestamps" do
@@ -78,15 +83,15 @@ defmodule DebtStalkerWeb.Components.UITest do
     test "returns formatted status labels" do
       options = UI.status_options()
 
-      assert {"Submitted", "submitted"} in options
-      assert {"Approved", "approved"} in options
+      assert {"Enviada", "submitted"} in options
+      assert {"Aprobada", "approved"} in options
     end
   end
 
   describe "format_status/1" do
     test "formats atoms and strings" do
-      assert UI.format_status(:pending_risk) == "Pending risk"
-      assert UI.format_status("additional_review") == "Additional review"
+      assert UI.format_status(:pending_risk) == "Riesgo pendiente"
+      assert UI.format_status("additional_review") == "Revisión adicional"
       assert UI.format_status(nil) == ""
     end
   end

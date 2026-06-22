@@ -27,9 +27,9 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin")
-      assert html =~ "Dashboard"
-      assert html =~ "Total applications"
-      assert html =~ "Provider errors"
+      assert html =~ "Panel"
+      assert html =~ "Total de solicitudes"
+      assert html =~ "Errores del proveedor"
       assert html =~ "Juan Garcia"
     end
 
@@ -39,7 +39,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLiveTest do
       {:ok, _} = Applications.update_status(app.id, "approved", "system")
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin")
-      assert html =~ "Decided today"
+      assert html =~ "Decididas hoy"
       assert html =~ "1"
     end
   end

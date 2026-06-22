@@ -25,7 +25,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
 
     socket =
       socket
-      |> assign(:page_title, "Applications")
+      |> assign(:page_title, gettext("Applications"))
       |> assign(:country_options, CountryRegistry.supported_countries())
       |> assign(:status_options, status_options())
       |> assign(:filters, %{limit: 20})
@@ -108,8 +108,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     ~H"""
     <div class="max-w-7xl mx-auto px-4 py-8">
       <.header>
-        Applications
-        <:subtitle>Review and manage credit applications.</:subtitle>
+        {gettext("Applications")}
+        <:subtitle>{gettext("Review and manage credit applications.")}</:subtitle>
       </.header>
 
       <div class="card bg-base-100 shadow-sm mt-6">
@@ -122,24 +122,24 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
             <.input
               type="select"
               name="country"
-              label="Country"
+              label={gettext("Country")}
               value={@filters[:country]}
-              prompt="All countries"
+              prompt={gettext("All countries")}
               options={Enum.map(@country_options, &{&1, &1})}
             />
             <.input
               type="select"
               name="status"
-              label="Status"
+              label={gettext("Status")}
               value={@filters[:status]}
-              prompt="All statuses"
+              prompt={gettext("All statuses")}
               options={@status_options}
             />
-            <.input type="date" name="date_from" label="From" value={@filters[:date_from]} />
-            <.input type="date" name="date_to" label="To" value={@filters[:date_to]} />
+            <.input type="date" name="date_from" label={gettext("From")} value={@filters[:date_from]} />
+            <.input type="date" name="date_to" label={gettext("To")} value={@filters[:date_to]} />
             <div class="flex items-end">
               <.link navigate={~p"/admin/applications"} class="btn btn-ghost w-full">
-                Clear
+                {gettext("Clear")}
               </.link>
             </div>
           </form>
@@ -151,8 +151,10 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
           <%= if @applications == [] do %>
             <div class="p-6">
               <.empty_state
-                title="No applications found"
-                description="Try adjusting the filters or wait for new applications to arrive."
+                title={gettext("No applications found")}
+                description={
+                  gettext("Try adjusting the filters or wait for new applications to arrive.")
+                }
               />
             </div>
           <% else %>
@@ -160,13 +162,13 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
               <table class="table table-zebra w-full">
                 <thead>
                   <tr>
-                    <th>Country</th>
-                    <th>Name</th>
-                    <th>Document</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Review</th>
-                    <th>Date</th>
+                    <th>{gettext("Country")}</th>
+                    <th>{gettext("Name")}</th>
+                    <th>{gettext("Document")}</th>
+                    <th>{gettext("Amount")}</th>
+                    <th>{gettext("Status")}</th>
+                    <th>{gettext("Review")}</th>
+                    <th>{gettext("Date")}</th>
                     <th class="w-0"></th>
                   </tr>
                 </thead>
@@ -182,9 +184,9 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
                       <td><.status_badge status={app.status} /></td>
                       <td>
                         <%= if app.additional_review_required do %>
-                          <span class="text-warning font-medium">Yes</span>
+                          <span class="text-warning font-medium">{gettext("Yes")}</span>
                         <% else %>
-                          <span class="text-base-content/40">No</span>
+                          <span class="text-base-content/40">{gettext("No")}</span>
                         <% end %>
                       </td>
                       <td class="whitespace-nowrap text-sm">
@@ -195,7 +197,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
                           navigate={~p"/admin/applications/#{app.id}"}
                           class="btn btn-ghost btn-xs"
                         >
-                          View
+                          {gettext("View")}
                         </.link>
                       </td>
                     </tr>
@@ -207,7 +209,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
             <%= if @next_cursor do %>
               <div class="p-6 border-t border-base-200">
                 <button phx-click="next_page" class="btn btn-primary w-full sm:w-auto">
-                  Load more
+                  {gettext("Load more")}
                 </button>
               </div>
             <% end %>

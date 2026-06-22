@@ -45,18 +45,18 @@ defmodule DebtStalkerWeb.PageController do
     if valid_password?(password, admin_password()) do
       conn
       |> put_session("role", "admin")
-      |> put_flash(:info, "Welcome back")
+      |> put_flash(:info, gettext("Welcome back"))
       |> redirect(to: ~p"/admin")
     else
       conn
-      |> put_flash(:error, "Invalid password")
+      |> put_flash(:error, gettext("Invalid password"))
       |> render(:login)
     end
   end
 
   def do_login(conn, _params) do
     conn
-    |> put_flash(:error, "Password is required")
+    |> put_flash(:error, gettext("Password is required"))
     |> render(:login)
   end
 
@@ -65,7 +65,7 @@ defmodule DebtStalkerWeb.PageController do
   def logout(conn, _params) do
     conn
     |> configure_session(drop: true)
-    |> put_flash(:info, "Logged out")
+    |> put_flash(:info, gettext("Logged out"))
     |> redirect(to: ~p"/")
   end
 

@@ -21,7 +21,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
 
     socket =
       socket
-      |> assign(:page_title, "Admin Dashboard")
+      |> assign(:page_title, gettext("Admin Dashboard"))
       |> load_dashboard()
 
     {:ok, socket}
@@ -45,27 +45,33 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
     ~H"""
     <div class="max-w-7xl mx-auto px-4 py-8">
       <.header>
-        Dashboard
-        <:subtitle>Overview of credit applications across all countries.</:subtitle>
+        {gettext("Dashboard")}
+        <:subtitle>
+          {gettext("Overview of credit applications across all countries.")}
+        </:subtitle>
       </.header>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
-        <.stat_card title="Total applications" value={@stats.total} icon="hero-document-text" />
-        <.stat_card title="Pending risk" value={@stats.pending_risk} icon="hero-clock" />
         <.stat_card
-          title="Additional review"
+          title={gettext("Total applications")}
+          value={@stats.total}
+          icon="hero-document-text"
+        />
+        <.stat_card title={gettext("Pending risk")} value={@stats.pending_risk} icon="hero-clock" />
+        <.stat_card
+          title={gettext("Additional review")}
           value={@stats.additional_review}
           icon="hero-exclamation-triangle"
         />
         <.stat_card
-          title="Provider errors"
+          title={gettext("Provider errors")}
           value={@stats.provider_errors}
           icon="hero-server-stack"
         />
         <.stat_card
-          title="Decided today"
+          title={gettext("Decided today")}
           value={@stats.decided_today}
-          description="Approved or rejected today"
+          description={gettext("Approved or rejected today")}
           icon="hero-check-circle"
         />
       </div>
@@ -73,26 +79,28 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
       <div class="card bg-base-100 shadow-sm mt-8">
         <div class="card-body">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="card-title text-lg">Recent applications</h2>
+            <h2 class="card-title text-lg">{gettext("Recent applications")}</h2>
             <.link navigate={~p"/admin/applications"} class="btn btn-primary btn-sm">
-              View all
+              {gettext("View all")}
             </.link>
           </div>
 
           <%= if @recent == [] do %>
             <.empty_state
-              title="No applications yet"
-              description="Applications will appear here once applicants start submitting them."
+              title={gettext("No applications yet")}
+              description={
+                gettext("Applications will appear here once applicants start submitting them.")
+              }
             />
           <% else %>
             <div class="overflow-x-auto">
               <table class="table table-zebra w-full">
                 <thead>
                   <tr>
-                    <th>Country</th>
-                    <th>Name</th>
-                    <th>Amount</th>
-                    <th>Status</th>
+                    <th>{gettext("Country")}</th>
+                    <th>{gettext("Name")}</th>
+                    <th>{gettext("Amount")}</th>
+                    <th>{gettext("Status")}</th>
                     <th class="w-0"></th>
                   </tr>
                 </thead>
@@ -108,7 +116,7 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
                           navigate={~p"/admin/applications/#{app.id}"}
                           class="btn btn-ghost btn-xs"
                         >
-                          View
+                          {gettext("View")}
                         </.link>
                       </td>
                     </tr>

@@ -7,6 +7,7 @@ defmodule DebtStalkerWeb.Components.UI do
   """
 
   use Phoenix.Component
+  use Gettext, backend: DebtStalkerWeb.Gettext
 
   import DebtStalkerWeb.CoreComponents, only: [icon: 1]
 
@@ -108,7 +109,7 @@ defmodule DebtStalkerWeb.Components.UI do
         <div class="timeline-end timeline-box bg-base-100 shadow-sm text-sm">
           <p class="font-medium">{format_audit_action(entry.action)}</p>
           <p class="text-xs text-base-content/70">
-            Actor: {entry.actor}
+            {gettext("Actor:")} {entry.actor}
             <span :if={entry.metadata["from"] && entry.metadata["to"]}>
               {format_status(entry.metadata["from"])} → {format_status(entry.metadata["to"])}
             </span>
@@ -141,13 +142,21 @@ defmodule DebtStalkerWeb.Components.UI do
     status |> Atom.to_string() |> format_status()
   end
 
+  def format_status("submitted"), do: gettext("Submitted")
+  def format_status("pending_risk"), do: gettext("Pending risk")
+  def format_status("additional_review"), do: gettext("Additional review")
+  def format_status("approved"), do: gettext("Approved")
+  def format_status("rejected"), do: gettext("Rejected")
+  def format_status("provider_error"), do: gettext("Provider error")
+  def format_status("cancelled"), do: gettext("Cancelled")
+
   def format_status(status) do
     status
     |> String.replace("_", " ")
     |> String.capitalize()
   end
 
-  defp format_audit_action("status_changed"), do: "Status changed"
+  defp format_audit_action("status_changed"), do: gettext("Status changed")
   defp format_audit_action(action), do: format_status(action)
 
   defp format_datetime(%DateTime{} = dt) do

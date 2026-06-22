@@ -34,6 +34,7 @@ defmodule DebtStalkerWeb.ConnCase do
   setup tags do
     DebtStalker.DataCase.setup_sandbox(tags)
     DebtStalker.Providers.CircuitBreakers.reset_all()
+    Gettext.put_locale(DebtStalkerWeb.Gettext, "es")
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 

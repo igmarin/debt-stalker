@@ -20,11 +20,11 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLiveTest do
       {:ok, _view, html} =
         live(with_role(conn, "applicant"), ~p"/apply/#{app.id}/confirmation")
 
-      assert html =~ "Application received"
+      assert html =~ "Solicitud recibida"
       assert html =~ app.id
       assert html =~ "Juan Garcia"
-      assert html =~ "Submitted"
-      assert html =~ "Copy reference ID"
+      assert html =~ "Enviada"
+      assert html =~ "Copiar ID de referencia"
       assert html =~ ~s(phx:copy)
     end
 
@@ -37,7 +37,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLiveTest do
       {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
 
       html = render(view)
-      assert html =~ "Pending risk"
+      assert html =~ "Riesgo pendiente"
     end
 
     test "redirects for unknown application", %{conn: conn} do

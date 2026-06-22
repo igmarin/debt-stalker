@@ -34,11 +34,11 @@ defmodule DebtStalkerWeb.Layouts do
         <nav :if={@current_role == "admin"} class="hidden md:block">
           <ul class="flex items-center gap-1">
             <li>
-              <.link navigate={~p"/admin"} class="btn btn-ghost btn-sm">Dashboard</.link>
+              <.link navigate={~p"/admin"} class="btn btn-ghost btn-sm">{gettext("Dashboard")}</.link>
             </li>
             <li>
               <.link navigate={~p"/admin/applications"} class="btn btn-ghost btn-sm">
-                Applications
+                {gettext("Applications")}
               </.link>
             </li>
             <li>
@@ -50,49 +50,63 @@ defmodule DebtStalkerWeb.Layouts do
                 class="inline"
               >
                 <input type="hidden" name="role" value="applicant" />
-                <button type="submit" class="btn btn-ghost btn-sm">Switch to applicant</button>
+                <button type="submit" class="btn btn-ghost btn-sm">{gettext("Switch to applicant")}</button>
               </.form>
             </li>
             <li>
               <.link href={~p"/admin/logout"} method="delete" class="btn btn-ghost btn-sm">
-                Log out
+                {gettext("Log out")}
               </.link>
             </li>
           </ul>
         </nav>
 
         <div :if={@current_role == "admin"} class="dropdown dropdown-end md:hidden">
-          <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-square" aria-label="Menu">
+          <div
+            tabindex="0"
+            role="button"
+            class="btn btn-ghost btn-sm btn-square"
+            aria-label={gettext("Menu")}
+          >
             <.icon name="hero-bars-3" class="size-5" />
           </div>
           <ul
             tabindex="0"
             class="dropdown-content menu bg-base-100 rounded-box z-50 mt-3 w-52 p-2 shadow border border-base-200"
           >
-            <li><.link navigate={~p"/admin"} class="justify-start">Dashboard</.link></li>
+            <li><.link navigate={~p"/admin"} class="justify-start">{gettext("Dashboard")}</.link></li>
             <li>
-              <.link navigate={~p"/admin/applications"} class="justify-start">Applications</.link>
+              <.link navigate={~p"/admin/applications"} class="justify-start">{gettext("Applications")}</.link>
             </li>
             <li>
               <.form for={%{}} id="switch-to-applicant-mobile" action={~p"/set-role"} method="post">
                 <input type="hidden" name="role" value="applicant" />
-                <button type="submit" class="w-full text-left px-4 py-2">Switch to applicant</button>
+                <button type="submit" class="w-full text-left px-4 py-2">{gettext(
+                  "Switch to applicant"
+                )}</button>
               </.form>
             </li>
             <li>
-              <.link href={~p"/admin/logout"} method="delete" class="justify-start">Log out</.link>
+              <.link href={~p"/admin/logout"} method="delete" class="justify-start">{gettext(
+                "Log out"
+              )}</.link>
             </li>
           </ul>
         </div>
 
         <nav :if={@current_role == "applicant"} class="hidden sm:block">
           <.link href={~p"/admin/logout"} method="delete" class="btn btn-ghost btn-sm">
-            Log out
+            {gettext("Log out")}
           </.link>
         </nav>
 
         <div :if={@current_role == "applicant"} class="dropdown dropdown-end sm:hidden">
-          <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-square" aria-label="Menu">
+          <div
+            tabindex="0"
+            role="button"
+            class="btn btn-ghost btn-sm btn-square"
+            aria-label={gettext("Menu")}
+          >
             <.icon name="hero-bars-3" class="size-5" />
           </div>
           <ul
@@ -100,7 +114,9 @@ defmodule DebtStalkerWeb.Layouts do
             class="dropdown-content menu bg-base-100 rounded-box z-50 mt-3 w-40 p-2 shadow border border-base-200"
           >
             <li>
-              <.link href={~p"/admin/logout"} method="delete" class="justify-start">Log out</.link>
+              <.link href={~p"/admin/logout"} method="delete" class="justify-start">{gettext(
+                "Log out"
+              )}</.link>
             </li>
           </ul>
         </div>

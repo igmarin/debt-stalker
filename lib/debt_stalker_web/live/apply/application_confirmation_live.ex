@@ -28,7 +28,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
 
         socket =
           socket
-          |> assign(:page_title, "Application Submitted")
+          |> assign(:page_title, gettext("Application Submitted"))
           |> assign(:app, app)
 
         {:ok, socket}
@@ -36,7 +36,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
       {:error, :not_found} ->
         {:ok,
          socket
-         |> put_flash(:error, "Application not found")
+         |> put_flash(:error, gettext("Application not found"))
          |> redirect(to: ~p"/apply")}
     end
   end
@@ -51,10 +51,13 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
         {:noreply,
          socket
          |> assign(:app, app)
-         |> put_flash(:info, "Status updated to #{format_status(app.status)}")}
+         |> put_flash(
+           :info,
+           gettext("Status updated to %{status}", status: format_status(app.status))
+         )}
 
       {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "Application no longer available")}
+        {:noreply, put_flash(socket, :error, gettext("Application no longer available"))}
     end
   end
 
@@ -65,7 +68,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-8">
       <.link navigate={~p"/apply"} class="btn btn-ghost btn-sm mb-4">
-        <.icon name="hero-arrow-left" class="size-4" /> New application
+        <.icon name="hero-arrow-left" class="size-4" /> {gettext("New application")}
       </.link>
 
       <div class="card bg-base-100 shadow-sm">
@@ -74,9 +77,12 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
             <.icon name="hero-check-circle" class="size-10" />
           </div>
 
-          <h1 class="card-title text-2xl justify-center">Application received</h1>
+          <h1 class="card-title text-2xl justify-center">{gettext("Application received")}</h1>
           <p class="text-base-content/70 mb-2">
-            Your reference ID is <span class="font-mono font-bold">{@app.id}</span>. Save it to track your application later.
+            {gettext("Your reference ID is")}
+            <span class="font-mono font-bold">{@app.id}</span>. {gettext(
+              "Save it to track your application later."
+            )}
           </p>
 
           <button
@@ -84,7 +90,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
             class="btn btn-ghost btn-sm mb-6"
             phx-click={JS.dispatch("phx:copy", detail: %{text: @app.id})}
           >
-            <.icon name="hero-clipboard-document" class="size-4" /> Copy reference ID
+            <.icon name="hero-clipboard-document" class="size-4" /> {gettext("Copy reference ID")}
           </button>
 
           <div class="flex justify-center mb-6" aria-live="polite" aria-atomic="true">
@@ -93,39 +99,41 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLive do
 
           <div :if={@app.additional_review_required} class="alert alert-warning mb-6">
             <.icon name="hero-exclamation-triangle" class="size-5" />
-            <span>Your application has been flagged for additional review.</span>
+            <span>
+              {gettext("Your application has been flagged for additional review.")}
+            </span>
           </div>
         </div>
       </div>
 
       <div class="card bg-base-100 shadow-sm mt-6">
         <div class="card-body">
-          <h2 class="card-title text-lg mb-4">Application summary</h2>
+          <h2 class="card-title text-lg mb-4">{gettext("Application summary")}</h2>
           <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-              <dt class="text-base-content/60">Country</dt>
+              <dt class="text-base-content/60">{gettext("Country")}</dt>
               <dd class="font-medium">{@app.country}</dd>
             </div>
             <div>
-              <dt class="text-base-content/60">Full name</dt>
+              <dt class="text-base-content/60">{gettext("Full name")}</dt>
               <dd class="font-medium">{@app.full_name}</dd>
             </div>
             <div>
-              <dt class="text-base-content/60">Identity document</dt>
+              <dt class="text-base-content/60">{gettext("Identity document")}</dt>
               <dd class="font-medium font-mono">
                 {CreditApplication.redact_document(@app.identity_document)}
               </dd>
             </div>
             <div>
-              <dt class="text-base-content/60">Requested amount</dt>
+              <dt class="text-base-content/60">{gettext("Requested amount")}</dt>
               <dd class="font-medium">{Decimal.to_string(@app.requested_amount)}</dd>
             </div>
             <div>
-              <dt class="text-base-content/60">Monthly income</dt>
+              <dt class="text-base-content/60">{gettext("Monthly income")}</dt>
               <dd class="font-medium">{Decimal.to_string(@app.monthly_income)}</dd>
             </div>
             <div>
-              <dt class="text-base-content/60">Submitted at</dt>
+              <dt class="text-base-content/60">{gettext("Submitted at")}</dt>
               <dd class="font-medium">
                 {Calendar.strftime(@app.application_date, "%Y-%m-%d %H:%M:%S UTC")}
               </dd>

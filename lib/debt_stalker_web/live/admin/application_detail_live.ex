@@ -29,7 +29,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
 
         socket =
           socket
-          |> assign(:page_title, "Application #{app.id}")
+          |> assign(:page_title, gettext("Application %{id}", id: app.id))
           |> load_application(app)
 
         {:ok, socket}
@@ -37,7 +37,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
       {:error, :not_found} ->
         {:ok,
          socket
-         |> put_flash(:error, "Application not found")
+         |> put_flash(:error, gettext("Application not found"))
          |> redirect(to: ~p"/admin/applications")}
     end
   end
@@ -52,13 +52,16 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
         {:noreply,
          socket
          |> load_application(app)
-         |> put_flash(:info, "Status updated to #{format_status(app.status)}")}
+         |> put_flash(
+           :info,
+           gettext("Status updated to %{status}", status: format_status(app.status))
+         )}
 
       {:error, :invalid_transition} ->
-        {:noreply, put_flash(socket, :error, "Invalid status transition")}
+        {:noreply, put_flash(socket, :error, gettext("Invalid status transition"))}
 
       {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "Application not found")}
+        {:noreply, put_flash(socket, :error, gettext("Application not found"))}
     end
   end
 
@@ -72,7 +75,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
       {:error, :not_found} ->
         {:noreply,
          socket
-         |> put_flash(:error, "Application no longer available")
+         |> put_flash(:error, gettext("Application no longer available"))
          |> redirect(to: ~p"/admin/applications")}
     end
   end
@@ -84,13 +87,15 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
     ~H"""
     <div class="max-w-7xl mx-auto px-4 py-8">
       <.link navigate={~p"/admin/applications"} class="btn btn-ghost btn-sm mb-4">
-        <.icon name="hero-arrow-left" class="size-4" /> Back to list
+        <.icon name="hero-arrow-left" class="size-4" /> {gettext("Back to list")}
       </.link>
 
       <.header>
-        Application {@app.id}
+        {gettext("Application %{id}", id: @app.id)}
         <:subtitle>
-          Submitted {Calendar.strftime(@app.application_date, "%Y-%m-%d %H:%M:%S UTC")}
+          {gettext("Submitted %{date}",
+            date: Calendar.strftime(@app.application_date, "%Y-%m-%d %H:%M:%S UTC")
+          )}
         </:subtitle>
         <:actions>
           <.status_badge status={@app.status} class="badge-lg" />
@@ -101,37 +106,37 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
         <div class="lg:col-span-2 space-y-6">
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
-              <h2 class="card-title text-lg mb-4">Application details</h2>
+              <h2 class="card-title text-lg mb-4">{gettext("Application details")}</h2>
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <dt class="text-base-content/60">Country</dt>
+                  <dt class="text-base-content/60">{gettext("Country")}</dt>
                   <dd class="font-medium">{@app.country}</dd>
                 </div>
                 <div>
-                  <dt class="text-base-content/60">Full name</dt>
+                  <dt class="text-base-content/60">{gettext("Full name")}</dt>
                   <dd class="font-medium">{@app.full_name}</dd>
                 </div>
                 <div>
-                  <dt class="text-base-content/60">Identity document</dt>
+                  <dt class="text-base-content/60">{gettext("Identity document")}</dt>
                   <dd class="font-medium font-mono">
                     {CreditApplication.redact_document(@app.identity_document)}
                   </dd>
                 </div>
                 <div>
-                  <dt class="text-base-content/60">Requested amount</dt>
+                  <dt class="text-base-content/60">{gettext("Requested amount")}</dt>
                   <dd class="font-medium">{Decimal.to_string(@app.requested_amount)}</dd>
                 </div>
                 <div>
-                  <dt class="text-base-content/60">Monthly income</dt>
+                  <dt class="text-base-content/60">{gettext("Monthly income")}</dt>
                   <dd class="font-medium">{Decimal.to_string(@app.monthly_income)}</dd>
                 </div>
                 <div>
-                  <dt class="text-base-content/60">Additional review</dt>
+                  <dt class="text-base-content/60">{gettext("Additional review")}</dt>
                   <dd class="font-medium">
                     <%= if @app.additional_review_required do %>
-                      <span class="text-warning">Required</span>
+                      <span class="text-warning">{gettext("Required")}</span>
                     <% else %>
-                      <span class="text-base-content/40">No</span>
+                      <span class="text-base-content/40">{gettext("No")}</span>
                     <% end %>
                   </dd>
                 </div>
@@ -141,10 +146,12 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
 
           <div :if={@app.provider_summary} class="card bg-base-100 shadow-sm">
             <div class="card-body">
-              <h2 class="card-title text-lg mb-2">Provider summary</h2>
+              <h2 class="card-title text-lg mb-2">{gettext("Provider summary")}</h2>
               <div class="collapse collapse-arrow bg-base-200">
                 <input type="checkbox" />
-                <div class="collapse-title text-sm font-medium">View normalized data</div>
+                <div class="collapse-title text-sm font-medium">
+                  {gettext("View normalized data")}
+                </div>
                 <div class="collapse-content">
                   <pre class="text-xs overflow-x-auto"><%= Jason.encode!(@app.provider_summary, pretty: true) %></pre>
                 </div>
@@ -156,17 +163,17 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
         <div class="space-y-6">
           <div :if={@allowed_transitions != []} class="card bg-base-100 shadow-sm">
             <div class="card-body">
-              <h2 class="card-title text-lg mb-4">Update status</h2>
+              <h2 class="card-title text-lg mb-4">{gettext("Update status")}</h2>
               <form id="status-update-form" phx-submit="update_status" class="space-y-4">
                 <.input
                   type="select"
                   name="status"
-                  label="New status"
+                  label={gettext("New status")}
                   value={List.first(@allowed_transitions)}
                   options={Enum.map(@allowed_transitions, &{format_status(&1), &1})}
                 />
                 <button type="submit" class="btn btn-primary w-full">
-                  Update status
+                  {gettext("Update status")}
                 </button>
               </form>
             </div>
@@ -174,9 +181,9 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
 
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
-              <h2 class="card-title text-lg mb-4">Audit trail</h2>
+              <h2 class="card-title text-lg mb-4">{gettext("Audit trail")}</h2>
               <%= if @audit_logs == [] do %>
-                <p class="text-sm text-base-content/60">No audit entries yet.</p>
+                <p class="text-sm text-base-content/60">{gettext("No audit entries yet.")}</p>
               <% else %>
                 <.audit_timeline entries={@audit_logs} />
               <% end %>
