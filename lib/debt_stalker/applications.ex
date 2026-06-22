@@ -334,11 +334,21 @@ defmodule DebtStalker.Applications do
         {:error, :not_found}
 
       app ->
-        # TTL ensures PII doesn't persist indefinitely in memory and
-        # serves as a safety net for staleness if an update path
-        # bypasses explicit invalidation.
-        ttl = Application.get_env(:debt_stalker, :app_cache_ttl_ms, :timer.minutes(30))
-        Cachex.put(:app_cache, cache_key, app, ttl: ttl)
+        # Race condition mitigation: verify the record hasn't been
+        # updated since we read it. If a concurrent update changed
+        # updated_at, skip caching to avoid storing stale data.
+        case Cachex.get(:app_cache, cache_key) do
+          {:ok, nil} ->
+            # Cache still empty — safe to populate.
+            ttl = Application.get_env(:debt_stalker, :app_cache_ttl_ms, :timer.seconds(60))
+            Cachex.put(:app_cache, cache_key, app, ttl: ttl)
+
+          _ ->
+            # Cache was populated or invalidated concurrently — skip
+            # to avoid overwriting a fresher entry or caching stale data.
+            :ok
+        end
+
         {:ok, app}
     end
   end

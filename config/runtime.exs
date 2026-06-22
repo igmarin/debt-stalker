@@ -92,10 +92,10 @@ if config_env() == :prod do
       window_ms: String.to_integer(System.get_env("RATE_LIMIT_WEBHOOK_WINDOW_MS", "60000"))
     ]
 
-  # App cache TTL (configurable via env, milliseconds)
+  # App cache TTL (configurable via env, milliseconds, default 60s)
   config :debt_stalker,
          :app_cache_ttl_ms,
-         String.to_integer(System.get_env("APP_CACHE_TTL_MS", "1800000"))
+         String.to_integer(System.get_env("APP_CACHE_TTL_MS", "60000"))
 end
 
 # Dev/test JWT secret (not sensitive — development only)

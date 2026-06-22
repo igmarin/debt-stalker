@@ -20,6 +20,8 @@ defmodule DebtStalker.CacheInvalidator do
 
   use GenServer
 
+  require Logger
+
   @cache :app_cache
   @pubsub DebtStalker.PubSub
   @topic "applications:list"
@@ -45,9 +47,13 @@ defmodule DebtStalker.CacheInvalidator do
     {:noreply, state}
   end
 
-  def handle_info({:status_changed, _payload}, state) do
-    # Fallback: if app_id is not in the payload, clear all.
-    Cachex.clear(@cache)
+  def handle_info({:status_changed, payload}, state) do
+    # Fallback: if app_id is not in the payload, log a warning.
+    # We don't clear the entire cache to avoid a thundering herd.
+    Logger.warning(
+      "CacheInvalidator received status_changed without application_id: #{inspect(payload)}"
+    )
+
     {:noreply, state}
   end
 
