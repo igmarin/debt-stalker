@@ -70,7 +70,7 @@ T14.1 (app cache) — depends on Phase 1 get_application + PubSub
 ### Track 2b — Production & Security
 T15.1 (probes) → T15.2 (real deploy) → T15.3 (HPA scaling)
 T16.1 (CI update) → T16.2 (CD image build + deploy)
-T17.1 (encrypted PII) → T17.2 (backfill migration)
+T17.1 (encrypted PII) — ~~T17.2 (backfill migration)~~ removed (PII encrypted from day one)
 T18.1 (secrets management) — independent
 T18.2 (log-scrubbing audit) — depends on T10.1
 

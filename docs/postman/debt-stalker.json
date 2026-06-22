@@ -427,6 +427,165 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Provider Failures",
+      "description": "Phase 2 failure scenarios: provider errors and circuit breaker behavior",
+      "item": [
+        {
+          "name": "Create Application (forced provider error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{read_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/applications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"ES\",\n  \"full_name\": \"Test Provider Error\",\n  \"identity_document\": \"99999999R\",\n  \"requested_amount\": \"5000.00\",\n  \"monthly_income\": \"3000.00\"\n}"
+            },
+            "description": "Create application that will trigger a provider error. When the provider is unavailable or times out, the application transitions to provider_error status. The circuit breaker opens after N consecutive failures."
+          },
+          "response": [
+            {
+              "name": "Provider Error Response",
+              "status": "201",
+              "code": 201,
+              "body": "{\n  \"id\": \"uuid-here\",\n  \"status\": \"provider_error\",\n  \"country\": \"ES\",\n  \"identity_document\": \"****9999R\",\n  \"provider_summary\": null,\n  \"additional_review_required\": false\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Application (provider_error status)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{read_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/applications/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{application_id}}"
+              ]
+            },
+            "description": "Retrieve an application in provider_error status. The circuit breaker may be open, causing subsequent provider calls to fail fast."
+          },
+          "response": [
+            {
+              "name": "Provider Error Status",
+              "status": "200",
+              "code": 200,
+              "body": "{\n  \"id\": \"uuid-here\",\n  \"status\": \"provider_error\",\n  \"country\": \"ES\",\n  \"identity_document\": \"****9999R\",\n  \"provider_summary\": null,\n  \"additional_review_required\": false\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DLQ Inspection",
+      "description": "Phase 2: Dead-letter queue inspection for failed Oban jobs",
+      "item": [
+        {
+          "name": "List Dead-Letter Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/dead-letters",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dead-letters"
+              ]
+            },
+            "description": "List dead-lettered Oban jobs. Jobs are moved to the DLQ after exhausting retries. Each entry retains original args, error message, and metadata."
+          },
+          "response": [
+            {
+              "name": "Dead-Letter List",
+              "status": "200",
+              "code": 200,
+              "body": "{\n  \"dead_letters\": [\n    {\n      \"id\": \"uuid-here\",\n      \"worker\": \"DebtStalker.Workers.RiskEvaluationWorker\",\n      \"args\": {\n        \"application_id\": \"uuid-here\"\n      },\n      \"error\": \"Provider timeout after 5000ms\",\n      \"inserted_at\": \"2026-01-15T10:30:00Z\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Replay Dead-Letter Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/dead-letters/{{dead_letter_id}}/replay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dead-letters",
+                "{{dead_letter_id}}",
+                "replay"
+              ]
+            },
+            "description": "Re-enqueue a dead-lettered job for retry. The original args are preserved and a new Oban job is inserted."
+          },
+          "response": [
+            {
+              "name": "Replay Success",
+              "status": "200",
+              "code": 200,
+              "body": "{\n  \"status\": \"reenqueued\",\n  \"job_id\": \"new-uuid-here\"\n}"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
