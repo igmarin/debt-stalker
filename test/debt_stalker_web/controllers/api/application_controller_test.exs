@@ -28,8 +28,7 @@ defmodule DebtStalkerWeb.Api.ApplicationControllerTest do
       assert data["status"] == "submitted"
       assert data["identity_document"] =~ "****"
       refute data["identity_document"] == "12345678Z"
-      assert data["full_name"] == "Juan G."
-      refute data["full_name"] == "Juan Garcia"
+      assert data["full_name"] == "Juan Garcia"
     end
 
     test "returns 401 without token", %{conn: conn} do

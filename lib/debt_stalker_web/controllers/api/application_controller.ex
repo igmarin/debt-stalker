@@ -152,7 +152,7 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
     %{
       id: app.id,
       country: app.country,
-      full_name: CreditApplication.redact_full_name(app.full_name),
+      full_name: app.full_name,
       identity_document: CreditApplication.redact_document(app.identity_document),
       requested_amount: Decimal.to_string(app.requested_amount),
       monthly_income: Decimal.to_string(app.monthly_income),

@@ -26,8 +26,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLiveTest do
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications/#{app.id}")
       assert html =~ app.id
-      assert html =~ "Juan G."
-      refute html =~ "Juan Garcia"
+      assert html =~ "Juan Garcia"
       assert html =~ "****678Z"
       assert html =~ "Enviada"
     end

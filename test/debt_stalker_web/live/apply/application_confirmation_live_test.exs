@@ -22,8 +22,7 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLiveTest do
 
       assert html =~ "Solicitud recibida"
       assert html =~ app.id
-      assert html =~ "Juan G."
-      refute html =~ "Juan Garcia"
+      assert html =~ "Juan Garcia"
       assert html =~ "Enviada"
       assert html =~ "Copiar ID de referencia"
       assert html =~ ~s(phx:copy)

@@ -97,6 +97,103 @@ defmodule DebtStalker.ObanTelemetryHandlerTest do
 
       refute Repo.get_by(DeadLetterJob, job_id: 902)
     end
+
+    test "handles exception event without job in metadata gracefully" do
+      attach_metric_listener(:oban_handler_test_no_job)
+
+      :telemetry.execute(
+        [:oban, :job, :exception],
+        %{duration: 1},
+        %{worker: "DebtStalker.Workers.RiskEvaluationWorker"}
+      )
+
+      assert_receive {:oban_metric,
+                      %{worker: "DebtStalker.Workers.RiskEvaluationWorker", result: :error}}
+    end
+  end
+
+  describe "[:oban, :job, :stop] with various results" do
+    test "classifies {:ok, _} as success" do
+      attach_metric_listener(:oban_handler_test_ok_tuple)
+
+      :telemetry.execute(
+        [:oban, :job, :stop],
+        %{duration: 1},
+        %{
+          worker: "Elixir.DebtStalker.Workers.RiskEvaluationWorker",
+          result: {:ok, %{some: :data}}
+        }
+      )
+
+      assert_receive {:oban_metric, %{result: :success}}
+    end
+
+    test "classifies {:error, _} as error" do
+      attach_metric_listener(:oban_handler_test_error_tuple)
+
+      :telemetry.execute(
+        [:oban, :job, :stop],
+        %{duration: 1},
+        %{
+          worker: "Elixir.DebtStalker.Workers.RiskEvaluationWorker",
+          result: {:error, :timeout}
+        }
+      )
+
+      assert_receive {:oban_metric, %{result: :error}}
+    end
+
+    test "classifies arbitrary term as error" do
+      attach_metric_listener(:oban_handler_test_arbitrary)
+
+      :telemetry.execute(
+        [:oban, :job, :stop],
+        %{duration: 1},
+        %{
+          worker: "Elixir.DebtStalker.Workers.RiskEvaluationWorker",
+          result: {:cancel, :some_reason}
+        }
+      )
+
+      assert_receive {:oban_metric, %{result: :error}}
+    end
+
+    test "captures discarded job with atom state" do
+      job = exhausted_job(id: 905, application_id: Ecto.UUID.generate())
+
+      :telemetry.execute(
+        [:oban, :job, :stop],
+        %{duration: 1},
+        %{job: job, worker: job.worker, result: {:error, :timeout}, state: :discarded}
+      )
+
+      assert %DeadLetterJob{job_id: 905} = Repo.get_by(DeadLetterJob, job_id: 905)
+    end
+
+    test "does not capture job when state is not discarded" do
+      job = exhausted_job(id: 906, application_id: Ecto.UUID.generate())
+
+      :telemetry.execute(
+        [:oban, :job, :stop],
+        %{duration: 1},
+        %{job: job, worker: job.worker, result: :ok, state: "completed"}
+      )
+
+      refute Repo.get_by(DeadLetterJob, job_id: 906)
+    end
+  end
+
+  describe "attach/0 and detach/0" do
+    test "attach returns :ok on first call, {:error, :already_exists} on second" do
+      ObanTelemetryHandler.detach()
+      assert ObanTelemetryHandler.attach() == :ok
+      assert {:error, :already_exists} = ObanTelemetryHandler.attach()
+    end
+
+    test "detach is safe when not attached" do
+      ObanTelemetryHandler.detach()
+      assert ObanTelemetryHandler.detach() == :ok
+    end
   end
 
   defp attach_metric_listener(handler_id) do

@@ -115,7 +115,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
                 <div>
                   <dt class="text-base-content/60">{gettext("Full name")}</dt>
                   <dd class="font-medium">
-                    {CreditApplication.redact_full_name(@app.full_name)}
+                    {@app.full_name}
                   </dd>
                 </div>
                 <div>
@@ -126,11 +126,11 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Requested amount")}</dt>
-                  <dd class="font-medium">{Decimal.to_string(@app.requested_amount)}</dd>
+                  <dd class="font-medium">{format_money(@app.requested_amount, @app.country)}</dd>
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Monthly income")}</dt>
-                  <dd class="font-medium">{Decimal.to_string(@app.monthly_income)}</dd>
+                  <dd class="font-medium">{format_money(@app.monthly_income, @app.country)}</dd>
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Additional review")}</dt>

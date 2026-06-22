@@ -143,6 +143,12 @@ defmodule DebtStalker.Countries.ESTest do
     end
   end
 
+  describe "currency_symbol/0" do
+    test "returns the euro symbol" do
+      assert ES.currency_symbol() == "€"
+    end
+  end
+
   # Helper: compute the DNI checksum letter
   defp dni_checksum_letter(number) do
     letters = "TRWAGMYFPDXBNJZSQVHLCKE"

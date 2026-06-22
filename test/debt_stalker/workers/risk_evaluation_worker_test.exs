@@ -77,5 +77,53 @@ defmodule DebtStalker.Workers.RiskEvaluationWorkerTest do
       # even if the status update to approved/rejected has issues
       assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
     end
+
+    test "skips evaluation for cancelled status (not_evaluable)" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+      {:ok, _} = Applications.update_status(app.id, "cancelled", "system")
+
+      assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
+    end
+
+    test "skips evaluation for rejected status (not_evaluable)" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+      {:ok, _} = Applications.update_status(app.id, "rejected", "system")
+
+      assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
+    end
+
+    test "skips evaluation for provider_error status (not_evaluable)" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "provider_error", "system")
+
+      assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
+    end
+
+    test "evaluates app already in pending_risk without re-transitioning" do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+
+      perform_job(RiskEvaluationWorker, %{application_id: app.id})
+
+      {:ok, updated} = Applications.get_application(app.id)
+      assert updated.status == "approved"
+    end
+
+    test "handles unsupported country gracefully" do
+      # Insert directly to bypass country validation
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+
+      # Update the country to an unsupported one directly in the DB
+      DebtStalker.Repo.update_all(
+        from(a in DebtStalker.Applications.CreditApplication, where: a.id == ^app.id),
+        set: [country: "XX"]
+      )
+
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+
+      assert :ok = perform_job(RiskEvaluationWorker, %{application_id: app.id})
+    end
   end
 end

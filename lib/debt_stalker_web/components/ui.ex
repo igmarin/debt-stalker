@@ -12,6 +12,7 @@ defmodule DebtStalkerWeb.Components.UI do
   import DebtStalkerWeb.CoreComponents, only: [icon: 1]
 
   alias DebtStalker.Applications.CreditApplication
+  alias DebtStalker.Countries
 
   @doc """
   Renders a status badge for a credit application.
@@ -215,5 +216,80 @@ defmodule DebtStalkerWeb.Components.UI do
     Enum.map(CreditApplication.valid_statuses(), fn status ->
       {format_status(status), status}
     end)
+  end
+
+  @doc """
+  Formats a Decimal amount as money with a currency symbol and thousand separators.
+
+  The currency symbol is resolved from the country code via the Countries context.
+  Returns an empty string when `amount` is nil.
+
+  ## Examples
+
+      iex> format_money(Decimal.new("5000"), "MX")
+      "$5,000"
+      iex> format_money(Decimal.new("15000"), "ES")
+      "€15,000"
+  """
+  @spec format_money(Decimal.t() | nil, String.t() | nil) :: String.t()
+  def format_money(nil, _country), do: ""
+
+  def format_money(%Decimal{} = amount, country) do
+    symbol = Countries.currency_symbol(country)
+    formatted = format_decimal_with_separators(amount)
+    "#{symbol}#{formatted}"
+  end
+
+  @doc """
+  Formats an integer with thousand separators for display of counts.
+
+  ## Examples
+
+      iex> format_number(4000)
+      "4,000"
+      iex> format_number(42)
+      "42"
+  """
+  @spec format_number(integer() | nil) :: String.t()
+  def format_number(nil), do: "0"
+
+  def format_number(number) when is_integer(number) do
+    number
+    |> Integer.to_charlist()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.join(",")
+    |> String.reverse()
+  end
+
+  defp format_decimal_with_separators(%Decimal{} = amount) do
+    amount
+    |> Decimal.to_string(:normal)
+    |> String.split(".")
+    |> case do
+      [int_part] ->
+        add_thousand_separators(int_part)
+
+      [int_part, decimal_part] ->
+        add_thousand_separators(int_part) <> "." <> decimal_part
+    end
+  end
+
+  defp add_thousand_separators(number_string) do
+    {sign, digits} =
+      case number_string do
+        "-" <> rest -> {"-", rest}
+        _ -> {"", number_string}
+      end
+
+    formatted =
+      digits
+      |> String.to_charlist()
+      |> Enum.reverse()
+      |> Enum.chunk_every(3)
+      |> Enum.join(",")
+      |> String.reverse()
+
+    sign <> formatted
   end
 end

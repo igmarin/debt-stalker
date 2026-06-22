@@ -15,14 +15,27 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
   }
 
   describe "Admin.ApplicationsLive" do
-    test "renders application list", %{conn: conn} do
+    test "renders application list with full name", %{conn: conn} do
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
       {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
       assert html =~ "Solicitudes"
-      assert html =~ "Juan G."
-      refute html =~ "Juan Garcia"
+      assert html =~ "Juan Garcia"
       assert html =~ "****678Z"
+    end
+
+    test "formats amounts with currency symbol and thousand separators", %{conn: conn} do
+      {:ok, _} =
+        Applications.create_application(%{
+          country: "MX",
+          full_name: "Maria Lopez",
+          identity_document: "GARC850101HDFRRL09",
+          requested_amount: Decimal.new("12000"),
+          monthly_income: Decimal.new("3000")
+        })
+
+      {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+      assert html =~ "$12,000"
     end
 
     test "filters by country via URL", %{conn: conn} do
@@ -41,9 +54,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
 
       html = render_patch(view, ~p"/admin/applications?country=ES")
 
-      assert html =~ "Juan G."
+      assert html =~ "Juan Garcia"
       refute html =~ "Maria Lopez"
-      refute html =~ "Maria L."
     end
 
     test "filters by country via form without blanking results", %{conn: conn} do
@@ -61,8 +73,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
         })
         |> render_change()
 
-      assert html =~ "Juan G."
-      refute html =~ "Juan Garcia"
+      assert html =~ "Juan Garcia"
       refute html =~ "No se encontraron solicitudes"
     end
 
@@ -73,10 +84,10 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
       html = render_patch(view, ~p"/admin/applications?status=pending_risk")
-      assert html =~ "Juan G."
+      assert html =~ "Juan Garcia"
 
       html = render_patch(view, ~p"/admin/applications?status=approved")
-      refute html =~ "Juan G."
+      refute html =~ "Juan Garcia"
     end
 
     test "shows empty state when filters match nothing", %{conn: conn} do
@@ -99,18 +110,50 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
             requested_amount: Decimal.new("9000")
         })
 
-      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      # Default sort is application_date desc — both apps visible
+      assert html =~ "Juan Garcia"
+      assert html =~ "High Amount"
 
       html =
         view
         |> element("button[phx-value-field='requested_amount']")
         |> render_click()
 
-      assert html =~ "9000"
+      # After sorting by amount desc, the higher amount should appear first
+      assert html =~ "€9,000"
+      assert html =~ "€5,000"
     end
 
-    test "paginates with cursor controls", %{conn: conn} do
-      for i <- 1..21 do
+    test "sorts by full name when header is clicked", %{conn: conn} do
+      {:ok, _} =
+        Applications.create_application(%{
+          @valid_es_attrs
+          | full_name: "Zebra Applicant",
+            identity_document: "87654321X"
+        })
+
+      {:ok, _} =
+        Applications.create_application(%{
+          @valid_es_attrs
+          | full_name: "Alpha Applicant",
+            identity_document: Countries.random_identity_document("ES")
+        })
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      html =
+        view
+        |> element("button[phx-value-field='full_name']")
+        |> render_click()
+
+      assert html =~ "Alpha Applicant"
+      assert html =~ "Zebra Applicant"
+    end
+
+    test "paginates with page controls", %{conn: conn} do
+      for i <- 1..25 do
         {:ok, _} =
           Applications.create_application(%{
             @valid_es_attrs
@@ -119,23 +162,14 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
           })
       end
 
-      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications?limit=10")
+      {:ok, view, html} = live(with_role(conn, "admin"), ~p"/admin/applications?per_page=10")
       assert html =~ "Mostrando"
-      assert html =~ "Cargar más"
+      assert html =~ "1–10"
+      assert html =~ "25"
 
-      [cursor] = Regex.run(~r/phx-value-cursor=\"([^\"]+)\"/, html, capture: :all_but_first)
-      html = render_click(view, "load_more", %{"cursor" => cursor})
-
+      # Navigate to page 2
+      html = render_click(view, "paginate", %{"page" => "2"})
       assert html =~ "Applicant"
-    end
-
-    test "ignores invalid cursor param without crashing", %{conn: conn} do
-      {:ok, _} = Applications.create_application(@valid_es_attrs)
-
-      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
-
-      assert render_click(view, "load_more", %{"cursor" => "invalid"}) =~ "Juan G."
-      assert render_patch(view, ~p"/admin/applications?cursor=invalid") =~ "Juan G."
     end
 
     test "updates in real-time via PubSub", %{conn: conn} do

@@ -83,6 +83,11 @@ defmodule DebtStalker.Countries.ES do
   @spec document_hint() :: String.t()
   def document_hint, do: "12345678Z (DNI)"
 
+  @doc "Returns the currency symbol for Spain."
+  @impl true
+  @spec currency_symbol() :: String.t()
+  def currency_symbol, do: "€"
+
   @doc "Generates a random valid Spanish DNI for demo/seed data."
   @spec random_identity_document() :: String.t()
   def random_identity_document do

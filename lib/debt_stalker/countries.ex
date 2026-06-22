@@ -52,4 +52,26 @@ defmodule DebtStalker.Countries do
         nil
     end
   end
+
+  @doc """
+  Returns the currency symbol for `country_code` (e.g. \"$\", \"€\").
+
+  Returns an empty string for unknown or nil countries.
+  """
+  @spec currency_symbol(String.t() | nil) :: String.t()
+  def currency_symbol(nil), do: ""
+
+  def currency_symbol(country_code) when is_binary(country_code) do
+    case Registry.lookup(country_code) do
+      {:ok, module} ->
+        if Code.ensure_loaded?(module) and function_exported?(module, :currency_symbol, 0) do
+          module.currency_symbol()
+        else
+          ""
+        end
+
+      {:error, :unsupported_country} ->
+        ""
+    end
+  end
 end

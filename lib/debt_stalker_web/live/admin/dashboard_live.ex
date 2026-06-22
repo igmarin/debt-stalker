@@ -8,7 +8,6 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
   on_mount {DebtStalkerWeb.Live.RoleAuth, :admin}
 
   alias DebtStalker.Applications
-  alias DebtStalker.Applications.CreditApplication
   alias DebtStalker.Countries.Registry, as: CountryRegistry
   alias DebtStalkerWeb.Admin.FilterParams
 
@@ -105,23 +104,27 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
         <.stat_card
           title={gettext("Total applications")}
-          value={@stats.total}
+          value={format_number(@stats.total)}
           icon="hero-document-text"
         />
-        <.stat_card title={gettext("Pending risk")} value={@stats.pending_risk} icon="hero-clock" />
+        <.stat_card
+          title={gettext("Pending risk")}
+          value={format_number(@stats.pending_risk)}
+          icon="hero-clock"
+        />
         <.stat_card
           title={gettext("Additional review")}
-          value={@stats.additional_review}
+          value={format_number(@stats.additional_review)}
           icon="hero-exclamation-triangle"
         />
         <.stat_card
           title={gettext("Provider errors")}
-          value={@stats.provider_errors}
+          value={format_number(@stats.provider_errors)}
           icon="hero-server-stack"
         />
         <.stat_card
           title={gettext("Decided today")}
-          value={@stats.decided_today}
+          value={format_number(@stats.decided_today)}
           description={gettext("Approved or rejected today")}
           icon="hero-check-circle"
         />
@@ -186,8 +189,8 @@ defmodule DebtStalkerWeb.Admin.DashboardLive do
                   <%= for app <- @recent do %>
                     <tr id={"recent-app-#{app.id}"}>
                       <td>{app.country}</td>
-                      <td>{CreditApplication.redact_full_name(app.full_name)}</td>
-                      <td>{Decimal.to_string(app.requested_amount)}</td>
+                      <td>{app.full_name}</td>
+                      <td>{format_money(app.requested_amount, app.country)}</td>
                       <td><.status_badge status={app.status} /></td>
                       <td>
                         <.link
