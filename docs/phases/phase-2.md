@@ -1,7 +1,7 @@
 # Phase 2 — Resilience, Observability & Production Hardening
 
 > **Parent:** `docs/master-plan.md` · **Builds on:** `docs/phases/phase-1.md`
-> **Status:** Planning artifact only. No code written.
+> **Status:** Complete — all tasks merged. See `docs/phases/phase-2-report.md`.
 > **Goal:** Take the green ES + MX vertical slice and make it **production-credible** — observable, resilient under failure, and actually deployable with secrets and PII protected.
 > **Structure:** Two sub-tracks — **2a Resilience & Observability** and **2b Production & Security**. They can run in parallel after Phase 1 contracts are frozen; the phase gate requires both.
 
