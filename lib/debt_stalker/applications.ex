@@ -334,7 +334,11 @@ defmodule DebtStalker.Applications do
         {:error, :not_found}
 
       app ->
-        Cachex.put(:app_cache, cache_key, app)
+        # TTL ensures PII doesn't persist indefinitely in memory and
+        # serves as a safety net for staleness if an update path
+        # bypasses explicit invalidation.
+        ttl = Application.get_env(:debt_stalker, :app_cache_ttl_ms, :timer.minutes(30))
+        Cachex.put(:app_cache, cache_key, app, ttl: ttl)
         {:ok, app}
     end
   end
