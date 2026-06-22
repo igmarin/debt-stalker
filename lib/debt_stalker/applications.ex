@@ -132,7 +132,27 @@ defmodule DebtStalker.Applications do
 
             {:ok, app}
 
-          {:error, _step, changeset, _changes} ->
+          # Application insert failed — return its changeset so callers see
+          # validation errors on the expected CreditApplication schema.
+          {:error, :application, changeset, _changes} ->
+            {:error, changeset}
+
+          # Transition or audit insert failed — the application data was
+          # valid but the audit trail could not be written. Return a
+          # CreditApplication changeset with a system error so callers
+          # always get a consistent error type.
+          {:error, step, _changeset, %{application: app}} ->
+            Logger.error("Provider error audit trail failed",
+              application_id: app.id,
+              country: app.country,
+              step: step
+            )
+
+            changeset =
+              app
+              |> Ecto.Changeset.change()
+              |> Ecto.Changeset.add_error(:base, "audit trail write failed")
+
             {:error, changeset}
         end
     end
