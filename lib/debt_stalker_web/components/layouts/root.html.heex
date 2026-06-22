@@ -40,7 +40,7 @@
   </head>
   <body>
     <.navbar current_role={assigns[:current_role]} />
-    <main class="min-h-screen bg-base-100">
+    <main class="min-h-screen bg-base-100 overflow-x-hidden">
       {@inner_content}
     </main>
     <.flash_group flash={@flash} />
