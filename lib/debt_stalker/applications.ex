@@ -392,11 +392,13 @@ defmodule DebtStalker.Applications do
 
   @default_sort_by "application_date"
   @default_sort_dir "desc"
+  @default_cursor_limit 20
+  @max_cursor_limit 100
 
   @doc """
   Lists applications with optional filtering, sorting, and pagination.
 
-  **Cursor mode** (API): pass `:limit` and optional `:cursor`.
+  **Cursor mode** (API): pass `:limit` and optional `:cursor`; limits are capped at 100.
   **Page mode** (admin UI): pass `:page` and optional `:per_page`.
 
   Supported filters: `:country`, `:status`, `:date_from`, `:date_to`.
@@ -461,7 +463,7 @@ defmodule DebtStalker.Applications do
   # Private — pagination
 
   defp list_applications_by_cursor(filters) do
-    limit = Map.get(filters, :limit, 20)
+    limit = filters |> Map.get(:limit, @default_cursor_limit) |> clamp_cursor_limit()
 
     query =
       filters
@@ -662,6 +664,11 @@ defmodule DebtStalker.Applications do
         order_by(query, [a], desc: a.application_date, desc: a.id)
     end
   end
+
+  defp clamp_cursor_limit(value) when is_integer(value) and value > 0,
+    do: min(value, @max_cursor_limit)
+
+  defp clamp_cursor_limit(_), do: @default_cursor_limit
 
   defp clamp_per_page(value) when is_integer(value), do: value |> max(1) |> min(100)
   defp clamp_per_page(_), do: 20

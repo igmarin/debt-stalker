@@ -72,8 +72,8 @@ If you wrote implementation before the test, delete it and start over.
 ## Key decisions for Phase 1
 - DB triggers → outbox → EventDispatcherWorker with FOR UPDATE SKIP LOCKED (not Oban Pro)
 - Simulated deterministic provider adapters (no real external calls)
-- Cursor pagination (keyset) — no unbounded OFFSET
-- PII encrypted at rest (Cloak) from day one + hash for lookup + redacted to last-4 in all responses + logs
+- API cursor pagination (keyset); bounded page pagination for sortable admin UI workflows
+- PII encrypted at rest (Cloak) from day one + hash for lookup + identity documents redacted to last-4 in responses + logs
 - Status flow: submitted → pending_risk → approved/rejected/additional_review
 - Country rules flag additional_review_required — they do NOT reject (decision D7)
 - 10 seed applications covering all scenarios (see phase-1.md §3.8)

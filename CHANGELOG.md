@@ -19,10 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - JWT authentication (Joken): read/update roles with AuthPlug + RequireRolePlug
   - REST API: `GET /api/health`, `/api/applications` (CRUD), `/api/applications/:id/status` (PATCH), `/api/auth/token`
   - Webhook endpoint: `/api/webhooks/provider-confirmations` with HMAC verification + idempotency
-  - LiveView: applications list (filters, cursor pagination, PubSub), detail view, create form
+  - LiveView: applications list (filters, bounded page pagination, PubSub), detail view, create form
   - Cloak encryption (AES-256-GCM) for identity_document at rest
-  - PII redaction: API responses and logs show last-4 only
-  - Cursor-based pagination (no unbounded OFFSET)
+  - PII handling: identity documents are redacted to last-4 in API/UI responses and logs
+  - API cursor-based pagination with capped limits
   - Status transitions: validated, recorded in status_transitions + audit_logs
   - Seeds: 10 demo applications (5 ES + 5 MX) + JWT token generation
   - k8s manifests: namespace, deployment, service, configmap, secrets, migration job
@@ -97,16 +97,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `WEBHOOK_SECRET` is required in production and webhook signatures are
     required by default
   - `LIVE_VIEW_SIGNING_SALT` and `SESSION_SIGNING_SALT` are now env-driven
-  - API responses and admin/applicant UI redact `full_name` to first name +
-    last initial
+  - Authorized API responses and admin/applicant UI show `full_name` consistently
   - `ApplicationController.update_status/2` now handles unexpected changeset
     errors gracefully
+
+### Fixed
+
+- API cursor pagination now clamps invalid, zero, negative, and excessive limits
+- Admin sort tests now assert row order instead of only checking that values render
+- README now documents the authorized full-name policy, admin page-pagination tradeoff,
+  and current MVP scale envelope
 
 ### Security
 
 - Webhook HMAC verification now works correctly in production
 - Raw provider payloads are no longer stored in `webhook_events`
-- Full-name redaction is consistent across API, admin UI, and applicant UI
+- Identity documents stay redacted in API/UI responses and logs; full names are visible
+  to authorized API/UI users and scrubbed from logs
 
 ## [0.1.0] - 2026-06-20
 

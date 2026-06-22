@@ -83,6 +83,8 @@ defmodule DebtStalkerWeb.Components.Pagination do
   defp range_end(_page, _per_page, 0), do: 0
   defp range_end(page, per_page, total), do: min(page * per_page, total)
 
+  defp page_range(_page, total_pages) when total_pages <= 0, do: []
+
   defp page_range(_page, total_pages) when total_pages <= 7,
     do: Enum.to_list(1..total_pages)
 

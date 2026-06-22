@@ -4,6 +4,11 @@ This handoff captures four follow-up improvement issues after the core Phase 2
 resilience work is complete. Each issue is written as a self-contained PR and
 traces back to the observations from the pre-implementation review.
 
+> **Superseded note:** This is historical handoff guidance. The current accepted
+> policy is documented in `README.md` and `CHANGELOG.md`: authorized API/UI
+> surfaces show full names consistently; identity documents remain redacted and
+> logs remain scrubbed.
+
 > **Goal:** Polish the evaluator-facing surface, fix production safety gaps, and
 > improve the admin UI/UX without changing domain architecture.
 
@@ -73,8 +78,9 @@ traces back to the observations from the pre-implementation review.
    default `require_webhook_signature` to `true` in production.
 3. **Env-driven LiveView salt:** Move `live_view` signing salt out of
    `config.exs` into `runtime.exs` (required in prod, dev default in test/dev).
-4. **`full_name` redaction:** Apply first-name + last-initial redaction in API
-   responses and UI (or document the intentional admin exception clearly).
+4. **`full_name` policy alignment:** Document the accepted policy consistently:
+   authorized API/UI surfaces show full names, identity documents stay redacted,
+   and logs remain scrubbed.
 5. **`Notifications` context:** Extract webhook event storage and outbound
    notification recording from controller/worker into a new
    `DebtStalker.Notifications` context.
@@ -84,7 +90,7 @@ traces back to the observations from the pre-implementation review.
 **Acceptance criteria:**
 - [ ] Webhook signature verification succeeds in production mode.
 - [ ] Missing `WEBHOOK_SECRET` raises at boot in production.
-- [ ] API responses redact `full_name` consistently (or policy is documented).
+- [ ] Full-name visibility policy is documented consistently across API/UI docs.
 - [ ] `DebtStalker.Notifications` context exists and is called by controller/worker.
 - [ ] `mix test`, `mix credo --strict`, and `mix dialyzer` are green.
 
@@ -119,8 +125,9 @@ traces back to the observations from the pre-implementation review.
 5. **Audit timeline icons:** Use status-specific icons for different audit actions.
 6. **Human-readable provider summary:** Show a short summary card before the
    collapsible raw JSON on the detail page.
-7. **Admin list cursor pagination:** Switch from OFFSET to cursor pagination so
-   the admin UI matches the API scale contract.
+7. **Admin pagination scale follow-up:** Keep bounded page pagination for the MVP
+   sortable admin table; for high-volume admin search, add sort-specific keyset
+   pagination or indexed search.
 8. **Applicant form step validation:** Enforce validation per step before
    allowing the user to proceed.
 9. **Theme toggle accessibility:** Add `aria-label`s to theme buttons.

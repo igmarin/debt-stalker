@@ -122,8 +122,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
         |> render_click()
 
       # After sorting by amount desc, the higher amount should appear first
-      assert html =~ "€9,000"
-      assert html =~ "€5,000"
+      assert html =~ ~r/€9,000.*€5,000/s
     end
 
     test "sorts by full name when header is clicked", %{conn: conn} do
@@ -148,8 +147,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
         |> element("button[phx-value-field='full_name']")
         |> render_click()
 
-      assert html =~ "Alpha Applicant"
-      assert html =~ "Zebra Applicant"
+      assert html =~ ~r/Zebra Applicant.*Alpha Applicant/s
     end
 
     test "paginates with page controls", %{conn: conn} do

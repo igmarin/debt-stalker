@@ -73,10 +73,11 @@
 
 ## 4. Test Status
 
-- **Total tests:** 399 (ExUnit) + 2 (property-based)
+- **Total tests:** 500 ExUnit tests total, including 2 property-based tests, in the latest continuation verification
 - **Failures:** 0
 - **Coverage gate:** 85% (enforced in CI)
 - **Quality gates:** format, compile (warnings-as-errors), credo (strict), dialyzer, test — all green
+- **Latest stabilization:** authorized API/UI surfaces show full names consistently; identity documents remain redacted and logs remain scrubbed
 - **CI checks:** Quality Checks, k8s Manifest Dry-Run, Secret Scan (gitleaks), Semgrep, rs-guard (known v1.2.0 bug, ignored)
 
 ### Test breakdown by area:
@@ -105,6 +106,7 @@ Items considered for Phase 2 but deferred to Phase 3/4:
 | Multi-region k8s deployment | Single-region sufficient for ES+MX | Phase 4 |
 | Provider retry with exponential backoff | Circuit breaker handles fail-fast; retry is in Oban | Phase 3 |
 | Webhook signature rotation | Static HMAC secret sufficient | Phase 4 |
+| Million-row hardening | MVP uses scale-ready primitives, but admin keyset search, dispatcher tuning, outbox lag alerts, and dashboard rollups need focused follow-up work | Follow-up PR / Phase 4 |
 
 ---
 

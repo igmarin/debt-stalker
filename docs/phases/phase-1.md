@@ -54,7 +54,7 @@
 
 **US-5 — List & filter applications**
 - **AC5.1** `GET /api/applications` and the LiveView list support filters: country, status, `application_date` range.
-- **AC5.2** Results use **cursor pagination** (no unbounded OFFSET).
+- **AC5.2** API results use **cursor pagination**; the admin UI uses bounded page pagination for sortable operational workflows.
 - **AC5.3** The UI allows filtering by country and status.
 
 **US-6 — Update status (audited + realtime)**
@@ -303,9 +303,9 @@ sequenceDiagram
   *AC:* validates country/document/financials, calls provider, persists with server-set date + `submitted` (or `provider_error`), encrypts `identity_document` at rest, redacts document in response.
 
 - **[DOMAIN] T4.2 — `get_application/1` + `list_applications/1` (cursor + filters)**
-  *TDD:* (a) Write failing tests: get by uuid returns redacted data; unknown uuid → `{:error, :not_found}`; list filters by country/status/date range; cursor pagination returns next cursor; no unbounded OFFSET. (b) Run → fail. (c) Implement `get` + `list`. (d) Run → pass.
+  *TDD:* (a) Write failing tests: get by uuid returns safe data with identity document redacted; unknown uuid → `{:error, :not_found}`; list filters by country/status/date range; API cursor pagination returns next cursor. (b) Run → fail. (c) Implement `get` + `list`. (d) Run → pass.
   *Review:* rs-guard → iterate (max 3).
-  *AC:* get by uuid; list filters country/status/date range; cursor pagination.
+  *AC:* get by uuid; list filters country/status/date range; API cursor pagination.
 
 - **[DOMAIN] T4.3 — `update_status/3` (validate + transition row + audit + broadcast)**
   *TDD:* (a) Write failing tests: valid transition → `{:ok, app}` + transition row + audit row + PubSub event; invalid transition → `{:error, :invalid_transition}`; PubSub broadcast asserted via `Phoenix.PubSub.subscribe` + `assert_received`. (b) Run → fail. (c) Implement `update_status/3`. (d) Run → pass.
@@ -357,7 +357,7 @@ sequenceDiagram
   *AC:* filters work; live updates on status change; no refresh.
 
 - **[WEB] T7.2 — LiveView detail + status update action**
-  *TDD:* (a) Write failing tests: detail page shows safe redacted data; authorized user can update status; unauthorized user sees no update button; live updates on PubSub broadcast. (b) Run → fail. (c) Implement LiveView detail. (d) Run → pass.
+  *TDD:* (a) Write failing tests: detail page shows safe data with identity document redacted; authorized user can update status; unauthorized user sees no update button; live updates on PubSub broadcast. (b) Run → fail. (c) Implement LiveView detail. (d) Run → pass.
   *Review:* rs-guard → iterate (max 3).
   *AC:* safe data; authorized status update; live updates.
 

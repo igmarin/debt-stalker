@@ -16,7 +16,7 @@ flowchart TB
     subgraph Web["DebtStalkerWeb"]
         Auth[JWT Auth + Role Plugs]
         RateLimit[Rate Limiting]
-        API[JSON API — redacted]
+        API[JSON API — auth + redacted documents]
         LV[LiveViews]
         WH[Webhook Controller — HMAC]
     end
@@ -102,7 +102,7 @@ sequenceDiagram
     API->>Apps: create_application / update_status
     Apps->>DB: INSERT/UPDATE credit_applications
     DB->>Outbox: Trigger INSERTS outbox row
-    Apps-->>Client: Return application (redacted)
+    Apps-->>Client: Return authorized response (documents redacted)
 
     loop Every minute
         Disp->>Outbox: SELECT ... FOR UPDATE SKIP LOCKED
@@ -118,16 +118,17 @@ sequenceDiagram
 ### Key Design Decisions
 
 - **Async outbox pattern**: Postgres triggers → `application_events` table →
-  `EventDispatcherWorker` drains with `FOR UPDATE SKIP LOCKED` → specialized
+  `EventDispatcherWorker` drains default batches of 50 with `FOR UPDATE SKIP LOCKED` → specialized
   workers.
 - **Country modules**: Pluggable country rules via behaviour (ES: DNI + threshold,
   MX: CURP + debt ratio).
 - **Provider adapters**: Simulated, deterministic responses; normalized output
   never exposes raw payloads.
-- **PII at rest**: `identity_document` encrypted with AES-256-GCM (Cloak); API/logs
-  show last-4 only.
-- **Cursor pagination**: No unbounded `OFFSET`; stable cursor based on
-  `(application_date, id)`.
+- **PII at rest**: `identity_document` encrypted with AES-256-GCM (Cloak);
+  identity documents are redacted to last-4 in API/UI and logs, while full names
+  are visible on authorized API/UI surfaces and scrubbed from logs.
+- **Pagination**: API lists use capped cursor pagination based on `(application_date, id)`;
+  admin lists use bounded page pagination to support sortable operational tables.
 - **Status machine**: `submitted → pending_risk → approved/rejected/additional_review`;
   all transitions validated + audited.
 - **Resilience (Phase 2)**: per-country circuit breakers, dead-letter queue for
@@ -232,8 +233,9 @@ make seed       # Create demo apps + print JWT tokens
   `GET /api/health*`, `POST /api/auth/token`.
 - **Role-based access**: `read` (list/get) vs `update` (create/patch status).
 - **PII encryption**: `identity_document` encrypted at rest with AES-256-GCM via Cloak.
-- **Redaction**: API responses and logs show document as `****XXXX` (last-4 only).
-  `full_name` is redacted to first name + last initial in API responses.
+- **Redaction**: API/UI responses show identity documents as `****XXXX` (last-4 only).
+  Full names are shown to authorized API/UI users, but full names and identity documents
+  are scrubbed from application logs.
 - **Webhook verification**: HMAC-SHA256 signature validation using `WEBHOOK_SECRET`
   (required in production).
 
@@ -243,15 +245,20 @@ The system is designed to grow to **millions of credit applications**:
 
 | Technique | Status | Notes |
 |-----------|--------|-------|
-| **Cursor pagination** | Implemented | API uses `(application_date, id)` cursor; avoids `OFFSET` degradation. |
+| **API cursor pagination** | Implemented | API uses capped `(application_date, id)` cursors and avoids `OFFSET` degradation. |
+| **Admin page pagination** | MVP | Admin tables use bounded page pagination for flexible sorting; high-volume admin search should move to sort-specific keyset pagination or indexed search. |
 | **Composite indexes** | Implemented | `(country, status, application_date)`, `(application_date)`, `identity_document_hash`. |
-| **Outbox consumption** | Implemented | `FOR UPDATE SKIP LOCKED` batches of 50 events; scale by adding Oban concurrency or worker replicas. |
+| **Outbox consumption** | Implemented | `FOR UPDATE SKIP LOCKED` batches are parallel-safe; current default drains 50 events per dispatcher run and should be tuned for sustained high volume. |
 | **App detail cache** | Implemented | Cachex with 60s TTL + PubSub invalidation on status change. |
 | **Web/worker split** | Implemented | k8s `deployment-web` can disable queues via `OBAN_QUEUES=false`; `deployment-worker` scales independently. |
 | **Range partitioning** | Planned (Phase 4) | Partition `credit_applications` by `application_date` (e.g., monthly ranges). Keeps hot data small and enables partition pruning. |
 | **Read replicas** | Planned (Phase 4) | Offload list/detail queries to replica(s); writes stay on primary. |
 | **Archiving** | Planned (Phase 4) | Move old `audit_logs` and `notification_attempts` to cold storage; keep working set small. |
 | **Dashboard analytics** | MVP | Current dashboard runs aggregation queries. At very high volume, replace with daily rollups or materialized stats. |
+
+### Current MVP scale envelope
+
+The MVP uses scale-ready primitives, but it has not been load-tested at million-row volume. Current defaults are intentionally conservative: API lists cap cursor pages at 100 records, admin lists are bounded but offset-based for sortable operations, and the outbox dispatcher drains 50 events per run by default. For sustained high volume, tune dispatcher batch/cadence, track outbox lag, add sort-specific indexes or keyset cursors for admin tables, and replace live dashboard aggregates with rollups or materialized stats.
 
 ### Recommended indexes today
 
@@ -281,8 +288,10 @@ CREATE INDEX idx_status_transitions_application_id
 - **Cache**: Cachex for application detail reads, invalidated via PubSub on every
   status change. ETS caches static country/provider config at boot.
 - **Concurrency safety**: Outbox dispatcher uses `FOR UPDATE SKIP LOCKED` so
-  multiple worker processes can consume without conflicts. Status transitions are
-  validated idempotently through the `Applications` context.
+  multiple dispatcher jobs can claim work without conflicts. Current defaults drain
+  50 events per run; production throughput should tune batch size, cadence, and
+  worker replicas together. Status transitions are validated idempotently through
+  the `Applications` context.
 
 ## Deployment
 

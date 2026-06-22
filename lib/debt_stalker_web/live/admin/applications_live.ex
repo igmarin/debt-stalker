@@ -1,7 +1,7 @@
 defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   @moduledoc """
-  Admin-facing list of credit applications with filters, sorting, and cursor
-  pagination.
+  Admin-facing list of credit applications with filters, sorting, and bounded
+  page-based pagination.
 
   Subscribes to the applications PubSub topic so the list updates in real time.
   """
@@ -38,7 +38,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     {:ok, socket}
   end
 
-  @doc "Applies filters, sort, and cursor from URL parameters."
+  @doc "Applies filters, sort, and page pagination from URL parameters."
   @impl true
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

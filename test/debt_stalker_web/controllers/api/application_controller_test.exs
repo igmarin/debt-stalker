@@ -1,6 +1,8 @@
 defmodule DebtStalkerWeb.Api.ApplicationControllerTest do
   use DebtStalkerWeb.ConnCase, async: false
 
+  alias DebtStalker.Applications
+  alias DebtStalker.Countries
   alias DebtStalkerWeb.Auth.Token
 
   @valid_es_params %{
@@ -130,6 +132,41 @@ defmodule DebtStalkerWeb.Api.ApplicationControllerTest do
 
       assert %{"data" => data} = json_response(conn, 200)
       assert data == []
+    end
+
+    test "falls back to default limit for invalid, zero, and negative cursor limits", %{
+      conn: conn
+    } do
+      for limit <- ["abc", "0", "-1"] do
+        conn =
+          conn
+          |> recycle()
+          |> auth_conn("read")
+          |> get("/api/applications", %{"limit" => limit})
+
+        assert %{"data" => [_ | _]} = json_response(conn, 200)
+      end
+    end
+
+    test "caps excessive cursor limit", %{conn: conn} do
+      for i <- 1..105 do
+        {:ok, _} =
+          Applications.create_application(%{
+            country: "ES",
+            full_name: "Applicant #{i}",
+            identity_document: Countries.random_identity_document("ES"),
+            requested_amount: Decimal.new("5000"),
+            monthly_income: Decimal.new("2000")
+          })
+      end
+
+      conn =
+        conn
+        |> auth_conn("read")
+        |> get("/api/applications", %{"limit" => "1000"})
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert length(data) == 100
     end
   end
 
