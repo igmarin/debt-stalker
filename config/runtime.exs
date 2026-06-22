@@ -53,6 +53,16 @@ if config_env() == :prod do
 
   config :debt_stalker, :jwt_secret, jwt_secret
 
+  # Admin password for the browser companion UI (required in prod)
+  admin_password =
+    System.get_env("ADMIN_PASSWORD") ||
+      raise """
+      environment variable ADMIN_PASSWORD is missing.
+      Set a strong password for the admin dashboard.
+      """
+
+  config :debt_stalker, :admin_password, admin_password
+
   # Oban queues (configurable via env)
   # Set OBAN_QUEUES=false to disable all queues (web deployment).
   # Set individual queue sizes for worker deployment.
@@ -109,7 +119,8 @@ if config_env() == :prod do
          String.to_integer(System.get_env("APP_CACHE_TTL_MS", "60000"))
 end
 
-# Dev/test JWT secret (not sensitive — development only)
+# Dev/test JWT secret and admin password (not sensitive — development only)
 if config_env() in [:dev, :test] do
   config :debt_stalker, :jwt_secret, "dev-jwt-secret-not-for-production"
+  config :debt_stalker, :admin_password, System.get_env("ADMIN_PASSWORD", "admin123")
 end

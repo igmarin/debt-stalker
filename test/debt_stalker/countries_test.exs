@@ -21,4 +21,18 @@ defmodule DebtStalker.CountriesTest do
       assert Countries.get_document_hint(nil) == ""
     end
   end
+
+  describe "random_identity_document/1" do
+    test "returns a valid document for supported countries" do
+      assert DebtStalker.Countries.ES.validate_document(Countries.random_identity_document("ES")) ==
+               :ok
+
+      assert DebtStalker.Countries.MX.validate_document(Countries.random_identity_document("MX")) ==
+               :ok
+    end
+
+    test "returns nil for unknown countries" do
+      assert Countries.random_identity_document("XX") == nil
+    end
+  end
 end

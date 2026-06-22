@@ -30,4 +30,26 @@ defmodule DebtStalker.Countries do
         ""
     end
   end
+
+  @doc """
+  Generates a random identity document for `country_code` suitable for demo/seed data.
+
+  Returns `nil` for unknown countries or countries that do not implement the
+  optional `random_identity_document/0` callback.
+  """
+  @spec random_identity_document(String.t()) :: String.t() | nil
+  def random_identity_document(country_code) when is_binary(country_code) do
+    case Registry.lookup(country_code) do
+      {:ok, module} ->
+        if Code.ensure_loaded?(module) and
+             function_exported?(module, :random_identity_document, 0) do
+          module.random_identity_document()
+        else
+          nil
+        end
+
+      {:error, :unsupported_country} ->
+        nil
+    end
+  end
 end
