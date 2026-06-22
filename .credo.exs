@@ -18,9 +18,9 @@
       },
       plugins: [],
       requires: [
-        "lib/debt_stalker/credo_checks/no_country_branching.ex",
-        "lib/debt_stalker/credo_checks/require_spec.ex",
-        "lib/debt_stalker/credo_checks/no_io_inspect.ex"
+        "test/support/credo_checks/no_country_branching.ex",
+        "test/support/credo_checks/require_spec.ex",
+        "test/support/credo_checks/no_io_inspect.ex"
       ],
       checks: %{
         enabled: [
