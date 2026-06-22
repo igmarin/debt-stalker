@@ -129,14 +129,14 @@ defmodule DebtStalker.Applications.CreateApplicationTest do
 
       # Assert a status_transitions row exists for this application
       transition = Repo.get_by(StatusTransition, application_id: app.id)
-      assert transition != nil
+      assert %StatusTransition{} = transition
       assert transition.from_status == "created"
       assert transition.to_status == "provider_error"
       assert transition.triggered_by == "provider"
 
       # Assert an audit_logs row exists for this application
       audit = Repo.get_by(AuditLog, application_id: app.id)
-      assert audit != nil
+      assert %AuditLog{} = audit
       assert audit.action == "status_changed"
       assert audit.actor == "provider"
       assert audit.metadata == %{"from" => "created", "to" => "provider_error"}
