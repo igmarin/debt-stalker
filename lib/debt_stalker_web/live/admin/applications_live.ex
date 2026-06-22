@@ -96,7 +96,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     {:noreply, refresh_with_highlight(socket, app.id)}
   end
 
-  def handle_info({:status_changed, %{id: id}}, socket) do
+  def handle_info({:status_changed, %{application_id: id}}, socket) do
     {:noreply, refresh_with_highlight(socket, id)}
   end
 

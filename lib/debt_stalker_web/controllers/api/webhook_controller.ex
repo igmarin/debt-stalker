@@ -11,6 +11,8 @@ defmodule DebtStalkerWeb.Api.WebhookController do
 
   alias DebtStalker.Repo
 
+  plug DebtStalkerWeb.Plugs.RateLimit, [key: :webhook] when action == :receive_webhook
+
   @doc "Receives, verifies, and enqueues a provider webhook event."
   @spec receive_webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def receive_webhook(conn, params) do

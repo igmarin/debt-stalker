@@ -1,0 +1,39 @@
+_build
+deps
+.git
+.gitignore
+.github
+.credo.exs
+dialyzer-ignore.exs
+.formatter.exs
+
+# Test artifacts
+test
+cover
+.bench
+
+# Documentation
+docs
+README.md
+CHANGELOG.md
+
+# CI / tooling
+.agents
+.claude
+.cursor
+.devin
+.tool-versions
+
+# Priv plts (dialyzer)
+priv/plts
+
+# Node assets (built in Docker)
+node_modules
+assets/node_modules
+
+# Misc
+*.log
+*.md
+.env
+.env.*
+.DS_Store

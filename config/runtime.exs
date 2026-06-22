@@ -90,6 +90,22 @@ if config_env() == :prod do
         tag: "AES.GCM.V1", key: Base.decode64!(cloak_key), iv_length: 12
       }
     ]
+
+  # Rate limits (configurable via env, per-IP sliding window)
+  config :debt_stalker, :rate_limit,
+    auth_token: [
+      limit: String.to_integer(System.get_env("RATE_LIMIT_AUTH_TOKEN", "10")),
+      window_ms: String.to_integer(System.get_env("RATE_LIMIT_AUTH_TOKEN_WINDOW_MS", "60000"))
+    ],
+    webhook: [
+      limit: String.to_integer(System.get_env("RATE_LIMIT_WEBHOOK", "20")),
+      window_ms: String.to_integer(System.get_env("RATE_LIMIT_WEBHOOK_WINDOW_MS", "60000"))
+    ]
+
+  # App cache TTL (configurable via env, milliseconds, default 60s)
+  config :debt_stalker,
+         :app_cache_ttl_ms,
+         String.to_integer(System.get_env("APP_CACHE_TTL_MS", "60000"))
 end
 
 # Dev/test JWT secret and admin password (not sensitive — development only)
