@@ -8,4 +8,3 @@ data:
   PHX_PORT: "4000"
   POOL_SIZE: "10"
   MIX_ENV: "prod"
-  OBAN_QUEUES: "default:10,events:20,notifications:10"

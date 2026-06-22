@@ -5,10 +5,12 @@ metadata:
   namespace: debt-stalker
   labels:
     app: debt-stalker
+    component: web
 spec:
   type: ClusterIP
   selector:
     app: debt-stalker
+    component: web
   ports:
     - port: 4000
       targetPort: 4000

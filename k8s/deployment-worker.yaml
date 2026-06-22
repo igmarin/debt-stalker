@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debt-stalker-worker
+  namespace: debt-stalker
+  labels:
+    app: debt-stalker
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: debt-stalker
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: debt-stalker
+        component: worker
+    spec:
+      containers:
+        - name: debt-stalker
+          image: ghcr.io/igmarin/debt-stalker:latest
+          envFrom:
+            - configMapRef:
+                name: debt-stalker-config
+            - secretRef:
+                name: debt-stalker-secrets
+          env:
+            - name: PHX_SERVER
+              value: "false"
+            - name: RELEASE_NAME
+              value: "debt_stalker"
+            - name: OBAN_QUEUE_DEFAULT
+              value: "10"
+            - name: OBAN_QUEUE_EVENTS
+              value: "20"
+            - name: OBAN_QUEUE_NOTIFICATIONS
+              value: "10"
+          # Worker doesn't serve HTTP — use exec-based liveness probe
+          livenessProbe:
+            exec:
+              command: ["bin/debt_stalker", "rpc", "DebtStalker.Release.version()"]
+            initialDelaySeconds: 15
+            periodSeconds: 60
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -34,6 +34,8 @@ defmodule DebtStalkerWeb.Router do
     pipe_through :api
 
     get "/health", HealthController, :index
+    get "/health/live", HealthController, :liveness
+    get "/health/ready", HealthController, :readiness
 
     post "/auth/token", AuthController, :create
 

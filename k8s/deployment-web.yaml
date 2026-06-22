@@ -1,19 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: debt-stalker
+  name: debt-stalker-web
   namespace: debt-stalker
   labels:
     app: debt-stalker
+    component: web
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: debt-stalker
+      component: web
   template:
     metadata:
       labels:
         app: debt-stalker
+        component: web
     spec:
       containers:
         - name: debt-stalker
@@ -31,18 +34,22 @@ spec:
               value: "true"
             - name: RELEASE_NAME
               value: "debt_stalker"
+            - name: OBAN_QUEUES
+              value: "false"
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /api/health/ready
               port: 4000
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /api/health
+              path: /api/health/live
               port: 4000
             initialDelaySeconds: 15
             periodSeconds: 30
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
