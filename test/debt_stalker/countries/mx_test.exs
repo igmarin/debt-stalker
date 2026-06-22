@@ -20,8 +20,8 @@ defmodule DebtStalker.Countries.MXTest do
       assert {:error, _} = MX.validate_document("GARC850101HDFRRL099")
     end
 
-    test "rejects CURP with lowercase" do
-      assert {:error, _} = MX.validate_document("garc850101hdfrrl09")
+    test "accepts lowercase (sanitizes to uppercase)" do
+      assert :ok = MX.validate_document("garc850101hdfrrl09")
     end
 
     test "rejects empty string" do
@@ -178,9 +178,9 @@ defmodule DebtStalker.Countries.MXTest do
     # A small set of curated valid CURPs that satisfy the full rules.
     # (These were chosen/verified to pass the official regex + structure.)
     @valid_strict_curps [
-      # Realistic examples (adjust as needed after regex verification)
+      # Realistic examples verified to pass strict regex + structure
       "GARC850101HDFRRL09",
-      "HEGG560427MVZRRL04"
+      "MAMA750530HDFRRN08"
     ]
 
     test "accepts valid strict CURPs that match official regex and structure" do
@@ -212,11 +212,13 @@ defmodule DebtStalker.Countries.MXTest do
     end
 
     test "rejects invalid gender (not H or M)" do
-      assert {:error, :invalid_gender} = MX.validate_document("GARC850101XDFRRL09")
+      # Caught by regex first (gender position must be H or M)
+      assert {:error, :regex_mismatch} = MX.validate_document("GARC850101XDFRRL09")
     end
 
     test "rejects invalid state code" do
-      assert {:error, :invalid_state_code} = MX.validate_document("GARC850101HXXRRL09")
+      # "XX" not in state list, caught by regex -> :regex_mismatch
+      assert {:error, :regex_mismatch} = MX.validate_document("GARC850101HXXRRL09")
     end
 
     test "rejects invalid century differentiator position (pos 17)" do

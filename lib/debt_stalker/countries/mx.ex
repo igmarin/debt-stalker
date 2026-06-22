@@ -98,7 +98,8 @@ defmodule DebtStalker.Countries.MX do
       ])
 
     # Vary last few chars slightly while keeping structure valid enough for demo
-    prefix = String.slice(base, 0, 15)
+    # prefix up to position 16 (3 consonants), then century + check = 18 chars
+    prefix = String.slice(base, 0, 16)
     century = if :rand.uniform(2) == 1, do: Enum.random(?0..?9), else: Enum.random(?A..?Z)
     check = Enum.random(?0..?9)
     prefix <> <<century>> <> <<check>>
