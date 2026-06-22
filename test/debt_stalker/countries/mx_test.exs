@@ -272,7 +272,8 @@ defmodule DebtStalker.Countries.MXTest do
       # We assert that the state itself is accepted (i.e. we do not get :invalid_state_code).
       # Other errors (e.g. date, century, consonants) are acceptable for this test's purpose.
       base_prefix = "GARC850101H"
-      base_suffix = "FRRL09"
+      # 3 consonants + century + check digit = 5 chars
+      base_suffix = "FRL09"
 
       for state <- Enum.take(valid_states, 8) do
         curp = base_prefix <> state <> base_suffix
