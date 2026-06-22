@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Debt Stalker \u2014 API",
-    "description": "API collection for the ES+MX vertical slice (Phase 1 + health).\n\nSetup:\n1. Run `make up && make setup && make run`\n2. Execute 'Get Token' request first to populate {{token}} variable\n3. All other requests use {{token}} automatically",
+    "name": "Debt Stalker — API",
+    "description": "API collection for the ES+MX vertical slice (Phase 1 + Phase 2).\n\nSetup:\n1. Run `make up && make setup && make run`\n2. Execute 'Get Token (update)' first to populate {{token}}\n3. The Create Application requests capture {{application_id}} automatically\n4. Webhook requests compute HMAC-SHA256 over the raw body using {{webhook_secret}} (default: dev-webhook-secret)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,6 +16,14 @@
     {
       "key": "application_id",
       "value": ""
+    },
+    {
+      "key": "cursor",
+      "value": ""
+    },
+    {
+      "key": "webhook_secret",
+      "value": "dev-webhook-secret"
     }
   ],
   "item": [
@@ -26,6 +34,7 @@
           "name": "Health Check",
           "request": {
             "method": "GET",
+            "header": [],
             "url": "{{base_url}}/api/health"
           },
           "event": [
@@ -33,11 +42,55 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('status is ok', function () {",
+                  "pm.test('status is healthy', function () {",
                   "  var json = pm.response.json();",
-                  "  pm.expect(json.status).to.eql('ok');",
+                  "  pm.expect(json.status).to.eql('healthy');",
                   "});"
-                ]
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/health/live"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('liveness returns ok', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/health/ready"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('readiness returns ready or not_ready', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.status).to.be.oneOf(['ready', 'not_ready']);",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
             }
           ]
@@ -70,7 +123,8 @@
                 "exec": [
                   "var jsonData = pm.response.json();",
                   "pm.collectionVariables.set('token', jsonData.token);"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
           ]
@@ -98,7 +152,8 @@
                 "exec": [
                   "var jsonData = pm.response.json();",
                   "pm.collectionVariables.set('token', jsonData.token);"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
           ]
@@ -134,8 +189,11 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.data) { pm.collectionVariables.set('application_id', jsonData.data.id); }"
-                ]
+                  "if (jsonData.data && jsonData.data.id) {",
+                  "  pm.collectionVariables.set('application_id', jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
               }
             }
           ]
@@ -169,7 +227,8 @@
                   "pm.test('additional_review_required is true', function() {",
                   "  pm.expect(jsonData.data.additional_review_required).to.be.true;",
                   "});"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
           ]
@@ -196,7 +255,7 @@
           }
         },
         {
-          "name": "List Applications",
+          "name": "List Applications (first page)",
           "request": {
             "method": "GET",
             "header": [
@@ -206,18 +265,54 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/applications?limit=10",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "applications"
-              ],
+              "raw": "{{base_url}}/api/applications?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "applications"],
               "query": [
                 {
                   "key": "limit",
-                  "value": "10"
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.cursor) {",
+                  "  pm.collectionVariables.set('cursor', jsonData.cursor);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Applications (next page via cursor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/applications?limit=5&cursor={{cursor}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "applications"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{cursor}}"
                 }
               ]
             }
@@ -234,18 +329,17 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/applications?country=ES",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "applications"
-              ],
+              "raw": "{{base_url}}/api/applications?country=ES&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "applications"],
               "query": [
                 {
                   "key": "country",
                   "value": "ES"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
                 }
               ]
             }
@@ -265,7 +359,7 @@
           }
         },
         {
-          "name": "Update Status (\u2192 pending_risk)",
+          "name": "Update Status (→ pending_risk)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -286,7 +380,28 @@
           }
         },
         {
-          "name": "Update Status (\u2192 approved)",
+          "name": "Update Status (→ additional_review)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"additional_review\"}"
+            }
+          }
+        },
+        {
+          "name": "Update Status (→ approved)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -305,6 +420,48 @@
               "raw": "{\"status\": \"approved\"}"
             }
           }
+        },
+        {
+          "name": "Update Status (→ rejected)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"rejected\"}"
+            }
+          }
+        },
+        {
+          "name": "Update Status (→ cancelled)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"cancelled\"}"
+            }
+          }
         }
       ]
     },
@@ -319,6 +476,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "x-webhook-signature",
+                "value": "{{webhook_signature}}"
               }
             ],
             "url": "{{base_url}}/api/webhooks/provider-confirmations",
@@ -326,16 +487,43 @@
               "mode": "raw",
               "raw": "{\n  \"application_id\": \"{{application_id}}\",\n  \"status\": \"approved\",\n  \"source\": \"provider_es\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var CryptoJS = require('crypto-js');",
+                  "var body = pm.request.body.raw;",
+                  "var secret = pm.collectionVariables.get('webhook_secret');",
+                  "var signature = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex).toLowerCase();",
+                  "pm.collectionVariables.set('webhook_signature', signature);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('webhook accepted', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.received).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
     {
       "name": "Rate Limiting",
-      "description": "Verify 429 rate limit responses and retry hints on auth token and webhook endpoints.",
+      "description": "These requests demonstrate rate limiting. To reliably hit the limit, run the same request rapidly (e.g., via Postman Runner) or lower RATE_LIMIT_AUTH_TOKEN/RATE_LIMIT_WEBHOOK in runtime config.",
       "item": [
         {
-          "name": "POST /api/auth/token (x100 rapid \u2014 expect 429)",
+          "name": "POST /api/auth/token (rapid — expect 429 eventually)",
           "request": {
             "method": "POST",
             "header": [
@@ -360,28 +548,29 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 429) {",
-                  "    pm.test('429 returned', function () {",
-                  "        pm.response.to.have.status(429);",
-                  "    });",
-                  "    pm.test('Retry-After header present', function () {",
-                  "        pm.response.to.have.header('Retry-After');",
-                  "    });",
-                  "    pm.test('Error body correct', function () {",
-                  "        var body = pm.response.json();",
-                  "        pm.expect(body.error).to.eql('rate_limit_exceeded');",
-                  "    });",
+                  "  pm.test('429 returned', function () {",
+                  "    pm.response.to.have.status(429);",
+                  "  });",
+                  "  pm.test('Retry-After header present', function () {",
+                  "    pm.response.to.have.header('Retry-After');",
+                  "  });",
+                  "  pm.test('Error body correct', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('rate_limit_exceeded');",
+                  "  });",
                   "} else {",
-                  "    pm.test('Request allowed (under limit)', function () {",
-                  "        pm.response.to.have.status(200).or.status(400);",
-                  "    });",
+                  "  pm.test('Request allowed (under limit)', function () {",
+                  "    pm.response.to.have.status(200).or.status(400);",
+                  "  });",
                   "}"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
           ]
         },
         {
-          "name": "POST /api/webhooks/provider-confirmations (x100 rapid \u2014 expect 429)",
+          "name": "POST /api/webhooks/provider-confirmations (rapid — expect 429 eventually)",
           "request": {
             "method": "POST",
             "header": [
@@ -406,22 +595,23 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 429) {",
-                  "    pm.test('429 returned', function () {",
-                  "        pm.response.to.have.status(429);",
-                  "    });",
-                  "    pm.test('Retry-After header present', function () {",
-                  "        pm.response.to.have.header('Retry-After');",
-                  "    });",
-                  "    pm.test('Error body correct', function () {",
-                  "        var body = pm.response.json();",
-                  "        pm.expect(body.error).to.eql('rate_limit_exceeded');",
-                  "    });",
+                  "  pm.test('429 returned', function () {",
+                  "    pm.response.to.have.status(429);",
+                  "  });",
+                  "  pm.test('Retry-After header present', function () {",
+                  "    pm.response.to.have.header('Retry-After');",
+                  "  });",
+                  "  pm.test('Error body correct', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('rate_limit_exceeded');",
+                  "  });",
                   "} else {",
-                  "    pm.test('Request allowed (under limit)', function () {",
-                  "        pm.response.to.have.status(200).or.status(401).or.status(422);",
-                  "    });",
+                  "  pm.test('Request allowed (under limit)', function () {",
+                  "    pm.response.to.have.status(200).or.status(401).or.status(422);",
+                  "  });",
                   "}"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
           ]
@@ -430,7 +620,7 @@
     },
     {
       "name": "Provider Failures",
-      "description": "Phase 2 failure scenarios: provider errors and circuit breaker behavior",
+      "description": "Phase 2 failure scenarios: provider errors and circuit breaker behavior. Use the update token for create operations.",
       "item": [
         {
           "name": "Create Application (forced provider error)",
@@ -439,7 +629,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{read_token}}",
+                "value": "Bearer {{token}}",
                 "type": "text"
               },
               {
@@ -448,28 +638,25 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/applications",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "applications"
-              ]
-            },
+            "url": "{{base_url}}/api/applications",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"country\": \"ES\",\n  \"full_name\": \"Test Provider Error\",\n  \"identity_document\": \"99999999R\",\n  \"requested_amount\": \"5000.00\",\n  \"monthly_income\": \"3000.00\"\n}"
             },
-            "description": "Create application that will trigger a provider error. When the provider is unavailable or times out, the application transitions to provider_error status. The circuit breaker opens after N consecutive failures."
+            "description": "Create application that will trigger a provider error. When the provider is unavailable or times out, the application transitions to provider_error status."
           },
-          "response": [
+          "event": [
             {
-              "name": "Provider Error Response",
-              "status": "201",
-              "code": 201,
-              "body": "{\n  \"id\": \"uuid-here\",\n  \"status\": \"provider_error\",\n  \"country\": \"ES\",\n  \"identity_document\": \"****9999R\",\n  \"provider_summary\": null,\n  \"additional_review_required\": false\n}"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test('application created with provider_error status', function() {",
+                  "  pm.expect(jsonData.data.status).to.eql('provider_error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
           ]
         },
@@ -480,110 +667,13 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{read_token}}",
+                "value": "Bearer {{token}}",
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/applications/{{application_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "applications",
-                "{{application_id}}"
-              ]
-            },
-            "description": "Retrieve an application in provider_error status. The circuit breaker may be open, causing subsequent provider calls to fail fast."
-          },
-          "response": [
-            {
-              "name": "Provider Error Status",
-              "status": "200",
-              "code": 200,
-              "body": "{\n  \"id\": \"uuid-here\",\n  \"status\": \"provider_error\",\n  \"country\": \"ES\",\n  \"identity_document\": \"****9999R\",\n  \"provider_summary\": null,\n  \"additional_review_required\": false\n}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "DLQ Inspection",
-      "description": "Phase 2: Dead-letter queue inspection for failed Oban jobs",
-      "item": [
-        {
-          "name": "List Dead-Letter Jobs",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{admin_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/admin/dead-letters",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "dead-letters"
-              ]
-            },
-            "description": "List dead-lettered Oban jobs. Jobs are moved to the DLQ after exhausting retries. Each entry retains original args, error message, and metadata."
-          },
-          "response": [
-            {
-              "name": "Dead-Letter List",
-              "status": "200",
-              "code": 200,
-              "body": "{\n  \"dead_letters\": [\n    {\n      \"id\": \"uuid-here\",\n      \"worker\": \"DebtStalker.Workers.RiskEvaluationWorker\",\n      \"args\": {\n        \"application_id\": \"uuid-here\"\n      },\n      \"error\": \"Provider timeout after 5000ms\",\n      \"inserted_at\": \"2026-01-15T10:30:00Z\"\n    }\n  ]\n}"
-            }
-          ]
-        },
-        {
-          "name": "Replay Dead-Letter Job",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{admin_token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/admin/dead-letters/{{dead_letter_id}}/replay",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "dead-letters",
-                "{{dead_letter_id}}",
-                "replay"
-              ]
-            },
-            "description": "Re-enqueue a dead-lettered job for retry. The original args are preserved and a new Oban job is inserted."
-          },
-          "response": [
-            {
-              "name": "Replay Success",
-              "status": "200",
-              "code": 200,
-              "body": "{\n  \"status\": \"reenqueued\",\n  \"job_id\": \"new-uuid-here\"\n}"
-            }
-          ]
+            "url": "{{base_url}}/api/applications/{{application_id}}",
+            "description": "Retrieve an application in provider_error status."
+          }
         }
       ]
     }

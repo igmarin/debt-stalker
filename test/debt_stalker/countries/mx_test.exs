@@ -171,4 +171,10 @@ defmodule DebtStalker.Countries.MXTest do
       assert MX.document_hint() =~ "CURP"
     end
   end
+
+  describe "currency_symbol/0" do
+    test "returns the peso symbol" do
+      assert MX.currency_symbol() == "$"
+    end
+  end
 end

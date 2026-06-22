@@ -2,17 +2,17 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   @moduledoc """
   Oban worker that sends notifications when an application reaches a terminal status.
 
-  When no endpoint is configured, stores a simulated successful result
-  in notification_attempts. Idempotent via application_id + notification_type
-  dedup check.
+  When no endpoint is configured, stores a simulated successful result in
+  notification_attempts. Idempotent via application_id + notification_type dedup
+  check.
   """
+
   use Oban.Worker, queue: :notifications, max_attempts: 3
 
-  import Ecto.Query
   require Logger
 
   alias DebtStalker.Applications
-  alias DebtStalker.Repo
+  alias DebtStalker.Notifications
 
   @doc "Sends a notification for a terminal application status change."
   @impl true
@@ -50,14 +50,11 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
   end
 
   defp ensure_not_duplicate(app_id, notification_type) do
-    exists =
-      from(n in "notification_attempts",
-        where: n.application_id == type(^app_id, :binary_id),
-        where: n.notification_type == ^notification_type
-      )
-      |> Repo.exists?()
-
-    if exists, do: {:error, :duplicate}, else: :ok
+    if Notifications.notification_exists?(app_id, notification_type) do
+      {:error, :duplicate}
+    else
+      :ok
+    end
   end
 
   defp send_notification(app, _payload) do
@@ -71,19 +68,16 @@ defmodule DebtStalker.Workers.ExternalNotificationWorker do
         {"simulated", 200, "Simulated notification delivery"}
       end
 
-    Repo.insert_all("notification_attempts", [
-      %{
-        id: Ecto.UUID.bingenerate(),
-        application_id: Ecto.UUID.dump!(app.id),
+    {:ok, _attempt} =
+      Notifications.record_notification_attempt(%{
+        application_id: app.id,
         notification_type: "status_notification",
         status: status,
         endpoint: endpoint || "simulated://local",
         response_code: response_code,
         response_body: response_body,
-        attempt_number: 1,
-        inserted_at: DateTime.utc_now()
-      }
-    ])
+        attempt_number: 1
+      })
 
     Logger.info("Notification sent",
       application_id: app.id,

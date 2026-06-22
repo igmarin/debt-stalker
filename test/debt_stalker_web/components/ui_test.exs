@@ -95,4 +95,53 @@ defmodule DebtStalkerWeb.Components.UITest do
       assert UI.format_status(nil) == ""
     end
   end
+
+  describe "format_money/2" do
+    test "formats amount with MX peso symbol and thousand separators" do
+      assert UI.format_money(Decimal.new("5000"), "MX") == "$5,000"
+      assert UI.format_money(Decimal.new("1234567"), "MX") == "$1,234,567"
+    end
+
+    test "formats amount with ES euro symbol and thousand separators" do
+      assert UI.format_money(Decimal.new("5000"), "ES") == "€5,000"
+      assert UI.format_money(Decimal.new("15000"), "ES") == "€15,000"
+    end
+
+    test "preserves decimal cents" do
+      assert UI.format_money(Decimal.new("5000.50"), "MX") == "$5,000.50"
+      assert UI.format_money(Decimal.new("999.99"), "ES") == "€999.99"
+    end
+
+    test "handles nil country with no symbol" do
+      assert UI.format_money(Decimal.new("5000"), nil) == "5,000"
+    end
+
+    test "handles unknown country with no symbol" do
+      assert UI.format_money(Decimal.new("5000"), "XX") == "5,000"
+    end
+
+    test "handles nil amount" do
+      assert UI.format_money(nil, "MX") == ""
+    end
+  end
+
+  describe "format_number/1" do
+    test "formats integers with thousand separators" do
+      assert UI.format_number(4000) == "4,000"
+      assert UI.format_number(1_234_567) == "1,234,567"
+    end
+
+    test "handles small numbers without separators" do
+      assert UI.format_number(42) == "42"
+      assert UI.format_number(999) == "999"
+    end
+
+    test "handles zero" do
+      assert UI.format_number(0) == "0"
+    end
+
+    test "handles nil" do
+      assert UI.format_number(nil) == "0"
+    end
+  end
 end

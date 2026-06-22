@@ -114,7 +114,9 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Full name")}</dt>
-                  <dd class="font-medium">{@app.full_name}</dd>
+                  <dd class="font-medium">
+                    {@app.full_name}
+                  </dd>
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Identity document")}</dt>
@@ -124,11 +126,11 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Requested amount")}</dt>
-                  <dd class="font-medium">{Decimal.to_string(@app.requested_amount)}</dd>
+                  <dd class="font-medium">{format_money(@app.requested_amount, @app.country)}</dd>
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Monthly income")}</dt>
-                  <dd class="font-medium">{Decimal.to_string(@app.monthly_income)}</dd>
+                  <dd class="font-medium">{format_money(@app.monthly_income, @app.country)}</dd>
                 </div>
                 <div>
                   <dt class="text-base-content/60">{gettext("Additional review")}</dt>
@@ -146,11 +148,43 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
 
           <div :if={@app.provider_summary} class="card bg-base-100 shadow-sm">
             <div class="card-body">
-              <h2 class="card-title text-lg mb-2">{gettext("Provider summary")}</h2>
+              <h2 class="card-title text-lg mb-4">{gettext("Provider summary")}</h2>
+
+              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+                <div>
+                  <dt class="text-base-content/60">{gettext("Provider status")}</dt>
+                  <dd class="font-medium">
+                    <.provider_status_badge status={@app.provider_summary["provider_status"]} />
+                  </dd>
+                </div>
+                <div :if={@app.provider_summary["normalized_data"]["bank_name"]}>
+                  <dt class="text-base-content/60">{gettext("Bank")}</dt>
+                  <dd class="font-medium">{@app.provider_summary["normalized_data"]["bank_name"]}</dd>
+                </div>
+                <div :if={@app.provider_summary["risk_indicators"]["credit_score"]}>
+                  <dt class="text-base-content/60">{gettext("Credit score")}</dt>
+                  <dd class="font-medium">
+                    {@app.provider_summary["risk_indicators"]["credit_score"]}
+                  </dd>
+                </div>
+                <div :if={@app.provider_summary["risk_indicators"]["active_loans"]}>
+                  <dt class="text-base-content/60">{gettext("Active loans")}</dt>
+                  <dd class="font-medium">
+                    {@app.provider_summary["risk_indicators"]["active_loans"]}
+                  </dd>
+                </div>
+                <div :if={@app.provider_summary["normalized_data"]["monthly_payment"]}>
+                  <dt class="text-base-content/60">{gettext("Monthly payment")}</dt>
+                  <dd class="font-medium">
+                    {@app.provider_summary["normalized_data"]["monthly_payment"]}
+                  </dd>
+                </div>
+              </dl>
+
               <div class="collapse collapse-arrow bg-base-200">
                 <input type="checkbox" />
                 <div class="collapse-title text-sm font-medium">
-                  {gettext("View normalized data")}
+                  {gettext("View raw normalized data")}
                 </div>
                 <div class="collapse-content">
                   <pre class="text-xs overflow-x-auto"><%= Jason.encode!(@app.provider_summary, pretty: true) %></pre>
@@ -200,5 +234,23 @@ defmodule DebtStalkerWeb.Admin.ApplicationDetailLive do
     |> assign(:app, app)
     |> assign(:allowed_transitions, Applications.allowed_transitions(app))
     |> assign(:audit_logs, Audit.list_audit_logs(app.id))
+  end
+
+  attr :status, :string, default: nil
+
+  defp provider_status_badge(assigns) do
+    class =
+      case assigns.status do
+        "active" -> "badge-success"
+        "inactive" -> "badge-neutral"
+        "blocked" -> "badge-error"
+        _ -> "badge-ghost"
+      end
+
+    assigns = assign(assigns, :class, class)
+
+    ~H"""
+    <span class={["badge", @class]}>{@status || gettext("unknown")}</span>
+    """
   end
 end

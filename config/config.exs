@@ -24,7 +24,10 @@ config :debt_stalker, DebtStalkerWeb.Endpoint,
     layout: false
   ],
   pubsub_server: DebtStalker.PubSub,
-  live_view: [signing_salt: "mekwjnx0"]
+  session_signing_salt: System.get_env("SESSION_SIGNING_SALT", "dev-session-signing-salt"),
+  live_view: [
+    signing_salt: System.get_env("LIVE_VIEW_SIGNING_SALT", "dev-live-view-signing-salt")
+  ]
 
 # Configure LiveView
 config :phoenix_live_view,

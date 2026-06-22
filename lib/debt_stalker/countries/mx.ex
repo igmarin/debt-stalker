@@ -109,6 +109,11 @@ defmodule DebtStalker.Countries.MX do
   @spec document_hint() :: String.t()
   def document_hint, do: "GARC850101HDFRRL09 (CURP)"
 
+  @doc "Returns the currency symbol for Mexico."
+  @impl true
+  @spec currency_symbol() :: String.t()
+  def currency_symbol, do: "$"
+
   # Private
 
   defp maybe_flag_income_ratio(reasons, amount, income) do

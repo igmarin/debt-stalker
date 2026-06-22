@@ -1,6 +1,7 @@
 defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   @moduledoc """
-  Admin-facing list of credit applications with filters, sorting, and page pagination.
+  Admin-facing list of credit applications with filters, sorting, and bounded
+  page-based pagination.
 
   Subscribes to the applications PubSub topic so the list updates in real time.
   """
@@ -17,6 +18,8 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   import DebtStalkerWeb.Components.AdminFilters
   import DebtStalkerWeb.Components.Pagination
   import DebtStalkerWeb.Components.UI
+
+  @default_per_page 20
 
   @doc "Mounts the admin applications list."
   @impl true
@@ -35,7 +38,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     {:ok, socket}
   end
 
-  @doc "Applies filters, sort, and page from URL parameters."
+  @doc "Applies filters, sort, and page pagination from URL parameters."
   @impl true
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -44,7 +47,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
       params
       |> FilterParams.from_params()
       |> Map.put_new(:page, 1)
-      |> Map.put_new(:per_page, 20)
+      |> Map.put_new(:per_page, @default_per_page)
 
     result = Applications.list_applications(filters)
 
@@ -60,7 +63,7 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
     {:noreply, socket}
   end
 
-  @doc "Handles list interactions (filters, pagination, and sorting)."
+  @doc "Handles list interactions (filters, load more, and sorting)."
   @impl true
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -73,15 +76,23 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
         date_from: parse_date(params["date_from"]),
         date_to: parse_date(params["date_to"])
       })
-      |> Map.put(:page, 1)
+      |> Map.delete(:cursor)
+      |> Map.delete(:page)
       |> drop_nil_values()
+      |> Map.put_new(:page, 1)
+      |> Map.put_new(:per_page, @default_per_page)
 
     {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 
   def handle_event("paginate", %{"page" => page}, socket) do
-    current_page = Map.get(socket.assigns.filters, :page, 1)
-    filters = Map.put(socket.assigns.filters, :page, FilterParams.parse_int(page, current_page))
+    page = String.to_integer(page)
+
+    filters =
+      socket.assigns.filters
+      |> Map.put(:page, page)
+      |> Map.put_new(:per_page, @default_per_page)
+
     {:noreply, push_patch(socket, to: ~p"/admin/applications?#{FilterParams.to_query(filters)}")}
   end
 
@@ -164,11 +175,13 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
                   <%= for app <- @applications do %>
                     <tr id={"app-#{app.id}"} class={row_highlight_class(app.id, @highlighted_id)}>
                       <td>{app.country}</td>
-                      <td class="whitespace-nowrap">{app.full_name}</td>
+                      <td class="whitespace-nowrap">
+                        {app.full_name}
+                      </td>
                       <td class="font-mono">
                         {CreditApplication.redact_document(app.identity_document)}
                       </td>
-                      <td>{Decimal.to_string(app.requested_amount)}</td>
+                      <td>{format_money(app.requested_amount, app.country)}</td>
                       <td><.status_badge status={app.status} /></td>
                       <td>
                         <%= if app.additional_review_required do %>
@@ -239,11 +252,17 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLive do
   end
 
   defp reload_list(socket) do
-    result = Applications.list_applications(socket.assigns.filters)
+    filters =
+      socket.assigns.filters
+      |> Map.put_new(:page, 1)
+      |> Map.put_new(:per_page, @default_per_page)
+
+    result = Applications.list_applications(filters)
 
     socket
     |> assign(:applications, result.entries)
     |> assign(:page, result.page)
+    |> assign(:per_page, result.per_page)
     |> assign(:total_count, result.total_count)
     |> assign(:total_pages, result.total_pages)
   end

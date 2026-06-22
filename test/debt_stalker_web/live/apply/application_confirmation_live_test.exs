@@ -34,7 +34,21 @@ defmodule DebtStalkerWeb.Apply.ApplicationConfirmationLiveTest do
       {:ok, view, _html} =
         live(with_role(conn, "applicant"), ~p"/apply/#{app.id}/confirmation")
 
-      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+      # Subscribe so we can wait for the broadcast to be delivered before
+      # asserting on the rendered view.
+      app_id = app.id
+      :ok = Phoenix.PubSub.subscribe(DebtStalker.PubSub, "applications:#{app_id}")
+
+      {:ok, _} = Applications.update_status(app_id, "pending_risk", "system")
+
+      assert_receive {:status_changed, %{application_id: ^app_id}}
+
+      # Send the message directly to the view to guarantee it processes the
+      # status change synchronously in the test.
+      send(
+        view.pid,
+        {:status_changed, %{application_id: app_id, from: "submitted", to: "pending_risk"}}
+      )
 
       html = render(view)
       assert html =~ "Riesgo pendiente"

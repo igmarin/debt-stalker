@@ -39,5 +39,8 @@ defmodule DebtStalker.Countries.Behaviour do
   @doc "Returns a short example/hint for the identity document field in UI forms."
   @callback document_hint() :: String.t()
 
+  @doc ~S|Returns the currency symbol for this country (e.g. "$", "€").|
+  @callback currency_symbol() :: String.t()
+
   @optional_callbacks [acceptable_risk_score?: 1, document_hint: 0]
 end

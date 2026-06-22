@@ -35,4 +35,16 @@ defmodule DebtStalker.CountriesTest do
       assert Countries.random_identity_document("XX") == nil
     end
   end
+
+  describe "currency_symbol/1" do
+    test "returns the correct symbol for supported countries" do
+      assert Countries.currency_symbol("ES") == "€"
+      assert Countries.currency_symbol("MX") == "$"
+    end
+
+    test "returns an empty string for unknown or nil countries" do
+      assert Countries.currency_symbol("XX") == ""
+      assert Countries.currency_symbol(nil) == ""
+    end
+  end
 end

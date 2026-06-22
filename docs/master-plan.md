@@ -12,7 +12,7 @@
 | Document | Role |
 |----------|------|
 | `docs/requirements.md` | **Canonical challenge brief** (the customer requirements). |
-| `docs/master-plan.md` (this file) | Authoritative synthesis: review, architecture, roadmap, decisions, risks. |
+| `docs/master-plan.md` (this file) | Planning synthesis: review, architecture, roadmap, decisions, risks. `docs/requirements.md` remains canonical; later implementation decisions are reflected in README, CHANGELOG, and phase reports. |
 | `docs/phases/phase-0.md` | Detailed scope for Phase 0 (Platform Foundation + tooling). |
 | `docs/phases/phase-1.md` | Detailed scope for Phase 1 (ES + MX vertical slice). |
 | `docs/phases/phase-2.md` | Detailed scope for Phase 2 (Resilience/Observability + Production hardening). |
@@ -34,8 +34,8 @@
 - A new evaluator can run the system locally in **< 5 minutes** with documented commands.
 - An application created via API **or** the LiveView form flows end-to-end: synchronous validation → provider enrichment → persist → **Postgres trigger** writes an outbox event → worker processes it → status transition → **audit record** → **PubSub broadcast** → **UI updates without refresh**.
 - Adding a third country touches **only** a new country module + provider adapter + registration — **no** controller, persistence, worker, or UI changes.
-- All API endpoints (except health + token issuance) reject unauthenticated requests; PII never appears in logs or raw in responses.
-- The README contains a credible scale analysis (indexes, partitioning, cursor pagination, archiving).
+- All API endpoints (except health + token issuance) reject unauthenticated requests; identity documents and sensitive provider data never appear raw in responses or logs, and full names are only shown on authorized API/UI surfaces.
+- The README contains a credible scale analysis (indexes, partitioning, API cursor pagination, admin pagination tradeoffs, archiving).
 
 ---
 
@@ -208,8 +208,8 @@ Legend: ✅ = all three agree · ⚠️ = minor divergence · ★ = my chosen ap
 | ES income rule | >12× income → flag review | >12× income → flag review | >12× income → "reject unless manual review" | ⚠️ ★ **Flag `additional_review_required`** (keep app in system) — see §6 |
 | MX income rule | >10× income → review | Same | Same | ✅ ★ `> 10× income` → review |
 | MX debt rule | debt+amount > 18× income → review | Same | Same | ✅ ★ `provider_debt + amount > 18× income` → review |
-| Pagination | Cursor/keyset | Cursor/keyset | Cursor/keyset | ✅ ★ Cursor pagination (no unbounded OFFSET) |
-| PII | encrypt + hash + redact | Same | Same | ✅ ★ Phase 1: encrypt `identity_document` at rest (Cloak) + `identity_document_hash` for lookup + last-4 redaction in responses/logs |
+| Pagination | Cursor/keyset | Cursor/keyset | Cursor/keyset | ✅ ★ API cursor pagination; admin UI uses bounded page pagination for sortable operations |
+| PII | encrypt + hash + redact | Same | Same | ✅ ★ Phase 1: encrypt `identity_document` at rest (Cloak) + `identity_document_hash` for lookup + identity-document last-4 redaction in responses/logs |
 | Caching | ETS country config | ETS; app cache deferred | ETS country config | ✅ ★ ETS country config in Phase 1; **app-level detail cache → Phase 2** |
 | Data model | 6 core tables | 6 core tables | 6 core tables | ✅ ★ `credit_applications`, `application_status_transitions`, `application_events`, `audit_logs`, `webhook_events`, `notification_attempts` |
 | Indexes | (country,status,date)+ | Same | Same | ✅ ★ Composite + FK + outbox + hash indexes |
@@ -235,7 +235,7 @@ The synthesis converges on a clean layered architecture. The non-negotiable spin
 2. Country logic lives only in `DebtStalker.Countries.*` behind a behaviour + registry.
 3. Provider logic lives only in `DebtStalker.Providers.*`; **raw provider payloads are never persisted or exposed**; only normalized `provider_summary`.
 4. Every status change goes through **one** function that validates the transition, records an `application_status_transitions` row, writes an `audit_logs` entry, and emits a PubSub event.
-5. All list queries are **cursor-paginated**.
+5. API list queries are **cursor-paginated**; admin operational tables use bounded page pagination for sortable workflows until high-volume keyset/search work is added.
 6. `application_date` is always **server-set**.
 7. Full `identity_document` is **never** logged; responses redact to last-4.
 8. Async work driven by data changes originates from **Postgres triggers → `application_events`**.

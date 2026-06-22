@@ -12,6 +12,7 @@ defmodule DebtStalkerWeb.Components.UI do
   import DebtStalkerWeb.CoreComponents, only: [icon: 1]
 
   alias DebtStalker.Applications.CreditApplication
+  alias DebtStalker.Countries
 
   @doc """
   Renders a status badge for a credit application.
@@ -90,6 +91,18 @@ defmodule DebtStalkerWeb.Components.UI do
   end
 
   @doc """
+  Renders a loading skeleton placeholder.
+  """
+  attr :class, :any, default: nil
+
+  @spec skeleton(map()) :: Phoenix.LiveView.Rendered.t()
+  def skeleton(assigns) do
+    ~H"""
+    <div class={["skeleton rounded", @class]}></div>
+    """
+  end
+
+  @doc """
   Renders an audit trail timeline for an application.
   """
   attr :entries, :list, required: true
@@ -104,7 +117,7 @@ defmodule DebtStalkerWeb.Components.UI do
           {format_datetime(entry.inserted_at)}
         </div>
         <div class="timeline-middle">
-          <.icon name="hero-check-circle" class="size-4 text-base-content/40" />
+          <.icon name={audit_icon(entry)} class={["size-4", audit_icon_class(entry)]} />
         </div>
         <div class="timeline-end timeline-box bg-base-100 shadow-sm text-sm">
           <p class="font-medium">{format_audit_action(entry.action)}</p>
@@ -159,6 +172,32 @@ defmodule DebtStalkerWeb.Components.UI do
   defp format_audit_action("status_changed"), do: gettext("Status changed")
   defp format_audit_action(action), do: format_status(action)
 
+  defp audit_icon(%{action: "status_changed", metadata: %{"to" => status}}) do
+    case status do
+      "approved" -> "hero-check-circle"
+      "rejected" -> "hero-x-circle"
+      "additional_review" -> "hero-exclamation-triangle"
+      "provider_error" -> "hero-server-stack"
+      "cancelled" -> "hero-no-symbol"
+      _ -> "hero-arrow-path"
+    end
+  end
+
+  defp audit_icon(_entry), do: "hero-check-circle"
+
+  defp audit_icon_class(%{action: "status_changed", metadata: %{"to" => status}}) do
+    case status do
+      "approved" -> "text-success"
+      "rejected" -> "text-error"
+      "additional_review" -> "text-warning"
+      "provider_error" -> "text-neutral"
+      "cancelled" -> "text-base-content/50"
+      _ -> "text-base-content/40"
+    end
+  end
+
+  defp audit_icon_class(_entry), do: "text-base-content/40"
+
   defp format_datetime(%DateTime{} = dt) do
     Calendar.strftime(dt, "%Y-%m-%d %H:%M:%S UTC")
   end
@@ -177,5 +216,80 @@ defmodule DebtStalkerWeb.Components.UI do
     Enum.map(CreditApplication.valid_statuses(), fn status ->
       {format_status(status), status}
     end)
+  end
+
+  @doc """
+  Formats a Decimal amount as money with a currency symbol and thousand separators.
+
+  The currency symbol is resolved from the country code via the Countries context.
+  Returns an empty string when `amount` is nil.
+
+  ## Examples
+
+      iex> format_money(Decimal.new("5000"), "MX")
+      "$5,000"
+      iex> format_money(Decimal.new("15000"), "ES")
+      "€15,000"
+  """
+  @spec format_money(Decimal.t() | nil, String.t() | nil) :: String.t()
+  def format_money(nil, _country), do: ""
+
+  def format_money(%Decimal{} = amount, country) do
+    symbol = Countries.currency_symbol(country)
+    formatted = format_decimal_with_separators(amount)
+    "#{symbol}#{formatted}"
+  end
+
+  @doc """
+  Formats an integer with thousand separators for display of counts.
+
+  ## Examples
+
+      iex> format_number(4000)
+      "4,000"
+      iex> format_number(42)
+      "42"
+  """
+  @spec format_number(integer() | nil) :: String.t()
+  def format_number(nil), do: "0"
+
+  def format_number(number) when is_integer(number) do
+    number
+    |> Integer.to_charlist()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.join(",")
+    |> String.reverse()
+  end
+
+  defp format_decimal_with_separators(%Decimal{} = amount) do
+    amount
+    |> Decimal.to_string(:normal)
+    |> String.split(".")
+    |> case do
+      [int_part] ->
+        add_thousand_separators(int_part)
+
+      [int_part, decimal_part] ->
+        add_thousand_separators(int_part) <> "." <> decimal_part
+    end
+  end
+
+  defp add_thousand_separators(number_string) do
+    {sign, digits} =
+      case number_string do
+        "-" <> rest -> {"-", rest}
+        _ -> {"", number_string}
+      end
+
+    formatted =
+      digits
+      |> String.to_charlist()
+      |> Enum.reverse()
+      |> Enum.chunk_every(3)
+      |> Enum.join(",")
+      |> String.reverse()
+
+    sign <> formatted
   end
 end
