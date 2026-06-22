@@ -274,14 +274,17 @@ defmodule DebtStalker.Applications do
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:#{app.id}",
-          {:status_changed, %{from: app.status, to: new_status}}
+          {:status_changed, %{from: app.status, to: new_status, application_id: app.id}}
         )
 
         Phoenix.PubSub.broadcast(
           DebtStalker.PubSub,
           "applications:list",
-          {:status_changed, %{from: app.status, to: new_status}}
+          {:status_changed, %{from: app.status, to: new_status, application_id: app.id}}
         )
+
+        # Invalidate the cached application detail
+        Cachex.del(:app_cache, "app:#{app.id}")
 
         {:ok, updated}
 
@@ -290,18 +293,55 @@ defmodule DebtStalker.Applications do
     end
   end
 
-  @doc "Fetches a single application by id."
+  @doc "Fetches a single application by id (cache-backed)."
   @spec get_application(String.t()) :: {:ok, CreditApplication.t()} | {:error, :not_found}
   def get_application(id) do
-    case Ecto.UUID.cast(id) do
-      {:ok, _} ->
-        case Repo.get(CreditApplication, id) do
-          nil -> {:error, :not_found}
-          app -> {:ok, app}
-        end
+    with {:ok, _} <- Ecto.UUID.cast(id),
+         {:ok, app} <- fetch_from_cache(id) do
+      {:ok, app}
+    else
+      :error -> {:error, :not_found}
+      {:miss, id} -> fetch_from_db(id)
+    end
+  end
 
-      :error ->
+  @spec fetch_from_cache(String.t()) :: {:ok, CreditApplication.t()} | {:miss, String.t()}
+  defp fetch_from_cache(id) do
+    cache_key = "app:#{id}"
+
+    case Cachex.get(:app_cache, cache_key) do
+      {:ok, nil} ->
+        emit_cache_miss(cache_key)
+        {:miss, id}
+
+      {:ok, app} ->
+        emit_cache_hit(cache_key)
+        {:ok, app}
+
+      {:error, reason} ->
+        # Cache unavailable — log and fall back to DB.
+        Logger.warning("Cachex error during get_application: #{inspect(reason)}")
+        emit_cache_miss(cache_key)
+        {:miss, id}
+    end
+  end
+
+  @spec fetch_from_db(String.t()) :: {:ok, CreditApplication.t()} | {:error, :not_found}
+  defp fetch_from_db(id) do
+    cache_key = "app:#{id}"
+
+    case Repo.get(CreditApplication, id) do
+      nil ->
         {:error, :not_found}
+
+      app ->
+        # Cache-aside: populate cache after DB read. The TTL (default 60s)
+        # bounds staleness if a concurrent update invalidates between the
+        # DB read and this Cachex.put. The explicit Cachex.del in
+        # update_status/3 handles the normal invalidation path.
+        ttl = Application.get_env(:debt_stalker, :app_cache_ttl_ms, :timer.seconds(60))
+        Cachex.put(:app_cache, cache_key, app, ttl: ttl)
+        {:ok, app}
     end
   end
 
@@ -456,5 +496,23 @@ defmodule DebtStalker.Applications do
   defp handle_provider_result({:error, reason}, country) do
     DebtStalker.Telemetry.emit_provider_call(country, :error, error_reason: reason)
     {:error, :provider_error}
+  end
+
+  @spec emit_cache_hit(String.t()) :: :ok
+  defp emit_cache_hit(key) do
+    :telemetry.execute(
+      [:debt_stalker, :cache, :hit],
+      %{count: 1},
+      %{key: key}
+    )
+  end
+
+  @spec emit_cache_miss(String.t()) :: :ok
+  defp emit_cache_miss(key) do
+    :telemetry.execute(
+      [:debt_stalker, :cache, :miss],
+      %{count: 1},
+      %{key: key}
+    )
   end
 end

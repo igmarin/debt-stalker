@@ -67,14 +67,18 @@ defmodule DebtStalker.Applications.UpdateStatusTest do
       Phoenix.PubSub.subscribe(DebtStalker.PubSub, "applications:#{app.id}")
       {:ok, _updated} = Applications.update_status(app.id, "pending_risk", "system")
 
-      assert_receive {:status_changed, %{from: "submitted", to: "pending_risk"}}, 1000
+      assert_receive {:status_changed,
+                      %{from: "submitted", to: "pending_risk", application_id: _}},
+                     1000
     end
 
     test "broadcasts PubSub event to applications:list topic", %{app: app} do
       Phoenix.PubSub.subscribe(DebtStalker.PubSub, "applications:list")
       {:ok, _updated} = Applications.update_status(app.id, "pending_risk", "system")
 
-      assert_receive {:status_changed, %{from: "submitted", to: "pending_risk"}}, 1000
+      assert_receive {:status_changed,
+                      %{from: "submitted", to: "pending_risk", application_id: _}},
+                     1000
     end
 
     test "unknown application returns not_found" do

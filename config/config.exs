@@ -95,6 +95,12 @@ config :debt_stalker, :rate_limit,
   auth_token: [limit: 10, window_ms: 60_000],
   webhook: [limit: 20, window_ms: 60_000]
 
+# App cache TTL (milliseconds). The cache stores the full
+# CreditApplication struct (including decrypted PII) in memory.
+# A short TTL limits the PII exposure window and bounds staleness
+# if an update path bypasses explicit invalidation.
+config :debt_stalker, :app_cache_ttl_ms, :timer.seconds(60)
+
 # Configure Oban
 config :debt_stalker, Oban,
   repo: DebtStalker.Repo,

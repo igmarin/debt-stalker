@@ -217,6 +217,16 @@ defmodule DebtStalkerWeb.Telemetry do
         event_name: [:debt_stalker, :oban, :job, :stop],
         tags: [:worker, :result],
         description: "Number of Oban jobs executed by worker and result"
+      ),
+
+      # Cache: hit/miss metrics
+      counter("debt_stalker.cache.hit.count",
+        event_name: [:debt_stalker, :cache, :hit],
+        description: "Number of cache hits on application detail reads"
+      ),
+      counter("debt_stalker.cache.miss.count",
+        event_name: [:debt_stalker, :cache, :miss],
+        description: "Number of cache misses on application detail reads"
       )
     ]
   end
