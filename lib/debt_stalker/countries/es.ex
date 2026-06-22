@@ -2,9 +2,11 @@ defmodule DebtStalker.Countries.ES do
   @moduledoc """
   Spain (ES) country module.
 
-  Implements DNI validation (8 digits + checksum letter), financial threshold
-  checks (amount > 15000 and amount > 12x income flag for review),
-  and provider summary interpretation.
+  Implements DNI/NIE validation, financial threshold checks (amount > 15000 and
+  amount > 12x income flag for review), and provider summary interpretation.
+
+  Document validation is delegated to `DebtStalker.Countries.DniNie`.
+  See https://github.com/igmarin/debt-stalker/issues/122 for future hardening work.
   """
   @behaviour DebtStalker.Countries.Behaviour
 
@@ -12,15 +14,17 @@ defmodule DebtStalker.Countries.ES do
   @amount_threshold Decimal.new("15000")
   @income_multiplier 12
 
-  @doc "Validates a Spanish DNI (8 digits + checksum letter)."
+  @doc "Validates a Spanish DNI or NIE using strict pre-validation rules."
   @impl true
-  @spec validate_document(String.t()) :: :ok | {:error, String.t()}
+  @spec validate_document(String.t()) :: :ok | {:error, atom()}
   def validate_document(document) do
-    trimmed = String.trim(document)
+    validate_document(document, [])
+  end
 
-    with {:ok, {digits, letter}} <- parse_dni(trimmed) do
-      verify_checksum(digits, letter)
-    end
+  @impl true
+  @spec validate_document(String.t(), keyword()) :: :ok | {:error, atom()}
+  def validate_document(document, opts) do
+    DebtStalker.Countries.DniNie.validate(document, opts)
   end
 
   @doc "Checks financial thresholds for Spain and returns review flags."
@@ -92,33 +96,7 @@ defmodule DebtStalker.Countries.ES do
     digits_str <> letter
   end
 
-  # Private
-
-  defp parse_dni(document) when byte_size(document) == 9 do
-    digits_str = String.slice(document, 0, 8)
-    letter = String.at(document, 8)
-
-    if String.match?(digits_str, ~r/^\d{8}$/) and String.match?(letter, ~r/^[A-Z]$/) do
-      {:ok, {String.to_integer(digits_str), letter}}
-    else
-      {:error, "invalid DNI format: must be 8 digits followed by one uppercase letter"}
-    end
-  end
-
-  defp parse_dni(_document) do
-    {:error, "invalid DNI format: must be exactly 9 characters (8 digits + 1 letter)"}
-  end
-
-  defp verify_checksum(digits, letter) do
-    expected_index = rem(digits, 23)
-    expected_letter = String.at(@dni_letters, expected_index)
-
-    if letter == expected_letter do
-      :ok
-    else
-      {:error, "invalid DNI checksum: expected #{expected_letter}, got #{letter}"}
-    end
-  end
+  # Private helpers for financials only (DNI/NIE logic moved to DniNie)
 
   defp maybe_flag_amount(reasons, amount) do
     if Decimal.gt?(amount, @amount_threshold) do

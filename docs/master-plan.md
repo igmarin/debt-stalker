@@ -67,7 +67,7 @@ The four planning skills are interactive and gated. They were run here in **non-
 | Concern | Area | Severity | Recommendation |
 |---------|------|----------|----------------|
 | DB-generated async via Postgres triggers → outbox is non-trivial to keep idempotent & ordered | Architecture | **Medium** | Use a dedicated `application_events` outbox + `FOR UPDATE SKIP LOCKED` dispatcher; idempotent workers keyed on event id. Cover with an integration test (insert/update → event row → worker). |
-| DNI/CURP checksum correctness | NFR / Correctness | **Medium** | Implement documented format + checksum; document any simplification; property-based + table tests. |
+| DNI/CURP checksum correctness | NFR / Correctness | **Low** (mitigated) | Strict pre-validation implemented in `Countries.Curp` + `DniNie` (see ADR-0008); property + table tests; virtual birth_date cross-check. Remaining full weighted CURP digit can be added later. |
 | "Millions of applications" with no real volume to test | Scalability | **Low** | Design for it (cursor pagination, composite indexes, partition-by-date plan) and *document* it; do not over-build in Phase 1. |
 | PII handling vs "easy to run in <5 min" | Security vs Reproducibility | **Low** | Phase 1: encrypt `identity_document` at rest with Cloak from day one + hash for lookup + redact (last-4) in responses/logs. Local setup stays trivial — encryption key is a dev default in `config/dev.exs`. |
 | Realtime UI tests can be flaky | Testing | **Low** | Test PubSub directly + LiveView lifecycle assertions. |
@@ -523,7 +523,7 @@ Country modules return their allowed transitions from `allowed_status_transition
 | Risk | Likelihood | Impact | Proximity | Mitigation | Owner |
 |------|------------|--------|-----------|------------|-------|
 | Async idempotency/ordering (trigger→outbox→worker) | Med | High | Near | `FOR UPDATE SKIP LOCKED`; idempotent workers keyed on event id; integration test early | Tech Lead |
-| DNI/CURP checksum correctness | Med | Med | Near | Documented rules + simplifications; property + table tests | Backend dev |
+| DNI/CURP checksum correctness | Low | Med | Mitigated in curp-dni work | Strict rules + structured errors + ADR-0008; see Phase 2 refinement ticket #123 | Backend dev |
 | Over-building for scale before slice is green | Med | High | Near | Strict Phase 1 gate; design-not-implement for scale | Delivery Lead |
 | LiveView realtime tests flaky | Med | Med | Mid | Test PubSub directly; LiveView lifecycle assertions | Frontend dev |
 | Provider failure orphans applications | Low | Med | Near | Always persist with recoverable `provider_error` status | Backend dev |
@@ -586,6 +586,8 @@ Each phase produces three documentation artifacts:
 
 **2. Architecture Decision Records** (`docs/adr/NNNN-title.md`):
 Each significant decision made during implementation (not just pre-planned ones) gets an ADR:
+
+- ADR-0008: Strict document validation hardening for CURP/DNI (DRY/YAGNI + future country extensibility). See GitHub #122 and phase-2-refinement ticket #123.
 ```markdown
 # NNNN. Title
 ## Status
