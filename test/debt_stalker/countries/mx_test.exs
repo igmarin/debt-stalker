@@ -220,9 +220,8 @@ defmodule DebtStalker.Countries.MXTest do
     end
 
     test "rejects invalid century differentiator position (pos 17)" do
-      # pos 17 must be 0-9 for pre-2000 or A-Z for 2000+
-      # Using a value that breaks rules (e.g. symbol) will be caught by regex mostly
-      assert {:error, :invalid_century_code} = MX.validate_document("GARC850101HDFRR-09")
+      # The invalid character is caught by the regex (century position must be 0-9 or A-Z)
+      assert {:error, :regex_mismatch} = MX.validate_document("GARC850101HDFRR-09")
     end
 
     test "returns structured error atoms (not bare strings)" do
@@ -269,16 +268,19 @@ defmodule DebtStalker.Countries.MXTest do
         "ZS"
       ]
 
-      # sample to keep fast
-      for state <- Enum.take(valid_states, 5) do
-        # Build a minimal document that will pass regex structure except we use a known good pattern
-        curp = "GARC850101H" <> state <> "FRRL09"
-        # Note: may still fail strict consonant/century but exercises state path
-        _ = MX.validate_document(curp)
-      end
+      # Use a base that should be otherwise valid except we vary the state.
+      # We assert that the state itself is accepted (i.e. we do not get :invalid_state_code).
+      # Other errors (e.g. date, century, consonants) are acceptable for this test's purpose.
+      base_prefix = "GARC850101H"
+      base_suffix = "FRRL09"
 
-      # At least one should not be :invalid_state_code
-      assert true
+      for state <- Enum.take(valid_states, 8) do
+        curp = base_prefix <> state <> base_suffix
+        result = MX.validate_document(curp)
+
+        refute result == {:error, :invalid_state_code},
+               "State #{state} should be accepted, got #{inspect(result)}"
+      end
     end
 
     test "birth_date cross validation with 2000+ century letter" do

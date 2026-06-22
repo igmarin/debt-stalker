@@ -725,14 +725,48 @@ defmodule DebtStalker.Applications do
 
   defp resolve_country(_attrs), do: {:error, :unsupported_country}
 
-  defp validate_document(country_module, %{identity_document: document}) do
-    case country_module.validate_document(document) do
-      :ok -> :ok
-      {:error, message} -> {:error, :invalid_document, message}
+  defp validate_document(country_module, attrs) when is_map(attrs) do
+    document = Map.get(attrs, :identity_document) || Map.get(attrs, "identity_document")
+
+    if is_nil(document) do
+      :ok
+    else
+      birth_date = parse_optional_birth_date(attrs)
+
+      case country_module.validate_document(document, birth_date: birth_date) do
+        :ok ->
+          :ok
+
+        {:error, reason} when is_atom(reason) ->
+          {:error, :invalid_document, error_message_for(reason)}
+      end
     end
   end
 
-  defp validate_document(_country_module, _attrs), do: :ok
+  defp parse_optional_birth_date(%{birth_date: %Date{} = d}), do: d
+  defp parse_optional_birth_date(%{"birth_date" => val}), do: parse_date_value(val)
+  defp parse_optional_birth_date(_), do: nil
+
+  defp parse_date_value(%Date{} = d), do: d
+
+  defp parse_date_value(str) when is_binary(str) do
+    case Date.from_iso8601(str) do
+      {:ok, d} -> d
+      _ -> nil
+    end
+  end
+
+  defp parse_date_value(_), do: nil
+
+  defp error_message_for(:invalid_length), do: "has invalid length for the document type"
+  defp error_message_for(:regex_mismatch), do: "has invalid format"
+  defp error_message_for(:invalid_date), do: "contains an invalid date of birth"
+  defp error_message_for(:invalid_gender), do: "has invalid gender code"
+  defp error_message_for(:invalid_state_code), do: "has invalid state code"
+  defp error_message_for(:invalid_century_code), do: "has invalid century code"
+  defp error_message_for(:bad_control_digit), do: "has invalid control/check digit"
+  defp error_message_for(:birth_date_mismatch), do: "does not match the provided birth date"
+  defp error_message_for(_), do: "is invalid"
 
   defp evaluate_financials(country_module, attrs) do
     amount = Map.get(attrs, :requested_amount)

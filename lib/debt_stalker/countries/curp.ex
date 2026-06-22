@@ -34,7 +34,6 @@ defmodule DebtStalker.Countries.Curp do
           | :invalid_date
           | :invalid_gender
           | :invalid_state_code
-          | :invalid_century_code
           | :birth_date_mismatch
 
   @doc """
@@ -79,16 +78,14 @@ defmodule DebtStalker.Countries.Curp do
   end
 
   defp validate_components(curp) do
-    # Positions are 0-indexed in Elixir strings
+    # Positions are 0-indexed in Elixir strings.
+    # Note: century and final check digit are already enforced by @official_regex.
+    # Only gender, state, and realistic date need explicit checks here for better error atoms.
     gender = String.at(curp, 10)
     state = String.slice(curp, 11, 2)
-    century_char = String.at(curp, 16)
-    check_digit = String.at(curp, 17)
 
     with :ok <- validate_gender(gender),
-         :ok <- validate_state(state),
-         :ok <- validate_century(century_char),
-         :ok <- validate_check_digit(check_digit) do
+         :ok <- validate_state(state) do
       validate_date_segment(curp)
     end
   end
@@ -102,13 +99,6 @@ defmodule DebtStalker.Countries.Curp do
     else
       {:error, :invalid_state_code}
     end
-  end
-
-  defp validate_century(<<c>>) when c in ?0..?9 or c in ?A..?Z, do: :ok
-  defp validate_century(_), do: {:error, :invalid_century_code}
-
-  defp validate_check_digit(digit) do
-    if String.match?(digit, ~r/^[0-9]$/), do: :ok, else: {:error, :bad_control_digit}
   end
 
   defp validate_date_segment(curp) do

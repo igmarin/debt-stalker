@@ -44,10 +44,11 @@ defmodule DebtStalker.Countries.ESTest do
     end
 
     test "supports DNI with fewer than 8 digits (pads)" do
-      # "1234567Z" becomes 01234567Z for checksum calculation
-      result = ES.validate_document("1234567Z")
-      # May be error or ok depending on letter; the point is it does not crash on length
-      assert match?({:error, _}, result) or result == :ok
+      # "0000000T" pads to "00000000T" which has correct letter (known valid)
+      assert :ok = ES.validate_document("0000000T")
+
+      # Wrong letter after padding should give bad control
+      assert {:error, :bad_control_digit} = ES.validate_document("0000000A")
     end
 
     test "returns structured atom errors" do
