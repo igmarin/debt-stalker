@@ -18,11 +18,13 @@ defmodule DebtStalker.Application do
       DebtStalker.Repo,
       {DNSCluster, query: Application.get_env(:debt_stalker, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: DebtStalker.PubSub},
+      {Cachex, name: :app_cache},
       DebtStalker.Countries.Registry,
       DebtStalker.Providers.Registry,
       DebtStalker.Providers.CircuitBreakers,
       {Oban, Application.fetch_env!(:debt_stalker, Oban)},
       DebtStalker.ObanTelemetryHandler,
+      DebtStalker.CacheInvalidator,
       prometheus_metrics_reporter(),
       DebtStalkerWeb.Endpoint
     ]

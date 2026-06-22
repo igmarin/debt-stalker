@@ -103,6 +103,9 @@ defmodule DebtStalker.MixProject do
       # Rate limiting
       {:hammer, "~> 6.0"},
 
+      # Application-level cache
+      {:cachex, "~> 3.6"},
+
       # Code quality (dev/test)
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
