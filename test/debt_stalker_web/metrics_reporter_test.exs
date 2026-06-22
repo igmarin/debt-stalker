@@ -17,6 +17,34 @@ defmodule DebtStalkerWeb.MetricsReporterTest do
   end
 
   describe "Prometheus metrics reporter" do
+    test "defines unique Prometheus metric names" do
+      metric_names =
+        DebtStalkerWeb.Telemetry.prometheus_metrics()
+        |> Enum.map(& &1.name)
+
+      assert metric_names == Enum.uniq(metric_names)
+    end
+
+    test "registers outbox metrics only in the Prometheus metrics list" do
+      generic_metric_names =
+        DebtStalkerWeb.Telemetry.metrics()
+        |> Enum.map(&metric_name/1)
+
+      prometheus_metric_names =
+        DebtStalkerWeb.Telemetry.prometheus_metrics()
+        |> Enum.map(&metric_name/1)
+
+      outbox_metric_names = [
+        "debt_stalker.outbox.events.processed.count",
+        "debt_stalker.outbox.events.failed.count",
+        "debt_stalker.outbox.remaining.count",
+        "debt_stalker.outbox.oldest_unprocessed_age_ms"
+      ]
+
+      assert Enum.all?(outbox_metric_names, &(&1 in prometheus_metric_names))
+      refute Enum.any?(outbox_metric_names, &(&1 in generic_metric_names))
+    end
+
     test "exposes status transition metrics after a transition", %{app: app} do
       {:ok, _updated} = Applications.update_status(app.id, "pending_risk", "system")
 
@@ -65,4 +93,7 @@ defmodule DebtStalkerWeb.MetricsReporterTest do
              end)
     end
   end
+
+  defp metric_name(%{name: name}) when is_list(name), do: Enum.join(name, ".")
+  defp metric_name(%{name: name}), do: name
 end
