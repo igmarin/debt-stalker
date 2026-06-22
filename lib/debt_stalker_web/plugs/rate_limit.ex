@@ -8,7 +8,8 @@ defmodule DebtStalkerWeb.Plugs.RateLimit do
 
   ## Configuration
 
-  Limits are configured in `config.exs` under `:debt_stalker, :rate_limit`:
+  Limits are configured in `config.exs` under `:debt_stalker, :rate_limit`
+  and can be overridden via env vars in `runtime.exs`:
 
       config :debt_stalker, :rate_limit,
         auth_token: [limit: 10, window_ms: 60_000],
@@ -16,7 +17,7 @@ defmodule DebtStalkerWeb.Plugs.RateLimit do
 
   ## Usage
 
-      plug DebtStalkerWeb.Plugs.RateLimit, key: :auth_token
+      plug DebtStalkerWeb.Plugs.RateLimit, [key: :auth_token] when action == :create
   """
 
   import Plug.Conn
@@ -24,6 +25,14 @@ defmodule DebtStalkerWeb.Plugs.RateLimit do
 
   @spec init(keyword()) :: keyword()
   def init(opts) do
+    # Validate that :key is present. Config is read at runtime in
+    # call/2 so that env vars from runtime.exs are respected.
+    _ = Keyword.fetch!(opts, :key)
+    opts
+  end
+
+  @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
+  def call(conn, opts) do
     key = Keyword.fetch!(opts, :key)
     config = Application.get_env(:debt_stalker, :rate_limit)[key]
 
@@ -33,15 +42,6 @@ defmodule DebtStalkerWeb.Plugs.RateLimit do
 
     limit = Keyword.fetch!(config, :limit)
     window_ms = Keyword.fetch!(config, :window_ms)
-
-    [key: key, limit: limit, window_ms: window_ms]
-  end
-
-  @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
-  def call(conn, opts) do
-    key = Keyword.fetch!(opts, :key)
-    limit = Keyword.fetch!(opts, :limit)
-    window_ms = Keyword.fetch!(opts, :window_ms)
 
     client_ip = get_client_ip(conn)
     bucket = "#{key}:#{client_ip}"
@@ -64,8 +64,13 @@ defmodule DebtStalkerWeb.Plugs.RateLimit do
   @spec get_client_ip(Plug.Conn.t()) :: String.t()
   defp get_client_ip(conn) do
     case get_req_header(conn, "x-forwarded-for") do
-      [ip | _] when is_binary(ip) and ip != "" ->
-        String.trim(ip)
+      [header | _] when is_binary(header) and header != "" ->
+        # X-Forwarded-For is a comma-separated list of proxy IPs;
+        # the leftmost is the original client IP.
+        header
+        |> String.split(",")
+        |> List.first()
+        |> String.trim()
 
       _ ->
         case conn.remote_ip do
