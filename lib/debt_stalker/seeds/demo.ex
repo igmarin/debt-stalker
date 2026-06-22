@@ -11,7 +11,7 @@ defmodule DebtStalker.Seeds.Demo do
 
   ## Examples
 
-      # Default: 100 apps (5 realistic + 95 bulk)
+      # Default: 1_000 apps (5 realistic + 995 bulk)
       DebtStalker.Seeds.Demo.run()
 
       # Dashboard-friendly volume
@@ -22,7 +22,7 @@ defmodule DebtStalker.Seeds.Demo do
 
   Environment variables (used by `priv/repo/seeds.exs`):
 
-  - `SEED_COUNT` — total records (default: `100`)
+  - `SEED_COUNT` — total records (default: `1_000`)
   - `SEED_MODE` — `bulk`, `realistic`, or `mixed` (default: `mixed`)
   - `SEED_REALISTIC_COUNT` — realistic records in mixed mode (default: `5`)
   - `SEED_COUNTRIES` — comma-separated list, e.g. `ES,MX`
@@ -35,7 +35,7 @@ defmodule DebtStalker.Seeds.Demo do
   alias DebtStalker.Repo
   alias DebtStalkerWeb.Auth.Token
 
-  @default_count 100
+  @default_count 1_000
   @default_realistic_count 5
   @default_countries ~w(ES MX)
   @default_scenario :default
