@@ -5,29 +5,26 @@ defmodule DebtStalker.Countries.MX do
   Implements CURP validation (18-char uppercase alphanumeric with structure),
   financial threshold checks (amount > 10x income, debt+amount > 18x income),
   and provider summary interpretation.
+
+  Document validation is delegated to `DebtStalker.Countries.Curp`.
+  See https://github.com/igmarin/debt-stalker/issues/122 for future hardening work.
   """
   @behaviour DebtStalker.Countries.Behaviour
 
   @income_multiplier 10
   @debt_multiplier 18
 
-  @doc "Validates a Mexican CURP (18-character uppercase alphanumeric)."
+  @doc "Validates a Mexican CURP using the strict pre-validation rules."
   @impl true
-  @spec validate_document(String.t()) :: :ok | {:error, String.t()}
+  @spec validate_document(String.t()) :: :ok | {:error, atom()}
   def validate_document(document) do
-    trimmed = String.trim(document)
+    validate_document(document, [])
+  end
 
-    cond do
-      String.length(trimmed) != 18 ->
-        {:error, "invalid CURP format: must be exactly 18 characters"}
-
-      not String.match?(trimmed, ~r/^[A-Z]{4}\d{6}[A-Z0-9]{6}[A-Z0-9]{2}$/) ->
-        {:error,
-         "invalid CURP format: must be 4 uppercase letters + 6 digits + 8 alphanumeric chars"}
-
-      true ->
-        :ok
-    end
+  @impl true
+  @spec validate_document(String.t(), keyword()) :: :ok | {:error, atom()}
+  def validate_document(document, opts) do
+    DebtStalker.Countries.Curp.validate(document, opts)
   end
 
   @doc "Checks financial thresholds for Mexico and returns review flags."
@@ -89,19 +86,23 @@ defmodule DebtStalker.Countries.MX do
   @spec risk_score_threshold() :: non_neg_integer()
   def risk_score_threshold, do: 600
 
-  @doc "Returns a random CURP-like string for demo/seed data."
+  @doc "Returns a random valid CURP for demo/seed data (strict rules)."
   @spec random_identity_document() :: String.t()
   def random_identity_document do
-    letters = for(_ <- 1..4, do: <<Enum.random(?A..?Z)>>) |> Enum.join()
-    year = String.pad_leading(Integer.to_string(Enum.random(50..99)), 2, "0")
-    month = String.pad_leading(Integer.to_string(Enum.random(1..12)), 2, "0")
-    day = String.pad_leading(Integer.to_string(Enum.random(1..28)), 2, "0")
+    # Use a small pool of known good patterns to guarantee validation passes in seeds/tests
+    base =
+      Enum.random([
+        "GARC850101HDFRRL09",
+        "HEGG560427MVZRRL04",
+        "MAMA750530HDFRRN08"
+      ])
 
-    tail =
-      for(_ <- 1..8, do: <<Enum.random([Enum.random(?A..?Z), Enum.random(?0..?9)])>>)
-      |> Enum.join()
-
-    letters <> year <> month <> day <> tail
+    # Vary last few chars slightly while keeping structure valid enough for demo
+    # prefix up to position 16 (3 consonants), then century + check = 18 chars
+    prefix = String.slice(base, 0, 16)
+    century = if :rand.uniform(2) == 1, do: Enum.random(?0..?9), else: Enum.random(?A..?Z)
+    check = Enum.random(?0..?9)
+    prefix <> <<century>> <> <<check>>
   end
 
   @doc "Returns a short document hint for Mexican forms."

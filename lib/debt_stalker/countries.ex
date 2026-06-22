@@ -52,4 +52,19 @@ defmodule DebtStalker.Countries do
         nil
     end
   end
+
+  @doc """
+  Public facade for document pre-validation.
+
+  Delegates to the country module's `validate_document/2`.
+  `opts` can include `birth_date: ~D[...]`.
+  """
+  @spec validate_document(String.t(), String.t(), keyword()) ::
+          :ok | {:error, atom()}
+  def validate_document(country_code, document, opts \\ []) do
+    case Registry.lookup(country_code) do
+      {:ok, module} -> module.validate_document(document, opts)
+      {:error, :unsupported_country} -> {:error, :unsupported_country}
+    end
+  end
 end

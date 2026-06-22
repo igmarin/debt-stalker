@@ -58,7 +58,8 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
       full_name: params["full_name"],
       identity_document: params["identity_document"],
       requested_amount: to_decimal(params["requested_amount"]),
-      monthly_income: to_decimal(params["monthly_income"])
+      monthly_income: to_decimal(params["monthly_income"]),
+      birth_date: parse_optional_date(params["birth_date"])
     }
 
     case Applications.create_application(attrs) do
@@ -142,6 +143,19 @@ defmodule DebtStalkerWeb.Api.ApplicationController do
 
   defp to_decimal(value) when is_integer(value), do: Decimal.new(value)
   defp to_decimal(value) when is_float(value), do: Decimal.from_float(value)
+
+  defp parse_optional_date(nil), do: nil
+  defp parse_optional_date(""), do: nil
+
+  defp parse_optional_date(str) when is_binary(str) do
+    case Date.from_iso8601(str) do
+      {:ok, d} -> d
+      _ -> nil
+    end
+  end
+
+  defp parse_optional_date(%Date{} = d), do: d
+  defp parse_optional_date(_), do: nil
 
   defp serialize_application(%CreditApplication{} = app) do
     %{

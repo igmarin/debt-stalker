@@ -41,7 +41,8 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
       full_name: params["full_name"],
       identity_document: params["identity_document"],
       requested_amount: safe_decimal(params["requested_amount"]),
-      monthly_income: safe_decimal(params["monthly_income"])
+      monthly_income: safe_decimal(params["monthly_income"]),
+      birth_date: parse_optional_date(params["birth_date"])
     }
 
     changeset =
@@ -64,7 +65,8 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
       full_name: params["full_name"],
       identity_document: params["identity_document"],
       requested_amount: safe_decimal(params["requested_amount"]),
-      monthly_income: safe_decimal(params["monthly_income"])
+      monthly_income: safe_decimal(params["monthly_income"]),
+      birth_date: parse_optional_date(params["birth_date"])
     }
 
     case Applications.create_application(attrs) do
@@ -132,6 +134,12 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
               placeholder={@document_hint}
             />
 
+            <.input
+              field={@form[:birth_date]}
+              type="date"
+              label={gettext("Birth date (for document verification)")}
+            />
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <.input
                 field={@form[:requested_amount]}
@@ -177,4 +185,17 @@ defmodule DebtStalkerWeb.Apply.ApplicationFormLive do
 
   defp present?(value) when is_binary(value), do: String.trim(value) != ""
   defp present?(_), do: false
+
+  defp parse_optional_date(nil), do: nil
+  defp parse_optional_date(""), do: nil
+
+  defp parse_optional_date(str) when is_binary(str) do
+    case Date.from_iso8601(str) do
+      {:ok, d} -> d
+      _ -> nil
+    end
+  end
+
+  defp parse_optional_date(%Date{} = d), do: d
+  defp parse_optional_date(_), do: nil
 end

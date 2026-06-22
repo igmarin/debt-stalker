@@ -10,13 +10,16 @@ defmodule DebtStalker.Countries.Behaviour do
   """
 
   @typedoc "Result of validating an identity document."
-  @type validation_result :: :ok | {:error, String.t()}
+  @type validation_result :: :ok | {:error, atom()}
 
   @typedoc "Result of validating financial thresholds."
   @type financial_result :: %{additional_review_required: boolean(), reasons: [String.t()]}
 
   @doc "Validates the identity document format for this country."
   @callback validate_document(document :: String.t()) :: validation_result()
+
+  @doc "Extended form (opts may contain :birth_date for CURP accuracy check)."
+  @callback validate_document(document :: String.t(), opts :: keyword()) :: validation_result()
 
   @doc "Validates financial thresholds and returns review flags."
   @callback validate_financials(params :: map()) :: financial_result()
