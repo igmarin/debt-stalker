@@ -318,8 +318,9 @@ defmodule DebtStalker.Applications do
         emit_cache_hit(cache_key)
         {:ok, app}
 
-      {:error, _reason} ->
-        # Cache unavailable — treat as miss and fall back to DB.
+      {:error, reason} ->
+        # Cache unavailable — log and fall back to DB.
+        Logger.warning("Cachex error during get_application: #{inspect(reason)}")
         emit_cache_miss(cache_key)
         {:miss, id}
     end
@@ -334,21 +335,12 @@ defmodule DebtStalker.Applications do
         {:error, :not_found}
 
       app ->
-        # Race condition mitigation: verify the record hasn't been
-        # updated since we read it. If a concurrent update changed
-        # updated_at, skip caching to avoid storing stale data.
-        case Cachex.get(:app_cache, cache_key) do
-          {:ok, nil} ->
-            # Cache still empty — safe to populate.
-            ttl = Application.get_env(:debt_stalker, :app_cache_ttl_ms, :timer.seconds(60))
-            Cachex.put(:app_cache, cache_key, app, ttl: ttl)
-
-          _ ->
-            # Cache was populated or invalidated concurrently — skip
-            # to avoid overwriting a fresher entry or caching stale data.
-            :ok
-        end
-
+        # Cache-aside: populate cache after DB read. The TTL (default 60s)
+        # bounds staleness if a concurrent update invalidates between the
+        # DB read and this Cachex.put. The explicit Cachex.del in
+        # update_status/3 handles the normal invalidation path.
+        ttl = Application.get_env(:debt_stalker, :app_cache_ttl_ms, :timer.seconds(60))
+        Cachex.put(:app_cache, cache_key, app, ttl: ttl)
         {:ok, app}
     end
   end

@@ -22,9 +22,9 @@ defmodule DebtStalker.Application do
       DebtStalker.Countries.Registry,
       DebtStalker.Providers.Registry,
       DebtStalker.Providers.CircuitBreakers,
+      DebtStalker.CacheInvalidator,
       {Oban, Application.fetch_env!(:debt_stalker, Oban)},
       DebtStalker.ObanTelemetryHandler,
-      DebtStalker.CacheInvalidator,
       prometheus_metrics_reporter(),
       DebtStalkerWeb.Endpoint
     ]
