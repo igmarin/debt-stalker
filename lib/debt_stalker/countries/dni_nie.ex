@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 defmodule DebtStalker.Countries.DniNie do
   @moduledoc """
   Robust validator for Spanish DNI and NIE.

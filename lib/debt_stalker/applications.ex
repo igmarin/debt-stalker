@@ -728,8 +728,8 @@ defmodule DebtStalker.Applications do
   defp validate_document(country_module, attrs) when is_map(attrs) do
     document = Map.get(attrs, :identity_document) || Map.get(attrs, "identity_document")
 
-    if is_nil(document) do
-      :ok
+    if is_nil(document) or String.trim(to_string(document)) == "" do
+      {:error, :invalid_document, "is required"}
     else
       birth_date = parse_optional_birth_date(attrs)
 

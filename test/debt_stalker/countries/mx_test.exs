@@ -295,5 +295,19 @@ defmodule DebtStalker.Countries.MXTest do
       result = MX.validate_document(curp_2005, birth_date: ~D[2005-01-01])
       assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
+
+    test "correctly handles post-2000 century letters (any A-Z means 20yy)" do
+      # Per spec, any letter in pos 17 means born 2000+, year = 2000 + yy
+      # Build a CURP matching the regex.
+      curp_2015_b = "GARC150101HDFRRLB5"
+      assert MX.validate_document(curp_2015_b) != {:error, :regex_mismatch}
+
+      assert MX.validate_document(curp_2015_b, birth_date: ~D[2015-01-01]) !=
+               {:error, :birth_date_mismatch}
+
+      # Mismatched birth year should fail the cross check
+      assert MX.validate_document(curp_2015_b, birth_date: ~D[2005-01-01]) ==
+               {:error, :birth_date_mismatch}
+    end
   end
 end

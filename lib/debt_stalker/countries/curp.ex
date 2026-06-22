@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 defmodule DebtStalker.Countries.Curp do
   @moduledoc """
   Robust, self-contained validator for Mexican CURP (Clave Única de Registro de Población).
@@ -109,9 +107,16 @@ defmodule DebtStalker.Countries.Curp do
 
     year =
       case century_char do
-        <<c>> when c in ?0..?9 -> 1900 + yy
-        <<c>> when c in ?A..?Z -> 2000 + (c - ?A)
-        _ -> 1900 + yy
+        <<c>> when c in ?0..?9 ->
+          1900 + yy
+
+        <<c>> when c in ?A..?Z ->
+          2000 + yy
+
+        # letter A-Z means 2000+ (spec); letter value itself ignored for year.
+
+        _ ->
+          1900 + yy
       end
 
     case Date.new(year, mm, dd) do
@@ -130,9 +135,16 @@ defmodule DebtStalker.Countries.Curp do
 
     year =
       case century_char do
-        <<c>> when c in ?0..?9 -> 1900 + yy
-        <<c>> when c in ?A..?Z -> 2000 + (c - ?A)
-        _ -> 1900 + yy
+        <<c>> when c in ?0..?9 ->
+          1900 + yy
+
+        <<c>> when c in ?A..?Z ->
+          2000 + yy
+
+        # letter A-Z means 2000+ (spec); letter value itself ignored for year.
+
+        _ ->
+          1900 + yy
       end
 
     case Date.new(year, mm, dd) do
