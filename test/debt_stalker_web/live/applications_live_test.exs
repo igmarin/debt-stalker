@@ -1,4 +1,4 @@
-defmodule DebtStalkerWeb.ApplicationsLiveTest do
+defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
   use DebtStalkerWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -13,12 +13,12 @@ defmodule DebtStalkerWeb.ApplicationsLiveTest do
     monthly_income: Decimal.new("2000")
   }
 
-  describe "ApplicationsLive" do
+  describe "Admin.ApplicationsLive" do
     test "renders application list", %{conn: conn} do
       {:ok, _app} = Applications.create_application(@valid_es_attrs)
 
-      {:ok, _view, html} = live(conn, "/applications")
-      assert html =~ "Credit Applications"
+      {:ok, _view, html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+      assert html =~ "Applications"
       assert html =~ "Juan Garcia"
       assert html =~ "****678Z"
     end
@@ -35,26 +35,43 @@ defmodule DebtStalkerWeb.ApplicationsLiveTest do
           monthly_income: Decimal.new("2000")
         })
 
-      {:ok, view, _html} = live(conn, "/applications")
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
-      html =
-        view
-        |> element("form")
-        |> render_change(%{"country" => "ES", "status" => ""})
+      html = render_patch(view, ~p"/admin/applications?country=ES")
 
       assert html =~ "Juan Garcia"
       refute html =~ "Maria Lopez"
     end
 
+    test "filters by status", %{conn: conn} do
+      {:ok, app} = Applications.create_application(@valid_es_attrs)
+      {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      html = render_patch(view, ~p"/admin/applications?status=pending_risk")
+      assert html =~ "Juan Garcia"
+
+      html = render_patch(view, ~p"/admin/applications?status=approved")
+      refute html =~ "Juan Garcia"
+    end
+
+    test "shows empty state when filters match nothing", %{conn: conn} do
+      {:ok, _app} = Applications.create_application(@valid_es_attrs)
+
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
+
+      html = render_patch(view, ~p"/admin/applications?country=MX")
+      assert html =~ "No applications found"
+    end
+
     test "updates in real-time via PubSub", %{conn: conn} do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
-      {:ok, view, _html} = live(conn, "/applications")
+      {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
-      # Simulate status change
       {:ok, _} = Applications.update_status(app.id, "pending_risk", "system")
       Phoenix.PubSub.broadcast(DebtStalker.PubSub, "applications:list", {:status_changed, %{}})
 
-      # Give the LiveView time to process
       html = render(view)
       assert html =~ "pending_risk"
     end

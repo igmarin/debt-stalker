@@ -12,66 +12,48 @@ defmodule DebtStalkerWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
-  Renders your app layout.
+  Renders the main application navbar.
 
-  This function is typically invoked from every template,
-  and it often contains your application menu, sidebar,
-  or similar.
-
-  ## Examples
-
-      <Layouts.app flash={@flash}>
-        <h1>Content</h1>
-      </Layouts.app>
-
+  The navbar is persona-aware: applicants and admins see different links,
+  and the landing page shows a minimal version.
   """
-  attr :flash, :map, required: true, doc: "the map of flash messages"
+  attr :current_role, :string, default: nil
 
-  attr :current_scope, :map,
-    default: nil,
-    doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
-
-  slot :inner_block, required: true
-
-  @spec app(map()) :: Phoenix.LiveView.Rendered.t()
-  def app(assigns) do
+  @spec navbar(map()) :: Phoenix.LiveView.Rendered.t()
+  def navbar(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
+    <header class="navbar bg-base-100 border-b border-base-200 px-4 sm:px-6 lg:px-8">
       <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
-        </a>
+        <.link navigate={home_path(@current_role)} class="flex items-center gap-2 text-lg font-bold">
+          <.icon name="hero-shield-check" class="size-6 text-primary" />
+          <span>Debt Stalker</span>
+        </.link>
       </div>
-      <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
+      <nav class="flex-none">
+        <ul class="flex items-center gap-2">
+          <li :if={@current_role == "admin"}>
+            <.link navigate={~p"/admin"} class="btn btn-ghost btn-sm">Dashboard</.link>
           </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
+          <li :if={@current_role == "admin"}>
+            <.link navigate={~p"/admin/applications"} class="btn btn-ghost btn-sm">Applications</.link>
+          </li>
+          <li :if={@current_role}>
+            <.link navigate={~p"/admin/logout"} class="btn btn-ghost btn-sm">
+              Log out
+            </.link>
           </li>
           <li>
             <.theme_toggle />
           </li>
-          <li>
-            <a href="https://phoenix.hexdocs.pm/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
-          </li>
         </ul>
-      </div>
+      </nav>
     </header>
-
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl space-y-4">
-        {render_slot(@inner_block)}
-      </div>
-    </main>
-
-    <.flash_group flash={@flash} />
     """
   end
+
+  defp home_path("admin"), do: ~p"/admin"
+  defp home_path("applicant"), do: ~p"/apply"
+  defp home_path(_), do: ~p"/"
 
   @doc """
   Shows the flash group with standard titles and content.

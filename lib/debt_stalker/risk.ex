@@ -58,7 +58,7 @@ defmodule DebtStalker.Risk do
   @doc """
   Returns the acceptable risk score threshold for a given country.
 
-  Delegates to the country module via `Registry.lookup/1`.
+  Delegates to the country module via `DebtStalker.Countries.Registry.lookup/1`.
   Returns `nil` for unsupported countries.
   """
   @spec risk_score_threshold(String.t()) :: non_neg_integer() | nil

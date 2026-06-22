@@ -27,7 +27,7 @@
           setTheme(localStorage.getItem("phx:theme") || "system");
         }
         window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        
+
         window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
 
         matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
@@ -39,6 +39,10 @@
     </script>
   </head>
   <body>
-    {@inner_content}
+    <.navbar current_role={assigns[:current_role]} />
+    <main class="min-h-screen bg-base-100">
+      {@inner_content}
+    </main>
+    <.flash_group flash={@flash} />
   </body>
 </html>

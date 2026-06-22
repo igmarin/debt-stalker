@@ -1,0 +1,31 @@
+<div class="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center bg-secondary/10 text-secondary rounded-full p-4 mb-4">
+        <.icon name="hero-shield-check" class="size-10" />
+      </div>
+      <h1 class="text-3xl font-bold">Admin sign in</h1>
+      <p class="text-base-content/70 mt-2">
+        Enter the admin password to access the review dashboard.
+      </p>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <.form for={%{}} action={~p"/admin/login"} method="post" class="space-y-4">
+          <.input type="password" name="password" label="Password" value="" required />
+
+          <button type="submit" class="btn btn-secondary w-full">
+            Sign in
+          </button>
+        </.form>
+
+        <div class="text-center mt-4">
+          <.link navigate={~p"/"} class="text-sm link">
+            Back to home
+          </.link>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

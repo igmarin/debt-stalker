@@ -17,4 +17,7 @@ defmodule DebtStalker.Applications.AuditLog do
 
     timestamps()
   end
+
+  @typedoc "An audit log entry."
+  @type t :: %__MODULE__{}
 end

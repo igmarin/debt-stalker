@@ -259,6 +259,20 @@ defmodule DebtStalker.Applications do
   end
 
   @doc """
+  Counts applications matching the given filters.
+
+  Supported filters: `:country`, `:status`, `:date_from`, `:date_to`.
+  """
+  @spec count_applications(map()) :: non_neg_integer()
+  def count_applications(filters) do
+    CreditApplication
+    |> maybe_filter_country(filters)
+    |> maybe_filter_status(filters)
+    |> maybe_filter_date_range(filters)
+    |> Repo.aggregate(:count, :id)
+  end
+
+  @doc """
   Lists applications with optional filtering and cursor pagination.
 
   Supported filters: `:country`, `:status`, `:date_from`, `:date_to`, `:limit`, `:cursor`.

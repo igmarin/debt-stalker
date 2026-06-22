@@ -1,49 +1,53 @@
-defmodule DebtStalkerWeb.ApplicationCreateLiveTest do
+defmodule DebtStalkerWeb.Apply.ApplicationFormLiveTest do
   use DebtStalkerWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
-  describe "ApplicationCreateLive" do
-    test "renders create form", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/applications/new")
-      assert html =~ "New Credit Application"
+  describe "Apply.ApplicationFormLive" do
+    test "renders the applicant form", %{conn: conn} do
+      {:ok, _view, html} = live(with_role(conn, "applicant"), ~p"/apply")
+      assert html =~ "Apply for credit"
       assert html =~ "Country"
-      assert html =~ "Full Name"
+      assert html =~ "Full name"
+    end
+
+    test "redirects to landing when no role is set", %{conn: conn} do
+      assert {:error, {:redirect, %{to: "/"}}} = live(conn, ~p"/apply")
     end
 
     test "shows country-specific document hint when country is selected", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/applications/new")
+      {:ok, view, _html} = live(with_role(conn, "applicant"), ~p"/apply")
 
       html =
         view
-        |> form("#create-form", %{"application" => %{"country" => "ES"}})
+        |> form("#apply-form", %{"application" => %{"country" => "ES"}})
         |> render_change()
 
       assert html =~ "DNI"
 
       html =
         view
-        |> form("#create-form", %{"application" => %{"country" => "MX"}})
+        |> form("#apply-form", %{"application" => %{"country" => "MX"}})
         |> render_change()
 
       assert html =~ "CURP"
     end
 
     test "initializes document hint from mount params", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/applications/new?application[country]=ES")
+      {:ok, _view, html} = live(with_role(conn, "applicant"), ~p"/apply?application[country]=ES")
       assert html =~ "DNI"
     end
 
     test "keeps document hint after submission error", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/applications/new")
+      {:ok, view, _html} = live(with_role(conn, "applicant"), ~p"/apply")
 
       view
-      |> form("#create-form", %{"application" => %{"country" => "ES"}})
+      |> form("#apply-form", %{"application" => %{"country" => "ES"}})
       |> render_change()
 
       html =
         view
-        |> form("#create-form", %{
+        |> form("#apply-form", %{
           "application" => %{
             "country" => "ES",
             "full_name" => "Test",
@@ -58,11 +62,11 @@ defmodule DebtStalkerWeb.ApplicationCreateLiveTest do
       assert html =~ "DNI"
     end
 
-    test "creates application and redirects", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/applications/new")
+    test "creates application and redirects to confirmation", %{conn: conn} do
+      {:ok, view, _html} = live(with_role(conn, "applicant"), ~p"/apply")
 
       view
-      |> form("#create-form", %{
+      |> form("#apply-form", %{
         "application" => %{
           "country" => "ES",
           "full_name" => "Juan Garcia",
@@ -74,16 +78,17 @@ defmodule DebtStalkerWeb.ApplicationCreateLiveTest do
       |> render_submit()
 
       {path, flash} = assert_redirect(view)
-      assert path =~ "/applications/"
-      assert flash["info"] =~ "created"
+      assert path =~ "/apply/"
+      assert path =~ "/confirmation"
+      assert flash["info"] =~ "submitted"
     end
 
     test "shows errors for invalid document", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/applications/new")
+      {:ok, view, _html} = live(with_role(conn, "applicant"), ~p"/apply")
 
       html =
         view
-        |> form("#create-form", %{
+        |> form("#apply-form", %{
           "application" => %{
             "country" => "ES",
             "full_name" => "Test",

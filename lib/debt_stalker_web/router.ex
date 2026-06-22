@@ -13,6 +13,7 @@ defmodule DebtStalkerWeb.Router do
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {DebtStalkerWeb.Layouts, :root}
+    plug DebtStalkerWeb.Plugs.AssignRole
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -25,9 +26,23 @@ defmodule DebtStalkerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    live "/applications", ApplicationsLive
-    live "/applications/new", ApplicationCreateLive
-    live "/applications/:id", ApplicationDetailLive
+    get "/set-role", PageController, :set_role
+
+    get "/admin/login", PageController, :login
+    post "/admin/login", PageController, :do_login
+    get "/admin/logout", PageController, :logout
+
+    # Legacy routes — redirect to the new persona-aware paths
+    get "/applications", PageController, :redirect_applications
+    get "/applications/new", PageController, :redirect_new_application
+    get "/applications/:id", PageController, :redirect_application_detail
+
+    live "/apply", Apply.ApplicationFormLive
+    live "/apply/:id/confirmation", Apply.ApplicationConfirmationLive
+
+    live "/admin", Admin.DashboardLive
+    live "/admin/applications", Admin.ApplicationsLive
+    live "/admin/applications/:id", Admin.ApplicationDetailLive
   end
 
   scope "/api", DebtStalkerWeb.Api do

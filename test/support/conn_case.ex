@@ -36,4 +36,14 @@ defmodule DebtStalkerWeb.ConnCase do
     DebtStalker.Providers.CircuitBreakers.reset_all()
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  @doc """
+  Initializes the test session with the given browser persona role.
+
+  Used to test the applicant and admin LiveViews without a real login flow.
+  """
+  @spec with_role(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
+  def with_role(conn, role) when role in ["applicant", "admin"] do
+    Plug.Test.init_test_session(conn, %{"role" => role})
+  end
 end
