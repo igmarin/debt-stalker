@@ -148,7 +148,10 @@ defmodule DebtStalkerWeb.Admin.ApplicationsLiveTest do
       {:ok, app} = Applications.create_application(@valid_es_attrs)
       {:ok, view, _html} = live(with_role(conn, "admin"), ~p"/admin/applications")
 
-      send(view.pid, {:status_changed, %{application_id: app.id, from: "submitted", to: "pending_risk"}})
+      send(
+        view.pid,
+        {:status_changed, %{application_id: app.id, from: "submitted", to: "pending_risk"}}
+      )
 
       html = render(view)
       assert html =~ "bg-primary/15"
