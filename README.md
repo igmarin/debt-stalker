@@ -271,9 +271,9 @@ CREATE INDEX idx_applications_country_status_date
 CREATE INDEX idx_applications_identity_document_hash
   ON credit_applications (identity_document_hash);
 
--- Outbox drainer
-CREATE INDEX idx_application_events_unprocessed
-  ON application_events (processed_at, inserted_at)
+-- Outbox drainer depth/lag query
+CREATE INDEX application_events_unprocessed_inserted_at_idx
+  ON application_events (inserted_at)
   WHERE processed_at IS NULL;
 
 -- Status-transition history

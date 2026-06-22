@@ -64,6 +64,7 @@ defmodule DebtStalker.Workers.EventDispatcherWorker do
     batch_stats = claim_and_dispatch_batch(batch_size)
     stats = merge_dispatch_stats(stats, batch_stats)
 
+    # Stop draining once the outbox is empty or the last claimed batch was not full.
     cond do
       batch_stats.claimed_count == 0 ->
         stats

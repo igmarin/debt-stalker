@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README now documents the authorized full-name policy, admin page-pagination tradeoff,
   and current MVP scale envelope
 - EventDispatcherWorker now drains configurable multi-batch runs and emits backlog/lag metrics
+- Added a partial outbox index for unprocessed event depth and lag queries
 
 ### Security
 
