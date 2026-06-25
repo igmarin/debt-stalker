@@ -4,6 +4,14 @@ Multi-country credit-application core for a fintech operating in 6 countries
 (ES, PT, IT, MX, CO, BR). Built with **Elixir + Phoenix + PostgreSQL + Oban +
 LiveView**.
 
+## NOTE
+
+Hey! Bravo team, I have been continusly playing with this app to also
+learn, so I tag v1.0.0 which is what I did last weekend, after that it
+on my own, hope it's clear
+
+## END OF NOTE
+
 ## Architecture
 
 ```mermaid
