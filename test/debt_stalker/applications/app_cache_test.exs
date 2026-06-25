@@ -3,6 +3,25 @@ defmodule DebtStalker.Applications.AppCacheTest do
 
   alias DebtStalker.Applications
 
+  defp attach_cache_telemetry(event, expected_key) do
+    test_pid = self()
+    ref = make_ref()
+
+    :telemetry.attach(
+      ref,
+      event,
+      fn _event, measurements, metadata, _config ->
+        if metadata.key == expected_key do
+          send(test_pid, {event, measurements, metadata})
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(ref) end)
+    ref
+  end
+
   @valid_es_attrs %{
     country: "ES",
     full_name: "Juan Garcia",
@@ -22,47 +41,23 @@ defmodule DebtStalker.Applications.AppCacheTest do
       {:ok, app1} = Applications.get_application(app.id)
       assert app1.id == app.id
 
-      test_pid = self()
-      ref = make_ref()
-
-      :telemetry.attach(
-        ref,
-        [:debt_stalker, :cache, :hit],
-        fn _event, _measurements, metadata, _config ->
-          send(test_pid, {:cache_hit, metadata})
-        end,
-        nil
-      )
+      cache_key = "app:#{app.id}"
+      attach_cache_telemetry([:debt_stalker, :cache, :hit], cache_key)
 
       {:ok, app2} = Applications.get_application(app.id)
       assert app2.id == app.id
 
-      assert_received {:cache_hit, %{key: key}}, 1000
-      assert key == "app:#{app.id}"
-
-      :telemetry.detach(ref)
+      assert_received {[:debt_stalker, :cache, :hit], _measurements, %{key: ^cache_key}}, 1000
     end
 
     test "first call is a cache miss", %{app: app} do
-      test_pid = self()
-      ref = make_ref()
-
-      :telemetry.attach(
-        ref,
-        [:debt_stalker, :cache, :miss],
-        fn _event, _measurements, metadata, _config ->
-          send(test_pid, {:cache_miss, metadata})
-        end,
-        nil
-      )
+      cache_key = "app:#{app.id}"
+      attach_cache_telemetry([:debt_stalker, :cache, :miss], cache_key)
 
       {:ok, app1} = Applications.get_application(app.id)
       assert app1.id == app.id
 
-      assert_received {:cache_miss, %{key: key}}, 1000
-      assert key == "app:#{app.id}"
-
-      :telemetry.detach(ref)
+      assert_received {[:debt_stalker, :cache, :miss], _measurements, %{key: ^cache_key}}, 1000
     end
   end
 
@@ -102,47 +97,23 @@ defmodule DebtStalker.Applications.AppCacheTest do
     test "cache hit emits telemetry event", %{app: app} do
       {:ok, _app1} = Applications.get_application(app.id)
 
-      test_pid = self()
-      ref = make_ref()
-
-      :telemetry.attach(
-        ref,
-        [:debt_stalker, :cache, :hit],
-        fn _event, measurements, metadata, _config ->
-          send(test_pid, {:cache_hit_telemetry, measurements, metadata})
-        end,
-        nil
-      )
+      cache_key = "app:#{app.id}"
+      attach_cache_telemetry([:debt_stalker, :cache, :hit], cache_key)
 
       {:ok, _app2} = Applications.get_application(app.id)
 
-      assert_received {:cache_hit_telemetry, measurements, metadata}, 1000
-      assert metadata.key == "app:#{app.id}"
+      assert_received {[:debt_stalker, :cache, :hit], measurements, %{key: ^cache_key}}, 1000
       assert is_map(measurements)
-
-      :telemetry.detach(ref)
     end
 
     test "cache miss emits telemetry event", %{app: app} do
-      test_pid = self()
-      ref = make_ref()
-
-      :telemetry.attach(
-        ref,
-        [:debt_stalker, :cache, :miss],
-        fn _event, measurements, metadata, _config ->
-          send(test_pid, {:cache_miss_telemetry, measurements, metadata})
-        end,
-        nil
-      )
+      cache_key = "app:#{app.id}"
+      attach_cache_telemetry([:debt_stalker, :cache, :miss], cache_key)
 
       {:ok, _app1} = Applications.get_application(app.id)
 
-      assert_received {:cache_miss_telemetry, measurements, metadata}, 1000
-      assert metadata.key == "app:#{app.id}"
+      assert_received {[:debt_stalker, :cache, :miss], measurements, %{key: ^cache_key}}, 1000
       assert is_map(measurements)
-
-      :telemetry.detach(ref)
     end
   end
 end

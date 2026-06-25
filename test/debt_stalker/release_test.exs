@@ -32,8 +32,9 @@ defmodule DebtStalker.ReleaseTest do
 
   describe "rollback/2" do
     test "accepts repo and version arguments" do
-      # Verify the function exists and accepts the right arguments
-      assert function_exported?(Release, :rollback, 2)
+      # function_exported?/3 is unreliable after CaptureIO in this module because
+      # version/0 runs in a captured process; __info__/1 reflects the loaded module.
+      assert {:rollback, 2} in Release.__info__(:functions)
     end
   end
 
