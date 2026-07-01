@@ -55,7 +55,8 @@ defmodule DebtStalker.Countries.Registry do
   defp default_countries do
     [
       {"ES", DebtStalker.Countries.ES},
-      {"MX", DebtStalker.Countries.MX}
+      {"MX", DebtStalker.Countries.MX},
+      {"CO", DebtStalker.Countries.CO}
     ]
   end
 end

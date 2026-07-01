@@ -24,6 +24,7 @@ defmodule DebtStalker.RiskTest do
     test "returns configured threshold for supported countries" do
       assert 650 = Risk.risk_score_threshold("ES")
       assert 600 = Risk.risk_score_threshold("MX")
+      assert 580 = Risk.risk_score_threshold("CO")
     end
 
     test "returns nil for unsupported countries" do
@@ -180,6 +181,104 @@ defmodule DebtStalker.RiskTest do
 
       app = %{app | provider_summary: %{"risk_indicators" => %{"buro_score" => 400}}}
       assert {:ok, "rejected"} = Risk.evaluate(app)
+    end
+
+    test "returns approved for CO app with good datacredito score" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "CO",
+          full_name: "Andres Gomez",
+          identity_document: "1234567890",
+          requested_amount: Decimal.new("8000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"datacredito_score" => 700}}}
+      assert {:ok, "approved"} = Risk.evaluate(app)
+    end
+
+    test "returns rejected for CO app with low datacredito score" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "CO",
+          full_name: "Andres Gomez",
+          identity_document: "1234567890",
+          requested_amount: Decimal.new("8000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"datacredito_score" => 400}}}
+      assert {:ok, "rejected"} = Risk.evaluate(app)
+    end
+
+    test "returns approved for CO app at exact threshold (580)" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "CO",
+          full_name: "Andres Gomez",
+          identity_document: "1234567890",
+          requested_amount: Decimal.new("8000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"datacredito_score" => 580}}}
+      assert {:ok, "approved"} = Risk.evaluate(app)
+    end
+
+    test "returns additional_review for CO app when debt ratio exceeded" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "CO",
+          full_name: "Andres Gomez",
+          identity_document: "1234567890",
+          requested_amount: Decimal.new("15000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      # debt + amount = 50000 + 15000 = 65000 > 22 * 2000 = 44000
+      app = %{
+        app
+        | provider_summary: %{
+            "risk_indicators" => %{"datacredito_score" => 700, "existing_debt" => "50000"}
+          }
+      }
+
+      assert {:ok, "additional_review"} = Risk.evaluate(app)
+    end
+
+    test "returns additional_review for CO app when income ratio exceeded" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "CO",
+          full_name: "Andres Gomez",
+          identity_document: "1234567890",
+          requested_amount: Decimal.new("30000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"datacredito_score" => 700}}}
+      assert {:ok, "additional_review"} = Risk.evaluate(app)
+    end
+
+    test "extracts provider_debt from provider summary for CO" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "CO",
+          full_name: "Andres Gomez",
+          identity_document: "1234567890",
+          requested_amount: Decimal.new("30000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      # debt + amount = 25000 + 30000 = 55000 > 22 * 2000 = 44000
+      app = %{
+        app
+        | provider_summary: %{
+            "risk_indicators" => %{"datacredito_score" => 700, "existing_debt" => "25000"}
+          }
+      }
+
+      assert {:ok, "additional_review"} = Risk.evaluate(app)
     end
   end
 end
