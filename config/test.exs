@@ -37,6 +37,11 @@ config :debt_stalker, :mx_simulated_debt_overrides, %{
   "DEBT850101HDFRRL09" => 35_000
 }
 
+# Fixed existing_debt for known CCs in CO adapter simulations (test-only)
+config :debt_stalker, :co_simulated_debt_overrides, %{
+  "DEBT00000001" => 40_000
+}
+
 # Circuit breaker settings for tests (high threshold avoids cross-test pollution in async suite)
 config :debt_stalker, :circuit_breakers,
   failure_threshold: 100,

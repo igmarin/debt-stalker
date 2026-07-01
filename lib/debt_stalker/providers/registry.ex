@@ -55,7 +55,8 @@ defmodule DebtStalker.Providers.Registry do
   defp default_providers do
     [
       {"ES", DebtStalker.Providers.ESAdapter},
-      {"MX", DebtStalker.Providers.MXAdapter}
+      {"MX", DebtStalker.Providers.MXAdapter},
+      {"CO", DebtStalker.Providers.COAdapter}
     ]
   end
 end

@@ -37,7 +37,7 @@ defmodule DebtStalker.Seeds.Demo do
 
   @default_count 1_000
   @default_realistic_count 5
-  @default_countries ~w(ES MX)
+  @default_countries ~w(ES MX CO)
   @default_scenario :default
   @seed_actor "seed"
 
