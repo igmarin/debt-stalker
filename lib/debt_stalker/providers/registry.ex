@@ -3,7 +3,7 @@ defmodule DebtStalker.Providers.Registry do
   ETS-backed registry for provider adapters.
 
   Caches the country code → adapter module mapping at boot time for O(1)
-  lookups. Resolves "ES" and "MX" to their respective simulated adapters.
+  lookups. Resolves configured country codes to their respective simulated adapters.
   """
   use GenServer
 
@@ -55,7 +55,8 @@ defmodule DebtStalker.Providers.Registry do
   defp default_providers do
     [
       {"ES", DebtStalker.Providers.ESAdapter},
-      {"MX", DebtStalker.Providers.MXAdapter}
+      {"MX", DebtStalker.Providers.MXAdapter},
+      {"PL", DebtStalker.Providers.PLAdapter}
     ]
   end
 end

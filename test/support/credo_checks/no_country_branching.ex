@@ -12,7 +12,7 @@ defmodule DebtStalker.CredoChecks.NoCountryBranching do
     base_priority: :high,
     category: :design,
     param_defaults: [
-      country_codes: ["ES", "MX", "PT", "IT", "CO", "BR"]
+      country_codes: ["ES", "MX", "PL", "PT", "IT", "CO", "BR"]
     ],
     explanations: [
       check: """

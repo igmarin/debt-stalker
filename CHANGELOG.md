@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Postman collection: all Phase 1 endpoints with auto-token scripts
   - Concurrency integration test: verifies SKIP LOCKED parallel safety
 
+- **Poland (PL) Provider / Country Vertical Slice**
+  - `DebtStalker.Countries.PL`: PESEL validation (11-digit weighted checksum), 60,000 PLN amount threshold, 10× income ratio, and BIK-score risk threshold (≥ 650)
+  - `DebtStalker.Providers.PLAdapter`: simulated BIK provider with deterministic `bik_score`, `existing_debt`, `active_loans`, and normalized `ProviderSummary`
+  - Registered PL in both `Countries.Registry` and `Providers.Registry`; included in demo seeds and Credo country-code list
+
 - **Phase 2 — Resilience, Observability & Production Hardening**
   - Telemetry events for HTTP, Ecto, Oban, provider calls, and status transitions
   - Prometheus metrics exporter (port 9568) and LiveDashboard (`/dev/dashboard` in dev)

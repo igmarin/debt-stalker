@@ -1,7 +1,7 @@
 # Debt Stalker
 
-Multi-country credit-application core for a fintech operating in 6 countries
-(ES, PT, IT, MX, CO, BR). Built with **Elixir + Phoenix + PostgreSQL + Oban +
+Multi-country credit-application core for a fintech operating in 7 countries
+(ES, PT, IT, MX, CO, BR, PL). Built with **Elixir + Phoenix + PostgreSQL + Oban +
 LiveView**.
 
 ## NOTE
@@ -31,7 +31,7 @@ flowchart TB
 
     subgraph Domain["DebtStalker Domain"]
         Apps[Applications Context]
-        Countries[Countries<br/>Behaviour + Registry<br/>ES / MX]
+        Countries[Countries<br/>Behaviour + Registry<br/>ES / MX / PL]
         Providers[Providers<br/>Behaviour + Simulated Adapters]
         Risk[Risk Evaluation]
         Audit[Audit Log]

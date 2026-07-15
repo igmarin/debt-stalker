@@ -1,6 +1,6 @@
 # Providers Context (`lib/debt_stalker/providers/`)
 
-This folder owns the **fetch and normalize** boundary for external credit-data providers. It defines a behaviour contract, provides simulated adapters for Spain and Mexico, normalizes raw provider data into a common shape, and protects provider calls with a custom circuit breaker.
+This folder owns the **fetch and normalize** boundary for external credit-data providers. It defines a behaviour contract, provides simulated adapters for Spain, Mexico, and Poland, normalizes raw provider data into a common shape, and protects provider calls with a custom circuit breaker.
 
 ## Responsibilities
 
@@ -18,6 +18,7 @@ This folder owns the **fetch and normalize** boundary for external credit-data p
 | `provider_summary.ex` | Normalized provider summary struct and serialization. |
 | `es_adapter.ex` | Simulated Spain provider adapter. |
 | `mx_adapter.ex` | Simulated Mexico provider adapter. |
+| `pl_adapter.ex` | Simulated Poland provider adapter. |
 | `registry.ex` | ETS-backed registry mapping country codes to adapter modules. |
 | `circuit_breaker.ex` | Custom GenServer circuit breaker with closed/open/half-open states. |
 | `circuit_breakers.ex` | Supervisor that boots one breaker per supported provider. |
@@ -38,7 +39,7 @@ Returns the adapter module for a country from ETS.
 
 #### `supported_providers() :: [String.t()]`
 
-Returns the list of configured provider countries (currently `["ES", "MX"]`).
+Returns the list of configured provider countries (currently `["ES", "MX", "PL"]`).
 
 ### `DebtStalker.Providers.CircuitBreaker`
 

@@ -8,7 +8,7 @@
 
 ## 1. Project Overview
 
-**Debt Stalker** is a multi-country credit-application core for a fintech operating in 6 countries (ES, PT, IT, MX, CO, BR). Built with Elixir + Phoenix + PostgreSQL + Oban + LiveView.
+**Debt Stalker** is a multi-country credit-application core for a fintech operating in 7 countries (ES, PT, IT, MX, CO, BR, PL). Built with Elixir + Phoenix + PostgreSQL + Oban + LiveView.
 
 ### Tech Stack
 
