@@ -2,7 +2,7 @@ defmodule DebtStalker.Countries.Behaviour do
   @moduledoc """
   Behaviour contract for country-specific validation and risk rules.
 
-  Each country module (ES, MX, etc.) implements this behaviour to provide:
+  Each country module (ES, MX, PL, etc.) implements this behaviour to provide:
   - Document format validation
   - Financial threshold checks
   - Provider summary interpretation

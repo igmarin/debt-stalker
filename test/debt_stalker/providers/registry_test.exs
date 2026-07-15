@@ -20,6 +20,10 @@ defmodule DebtStalker.Providers.RegistryTest do
       assert {:ok, DebtStalker.Providers.MXAdapter} = Registry.lookup("MX")
     end
 
+    test "resolves PL to PLAdapter" do
+      assert {:ok, DebtStalker.Providers.PLAdapter} = Registry.lookup("PL")
+    end
+
     test "returns error for unsupported country" do
       assert {:error, :unsupported_provider} = Registry.lookup("XX")
     end
@@ -27,7 +31,7 @@ defmodule DebtStalker.Providers.RegistryTest do
 
   describe "supported_providers/0" do
     test "returns sorted list of supported country codes" do
-      assert Registry.supported_providers() == ["ES", "MX"]
+      assert Registry.supported_providers() == ["ES", "MX", "PL"]
     end
   end
 end

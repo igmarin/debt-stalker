@@ -26,7 +26,7 @@ Seeds the database. Options:
 - `count` — total records (default `1000`).
 - `mode` — `:bulk`, `:realistic`, or `:mixed` (default `:mixed`).
 - `realistic_count` — number of lifecycled records in mixed mode (default `5`).
-- `countries` — list of country codes (default `["ES", "MX"]`).
+- `countries` — list of country codes (default `["ES", "MX", "PL"]`).
 - `scenario` — `:default` or `:dashboard` (default `:default`).
 - `quiet` — suppress per-record logging (default `false`).
 

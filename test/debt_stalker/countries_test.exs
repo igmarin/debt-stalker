@@ -13,6 +13,7 @@ defmodule DebtStalker.CountriesTest do
     test "returns the country-specific hint for supported countries" do
       assert Countries.get_document_hint("ES") =~ "DNI"
       assert Countries.get_document_hint("MX") =~ "CURP"
+      assert Countries.get_document_hint("PL") =~ "PESEL"
     end
 
     test "returns an empty string for unknown or empty countries" do
@@ -29,6 +30,9 @@ defmodule DebtStalker.CountriesTest do
 
       assert DebtStalker.Countries.MX.validate_document(Countries.random_identity_document("MX")) ==
                :ok
+
+      assert DebtStalker.Countries.PL.validate_document(Countries.random_identity_document("PL")) ==
+               :ok
     end
 
     test "returns nil for unknown countries" do
@@ -40,6 +44,7 @@ defmodule DebtStalker.CountriesTest do
     test "returns the correct symbol for supported countries" do
       assert Countries.currency_symbol("ES") == "€"
       assert Countries.currency_symbol("MX") == "$"
+      assert Countries.currency_symbol("PL") == "zł"
     end
 
     test "returns an empty string for unknown or nil countries" do

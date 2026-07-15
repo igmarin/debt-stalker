@@ -3,7 +3,7 @@ defmodule DebtStalker.Countries.Registry do
   ETS-backed registry for country modules.
 
   Caches the country code → module mapping at boot time for O(1) lookups.
-  Resolves "ES" and "MX" to their respective implementation modules.
+  Resolves configured country codes to their respective implementation modules.
   """
   use GenServer
 
@@ -55,7 +55,8 @@ defmodule DebtStalker.Countries.Registry do
   defp default_countries do
     [
       {"ES", DebtStalker.Countries.ES},
-      {"MX", DebtStalker.Countries.MX}
+      {"MX", DebtStalker.Countries.MX},
+      {"PL", DebtStalker.Countries.PL}
     ]
   end
 end

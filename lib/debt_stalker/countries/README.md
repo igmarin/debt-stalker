@@ -5,7 +5,7 @@ This folder isolates every country-specific rule in the system: document validat
 ## Responsibilities
 
 - Define the behaviour contract for country modules.
-- Implement country modules (currently `ES` and `MX`).
+- Implement country modules (currently `ES`, `MX`, and `PL`).
 - Register country modules in an ETS-backed registry for O(1) lookup.
 - Provide UI helpers (document hints, currency symbols) without exposing internal modules.
 
@@ -16,6 +16,7 @@ This folder isolates every country-specific rule in the system: document validat
 | `behaviour.ex` | Defines `DebtStalker.Countries.Behaviour` callbacks. |
 | `es.ex` | Spain implementation: DNI validation, € thresholds, transitions. |
 | `mx.ex` | Mexico implementation: CURP validation, $ thresholds, transitions. |
+| `pl.ex` | Poland implementation: PESEL validation, zł thresholds, BIK-score risk threshold. |
 | `registry.ex` | ETS-backed GenServer that loads supported countries at boot. |
 
 ## Public API
@@ -44,7 +45,7 @@ Looks up the country module in ETS. Returns `{:error, :unsupported_country}` whe
 
 #### `supported_countries() :: [String.t()]`
 
-Returns the list of configured country codes (currently `["ES", "MX"]`).
+Returns the list of configured country codes (currently `["ES", "MX", "PL"]`).
 
 ## Behaviour contract (`DebtStalker.Countries.Behaviour`)
 
@@ -77,6 +78,11 @@ Optional callbacks:
   - Financial rule: requested amount must not exceed 18× monthly income.
   - Risk threshold: 65.
   - Similar transition graph with `additional_review` as a terminal flag state.
+- **Poland (`pl.ex`)**:
+  - PESEL format: 11 digits with a weighted checksum.
+  - Financial rules: amount must not exceed 60,000 PLN and must not exceed 10× monthly income.
+  - Risk threshold: 650 (BIK score).
+  - Same shared transition graph with `additional_review` as a terminal flag state.
 
 ## Important notes
 

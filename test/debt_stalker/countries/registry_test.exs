@@ -12,6 +12,10 @@ defmodule DebtStalker.Countries.RegistryTest do
       assert {:ok, DebtStalker.Countries.MX} = Registry.lookup("MX")
     end
 
+    test "resolves PL to the PL country module" do
+      assert {:ok, DebtStalker.Countries.PL} = Registry.lookup("PL")
+    end
+
     test "returns error for unsupported country" do
       assert {:error, :unsupported_country} = Registry.lookup("XX")
     end
@@ -30,6 +34,7 @@ defmodule DebtStalker.Countries.RegistryTest do
       countries = Registry.supported_countries()
       assert "ES" in countries
       assert "MX" in countries
+      assert "PL" in countries
       assert countries == Enum.sort(countries)
     end
   end

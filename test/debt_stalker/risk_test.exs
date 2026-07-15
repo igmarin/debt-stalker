@@ -24,6 +24,7 @@ defmodule DebtStalker.RiskTest do
     test "returns configured threshold for supported countries" do
       assert 650 = Risk.risk_score_threshold("ES")
       assert 600 = Risk.risk_score_threshold("MX")
+      assert 650 = Risk.risk_score_threshold("PL")
     end
 
     test "returns nil for unsupported countries" do
@@ -179,6 +180,34 @@ defmodule DebtStalker.RiskTest do
         })
 
       app = %{app | provider_summary: %{"risk_indicators" => %{"buro_score" => 400}}}
+      assert {:ok, "rejected"} = Risk.evaluate(app)
+    end
+
+    test "delegates to country module for PL with high bik score" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "PL",
+          full_name: "Jan Kowalski",
+          identity_document: "02070803628",
+          requested_amount: Decimal.new("5000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"bik_score" => 700}}}
+      assert {:ok, "approved"} = Risk.evaluate(app)
+    end
+
+    test "delegates to country module for PL with low bik score" do
+      {:ok, app} =
+        Applications.create_application(%{
+          country: "PL",
+          full_name: "Jan Kowalski",
+          identity_document: "02070803628",
+          requested_amount: Decimal.new("5000"),
+          monthly_income: Decimal.new("2000")
+        })
+
+      app = %{app | provider_summary: %{"risk_indicators" => %{"bik_score" => 400}}}
       assert {:ok, "rejected"} = Risk.evaluate(app)
     end
   end

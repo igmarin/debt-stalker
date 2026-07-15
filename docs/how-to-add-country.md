@@ -5,7 +5,7 @@ Each step is self-contained and testable. The backend process is **additive** --
 no controller, persistence, or worker changes required. The current LiveView country
 selects are still static, so add the country there until those selects are registry-backed.
 
-> **Existing examples:** `Countries.ES` (Spain/DNI) and `Countries.MX` (Mexico/CURP).
+> **Existing examples:** `Countries.ES` (Spain/DNI), `Countries.MX` (Mexico/CURP), and `Countries.PL` (Poland/PESEL).
 > This guide uses **Portugal (PT)** as a hypothetical walkthrough.
 
 ---
